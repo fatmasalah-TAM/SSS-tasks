@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>SSS Tasks</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2f5bd3">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="SSS Tasks">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232f5bd3'/%3E%3Cpath d='M9 16.5l4.5 4.5L23 11.5' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
@@ -132,6 +139,15 @@ select,input[type=text],input[type=email],input[type=password],input[type=date],
 .err{background:color-mix(in srgb,var(--red) 12%,transparent);color:var(--red);padding:9px 12px;border-radius:8px;font-size:13px}
 .info{background:var(--accent-soft);color:var(--fg);padding:9px 12px;border-radius:8px;font-size:13px}
 .authlinks{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.bell{position:relative;padding:6px 9px}
+.bell .cnt{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;border-radius:9px;background:var(--red);color:#fff;font:600 10.5px/18px var(--mono);text-align:center;padding:0 5px}
+.nrow{display:flex;gap:10px;align-items:flex-start;padding:10px 8px;border:0;border-bottom:1px solid var(--line);background:none;width:100%;text-align:left;border-radius:6px}
+.nrow:hover{background:var(--sunk)}
+.nrow .b{flex:1;min-width:0}.nrow .tx{overflow-wrap:anywhere}.nrow .q{color:var(--fg2);font-size:12.5px;margin-top:2px;overflow-wrap:anywhere}
+.nrow time{color:var(--mute);font-size:12px}
+.nrow.unread{background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.nrow .ud{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none;margin-top:6px}
+.tip{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:var(--r);background:var(--accent-soft)}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:13px;z-index:40;max-width:calc(100% - 32px)}
 @media (prefers-reduced-motion:no-preference){.drawer{animation:slide .18s ease-out}@keyframes slide{from{transform:translateX(24px);opacity:.6}}}
 @media (max-width:640px){.board{scroll-snap-type:x mandatory}.col{scroll-snap-align:start;flex-basis:84vw}.props{grid-template-columns:88px 1fr}.lrow .id,.lrow .ptag{display:none}.row1 .btn:not(.primary){padding:6px 9px}}
@@ -166,6 +182,7 @@ const S={profiles:[],projects:[],tasks:[],invites:[],loading:true};
 const U={view:store.get('view',innerWidth<640?'list':'board'),mine:store.get('mine',false),person:'',project:store.get('project',''),prio:store.get('prio',''),hideDone:store.get('hideDone',false),q:''};
 let overlay=null; // {type:'task',id} | {type:'new',status} | {type:'settings',tab}
 let unsubComments=null,comments=[];
+let notifs=[],notifSeen=new Set(),notifOk=true,pendingTask=null;
 
 /* ---------- helpers ---------- */
 const me=()=>session&&S.profiles.find(p=>p.id===session.user.id);
@@ -257,6 +274,7 @@ function buildShell(){
           el('button',{id:'vBoard',onclick:()=>{U.view='board';store.set('view','board');refresh()}},'Board'),
           el('button',{id:'vList',onclick:()=>{U.view='list';store.set('view','list');refresh()}},'List')),
         el('span',{class:'spacer'}),
+        el('button',{class:'btn bell',id:'bellBtn','aria-label':'Notifications',onclick:()=>openOverlay({type:'inbox'}),html:'<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M4 6.5a4 4 0 0 1 8 0c0 3 1.2 4.3 1.8 5H2.2c.6-.7 1.8-2 1.8-5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M6.5 13.5a1.6 1.6 0 0 0 3 0" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>'}),
         el('button',{class:'btn',onclick:()=>openOverlay({type:'settings',tab:'members'})},'Team & settings'),
         el('button',{class:'btn primary',onclick:()=>openOverlay({type:'new',status:'todo'}),html:PLUS+' New task'}),acct),
       el('div',{class:'row2'},
@@ -279,7 +297,18 @@ function accountMenu(anchor){closeMenu();const r=anchor.getBoundingClientRect();
 function closeMenu(){$('#menupop')?.remove()}
 document.addEventListener('click',e=>{if(!e.target.closest('#menupop')&&!e.target.closest('#acct'))closeMenu()});
 
+async function loadNotifs(){const {data,error}=await sb.from('notifications').select('*').order('created_at',{ascending:false}).limit(60);if(error){notifOk=false;return}notifOk=true;notifs=data||[]}
+const unreadCount=()=>notifs.filter(n=>!n.read_at).length;
+function notifText(n){const t=S.tasks.find(x=>x.id===n.task_id);const who=dname(prof(n.actor_id));const ref=t?`${KEY}-${t.number}`:'a task';
+  if(n.kind==='assigned')return {title:`${who} assigned you ${ref}`,body:t?.title||''};
+  if(n.kind==='status')return {title:`${who} moved ${ref} to ${sName(n.detail)}`,body:t?.title||''};
+  return {title:`${who} commented on ${ref}`,body:n.detail||''}}
+async function alertNew(list){for(const n of list){const {title,body}=notifText(n);toast(title);
+  try{if('Notification' in window&&Notification.permission==='granted'&&navigator.serviceWorker){const reg=await navigator.serviceWorker.ready;reg.showNotification(title,{body,tag:n.id,icon:'icon-192.png',badge:'icon-192.png',data:{task:n.task_id}})}}catch{}}}
+async function markRead(ids){if(!ids.length)return;const now=new Date().toISOString();notifs=notifs.map(n=>ids.includes(n.id)?{...n,read_at:now}:n);refresh();await sb.from('notifications').update({read_at:now}).in('id',ids)}
 function syncControls(){
+  const bell=$('#bellBtn');if(bell){bell.querySelector('.cnt')?.remove();const c=unreadCount();if(c)bell.append(el('span',{class:'cnt',text:c>99?'99+':String(c)}));bell.hidden=!notifOk}
+  document.title=(unreadCount()?`(${unreadCount()}) `:'')+'SSS Tasks';
   $('#vBoard').setAttribute('aria-pressed',U.view==='board');$('#vList').setAttribute('aria-pressed',U.view==='list');
   $('#fMine').setAttribute('aria-pressed',U.mine);$('#fDone').setAttribute('aria-pressed',U.hideDone);
   const opts=(sel,first,items,val)=>{sel.replaceChildren(el('option',{value:''},first),...items.map(([v,n])=>el('option',{value:v},n)));sel.value=items.some(([v])=>v===val)?val:''};
@@ -347,11 +376,13 @@ function projectField(v,on){const inp=el('input',{type:'text',placeholder:'Proje
 function closeOverlay(){overlay=null;if(unsubComments){sb.removeChannel(unsubComments);unsubComments=null}comments=[];document.querySelectorAll('.scrim,.drawer,.modal').forEach(x=>x.remove())}
 function openOverlay(o){closeOverlay();closeMenu();overlay=o;
   if(o.type==='new')return newTask(o.status);
+  if(o.type==='inbox'){document.body.append(el('div',{class:'scrim',onclick:closeOverlay}),el('aside',{class:'drawer',role:'dialog','aria-label':'Notifications'}));return refreshOverlay(true)}
   document.body.append(el('div',{class:'scrim',onclick:closeOverlay}),el('aside',{class:'drawer',role:'dialog'}));
   if(o.type==='task'){const loadC=()=>sb.from('comments').select('*').eq('task_id',o.id).order('created_at').then(({data})=>{if(data){comments=data;drawComments()}});loadC();
     unsubComments=sb.channel('c-'+o.id).on('postgres_changes',{event:'*',schema:'public',table:'comments',filter:`task_id=eq.${o.id}`},loadC).subscribe()}
   refreshOverlay(true)}
 function refreshOverlay(full){if(!overlay||overlay.type==='new')return;const dr=$('.drawer');if(!dr)return;
+  if(overlay.type==='inbox')return drawInbox(dr);
   const typing=dr.contains(document.activeElement)&&/INPUT|TEXTAREA/.test(document.activeElement.tagName);
   if(overlay.type==='task'){const t=S.tasks.find(x=>x.id===overlay.id);if(!t){closeOverlay();return}if(!full&&typing){drawProps(t);return}drawTask(dr,t)}
   else{if(!full&&typing){drawSettingsLists();return}drawSettings(dr)}}
@@ -471,18 +502,46 @@ function drawSettingsLists(){const m=me(),admin=isAdmin();
       :[el('p',{class:'muted small',text:'No projects yet. Add one to group related tasks.'})]))}
 }
 
+/* ---------- notifications inbox ---------- */
+function drawInbox(dr){const unread=notifs.filter(n=>!n.read_at).map(n=>n.id);
+  const canAsk='Notification' in window&&Notification.permission==='default';
+  const standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+  const ios=/iPhone|iPad|iPod/.test(navigator.userAgent);
+  const tips=[];
+  if(canAsk)tips.push(el('div',{class:'tip'},el('strong',{text:'Get alerts on this device'}),el('span',{class:'small',text:'See a pop-up when someone assigns you a task, comments, or moves your work.'}),
+    el('button',{class:'btn primary',onclick:async()=>{const r=await Notification.requestPermission();toast(r==='granted'?'Alerts are on for this device':'Alerts stay off. You can turn them on in your browser settings.');drawInbox(dr)}},'Turn on alerts')));
+  else if(!('Notification' in window)&&ios&&!standalone)tips.push(el('div',{class:'tip'},el('strong',{text:'Want pop-up alerts on iPhone?'}),
+    el('span',{class:'small',text:'Install the app first: tap Share in Safari, then “Add to Home Screen”. Open SSS Tasks from your home screen and come back here.'})));
+  dr.replaceChildren(
+    el('div',{class:'dhead'},el('span',{text:'Notifications'}),el('span',{class:'spacer'}),
+      unread.length?el('button',{class:'btn ghost',onclick:()=>markRead(unread)},'Mark all read'):null,
+      el('button',{class:'iconbtn','aria-label':'Close',html:X,onclick:closeOverlay})),
+    el('div',{class:'dbody'},tips,
+      notifs.length?el('div',{},notifs.map(n=>{const {title,body}=notifText(n);
+        return el('button',{class:'nrow'+(n.read_at?'':' unread'),onclick:()=>{markRead([n.id]);if(S.tasks.some(t=>t.id===n.task_id))openOverlay({type:'task',id:n.task_id});else toast('That task was deleted')}},
+          avatar(prof(n.actor_id),28),el('div',{class:'b'},el('div',{class:'tx',text:title}),body&&el('div',{class:'q',text:body}),
+            el('time',{text:new Date(n.created_at).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})})),
+          n.read_at?null:el('span',{class:'ud'}))}))
+      :el('div',{class:'empty',style:'margin:24px auto'},el('h2',{text:'You’re all caught up'}),el('p',{class:'muted',text:'When someone assigns you a task, comments on your work, or changes its status, it shows up here.'}))))}
+
 /* ---------- boot ---------- */
 async function start(){
   if(!session){if(channel){sb.removeChannel(channel);channel=null}closeOverlay();authScreen('in');return}
   if(recovery){recoveryScreen();return}
   if(!shellBuilt)buildShell();
   S.loading=true;refresh();
-  await Promise.all(TABLES.map(load));S.loading=false;refresh();
+  await Promise.all([...TABLES.map(load),loadNotifs()]);S.loading=false;notifSeen=new Set(notifs.map(n=>n.id));refresh();
+  const want=pendingTask||(location.hash.startsWith('#task-')?location.hash.slice(6):null);
+  if(want&&S.tasks.some(t=>t.id===want)){pendingTask=null;history.replaceState(null,'',location.pathname);openOverlay({type:'task',id:want})}
   if(!channel){const timers={};channel=sb.channel('workspace');
     for(const t of TABLES)channel.on('postgres_changes',{event:'*',schema:'public',table:t},()=>{clearTimeout(timers[t]);timers[t]=setTimeout(async()=>{await load(t);refresh()},150)});
+    if(notifOk)channel.on('postgres_changes',{event:'*',schema:'public',table:'notifications',filter:`user_id=eq.${session.user.id}`},()=>{clearTimeout(timers.n);timers.n=setTimeout(async()=>{
+      await loadNotifs();const fresh=notifs.filter(n=>!notifSeen.has(n.id)&&!n.read_at);fresh.forEach(n=>notifSeen.add(n.id));refresh();alertNew(fresh.reverse())},150)});
     channel.subscribe()}
 }
 if(!configured){setupScreen();return}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});
+  navigator.serviceWorker.addEventListener('message',e=>{const id=e.data?.task;if(!id)return;if(S.tasks.some(t=>t.id===id))openOverlay({type:'task',id});else pendingTask=id})}
 let booted=false;
 sb.auth.onAuthStateChange((event,s)=>{const prev=session?.user?.id;session=s;
   // Defer: calling Supabase from inside this callback can stall the auth client.
