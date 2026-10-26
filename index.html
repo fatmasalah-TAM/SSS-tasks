@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SSS Tasks</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232f5bd3'/%3E%3Cpath d='M9 16.5l4.5 4.5L23 11.5' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+/* SSS Tasks — sticky toolbar over a horizontally scrolling board; details slide in from the right */
+:root{
+  --bg:#f5f6f8;--surface:#fff;--sunk:#eceef2;--line:#dfe2e8;--line-strong:#c9cdd6;
+  --fg:#15171c;--fg2:#4a4f5c;--mute:#8a90a0;
+  --accent:#2f5bd3;--accent-soft:#e3e9fb;--on-accent:#fff;
+  --amber:#c98a0b;--green:#2e9b62;--red:#d14343;
+  --shadow:0 1px 2px rgba(20,24,40,.06),0 4px 16px rgba(20,24,40,.06);--shadow-lg:0 12px 40px rgba(20,24,40,.18);
+  --sans:"Geist",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --r:8px;--gl:max(16px,env(safe-area-inset-left,0px));--gr:max(16px,env(safe-area-inset-right,0px));
+  color-scheme:light}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#111318;--surface:#181b22;--sunk:#0d0f13;--line:#262a33;--line-strong:#353a45;
+  --fg:#e8eaef;--fg2:#a8aebb;--mute:#6d7383;
+  --accent:#7d9bff;--accent-soft:#1f2a48;--on-accent:#0d1222;
+  --amber:#e0a93a;--green:#4cc285;--red:#ee6b6b;
+  --shadow:0 1px 2px rgba(0,0,0,.3);--shadow-lg:0 12px 40px rgba(0,0,0,.5);color-scheme:dark}}
+*{box-sizing:border-box}
+html,body,#app{height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);font:14px/1.45 var(--sans)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}button:disabled{opacity:.55;cursor:default}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+[hidden]{display:none!important}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--fg2)}.small{font-size:12.5px}.spacer{flex:1}
+.ico{display:inline-flex;flex:none}
+kbd{font-family:var(--mono);font-size:12px;border:1px solid var(--line-strong);border-bottom-width:2px;border-radius:4px;padding:0 5px}
+.shell{height:100%;display:flex;flex-direction:column}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:7px;padding:6px 12px;font-size:13px;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap}
+.btn:hover:not(:disabled){border-color:var(--line-strong)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:500}
+.btn.ghost{border-color:transparent;background:none}.btn.ghost:hover{background:var(--sunk)}
+.btn.danger{color:var(--red)}.btn.wide{width:100%}
+.link{border:0;background:none;color:var(--accent);padding:0;font-size:13px}.link:hover{text-decoration:underline}
+.iconbtn{border:0;background:none;width:30px;height:30px;border-radius:6px;display:grid;place-items:center;color:var(--fg2)}
+.iconbtn:hover{background:var(--sunk);color:var(--fg)}
+select,input[type=text],input[type=email],input[type=password],input[type=date],input[type=search]{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:6px 9px;font-size:13px;max-width:100%}
+.seg{display:inline-flex;background:var(--sunk);border-radius:7px;padding:2px}
+.seg button{border:0;background:none;padding:5px 11px;border-radius:5px;color:var(--fg2);font-size:13px}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:var(--shadow)}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 11px;font-size:12.5px;color:var(--fg2)}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:transparent;color:var(--accent);font-weight:500}
+.sel{font-size:12.5px;padding:4px 8px;color:var(--fg2);max-width:170px}
+.badge{font-size:12px;color:var(--fg2);background:var(--sunk);border-radius:999px;padding:2px 9px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:600;letter-spacing:-.01em;font-size:15px}
+.brand .mark{width:26px;height:22px;border-radius:6px;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font:600 10px var(--mono)}
+.top{position:sticky;top:0;z-index:5;background:var(--surface);border-bottom:1px solid var(--line);padding:calc(10px + env(safe-area-inset-top,0px)) var(--gr) 10px var(--gl);display:flex;flex-direction:column;gap:10px}
+.row1,.row2{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.row1{gap:10px}
+.search{flex:1 1 200px;min-width:0;max-width:320px;position:relative}
+.search input{width:100%;background:var(--bg);padding-left:30px}
+.search svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--mute)}
+.count{margin-left:auto;color:var(--mute);font-size:12.5px}
+.acct{border:0;background:none;padding:0;border-radius:50%}
+.menupop{position:fixed;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-lg);padding:10px;width:250px;display:flex;flex-direction:column;gap:8px;z-index:30}
+.menupop .who{display:flex;flex-direction:column;font-size:13px;overflow-wrap:anywhere}
+.main{flex:1;min-height:0;display:flex;flex-direction:column}
+.board{flex:1;min-height:0;overflow-x:auto;display:flex;gap:12px;align-items:flex-start;padding:16px var(--gr) 16px var(--gl)}
+.col{flex:0 0 272px;display:flex;flex-direction:column;max-height:100%;min-height:120px;border-radius:10px;background:var(--sunk);padding:8px}
+.col.drop{outline:2px dashed var(--accent);outline-offset:-2px}
+.colhead{display:flex;align-items:center;gap:7px;padding:4px 4px 8px;font-weight:600;font-size:13px}
+.colhead .n,.ghead .n{color:var(--mute);font-weight:400}
+.colhead .add{margin-left:auto;border:0;background:none;color:var(--mute);width:24px;height:24px;border-radius:5px;display:grid;place-items:center}
+.colhead .add:hover{background:var(--surface);color:var(--fg)}
+.cards{display:flex;flex-direction:column;gap:7px;overflow-y:auto;min-height:40px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:9px 10px;display:flex;flex-direction:column;gap:7px;text-align:left}
+.card:hover{border-color:var(--line-strong)}.card.dragging{opacity:.4}
+.card .meta{display:flex;align-items:center;gap:6px;color:var(--mute);font-size:11.5px}
+.card .t{font-weight:500;font-size:13.5px;line-height:1.35;overflow-wrap:anywhere}
+.card.done .t{color:var(--mute)}
+.colempty{color:var(--mute);font-size:12px;padding:10px 6px;text-align:center}
+.tags{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.ptag{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--fg2);border:1px solid var(--line);border-radius:999px;padding:1px 8px 1px 6px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ptag i{width:7px;height:7px;border-radius:50%;flex:none}
+.due{font-size:11.5px;color:var(--fg2);display:inline-flex;align-items:center;gap:4px}.due.over{color:var(--red)}
+.av{border-radius:50%;flex:none;display:inline-grid;place-items:center;background:var(--accent-soft);color:var(--accent);font-family:var(--mono);font-weight:600}
+.av.empty{border:1.5px dashed var(--line-strong);background:none}
+.list{flex:1;overflow-y:auto;padding:12px var(--gr) 40px var(--gl)}
+.group{margin-bottom:14px}
+.ghead{display:flex;align-items:center;gap:8px;padding:8px 10px;font-weight:600;font-size:13px;background:var(--sunk);border-radius:7px}
+.lrow{display:flex;align-items:center;gap:10px;padding:8px 10px;border:0;border-bottom:1px solid var(--line);background:none;width:100%;text-align:left}
+.lrow:hover{background:var(--surface)}
+.lrow .id{color:var(--mute);font-size:12px;width:58px;flex:none}
+.lrow .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.lrow .r{display:flex;align-items:center;gap:8px;flex:none}
+.empty{max-width:440px;margin:56px auto;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;padding-inline:16px}
+.empty h2{margin:0;font-size:18px;letter-spacing:-.01em;text-wrap:balance}.empty p{margin:0}
+.scrim{position:fixed;inset:0;background:rgba(10,12,20,.35);z-index:20}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(580px,100%);background:var(--surface);z-index:21;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) 0}
+.modal{position:fixed;left:50%;top:max(6vh,calc(env(safe-area-inset-top,0px) + 12px));transform:translateX(-50%);width:min(560px,calc(100% - 24px));max-height:86vh;background:var(--surface);border-radius:12px;box-shadow:var(--shadow-lg);z-index:21;display:flex;flex-direction:column;overflow:hidden}
+.dhead{display:flex;align-items:center;gap:8px;padding:12px 18px;border-bottom:1px solid var(--line);color:var(--mute);font-size:12.5px}
+.dbody{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:18px}
+.foot{display:flex;gap:8px;align-items:center;padding:12px 18px;border-top:1px solid var(--line);flex-wrap:wrap}
+.titlein{width:100%;border:0;background:none;font-size:20px;font-weight:600;letter-spacing:-.015em;padding:2px 0;resize:none;line-height:1.3}
+.titlein:focus{outline:none}
+.descin{width:100%;min-height:110px;border:1px solid var(--line);border-radius:var(--r);background:var(--bg);padding:10px 12px;resize:vertical;line-height:1.55}
+.props{display:grid;grid-template-columns:110px 1fr;gap:8px 12px;align-items:center}
+.props>label{color:var(--mute);font-size:12.5px}
+.v{min-width:0;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.sec h3,.addbox h3{margin:0 0 8px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);font-weight:600}
+.comment{display:flex;gap:10px;padding:8px 0}.comment .b{flex:1;min-width:0}
+.comment .who{font-size:12.5px;font-weight:600;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.comment .who time{font-weight:400;color:var(--mute)}
+.comment .txt{white-space:pre-wrap;overflow-wrap:anywhere}
+.cbox{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.cbox textarea{width:100%;min-height:64px;border:1px solid var(--line);border-radius:var(--r);background:var(--bg);padding:9px 11px;resize:vertical}
+.cbox .act{display:flex;justify-content:flex-end}
+.mrow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.mrow .nm{flex:1 1 160px;min-width:0;font-weight:500;overflow-wrap:anywhere}
+.mrow .sub{color:var(--mute);font-size:12px;font-weight:400}
+.inlinename{flex:1;min-width:0;border-color:transparent!important;background:none!important;font-weight:500}
+.inlinename:hover,.inlinename:focus{border-color:var(--line)!important;background:var(--bg)!important}
+.dot{width:16px;height:16px;border-radius:50%;border:0;flex:none;padding:0}
+.addbox{display:flex;flex-direction:column;gap:8px;padding:14px;border:1px solid var(--line);border-radius:var(--r);background:var(--bg)}
+.addbox p{margin:0}
+.inline{display:flex;gap:8px;flex-wrap:wrap}.inline input{flex:1 1 180px;min-width:0}
+.center{min-height:100%;display:grid;place-items:center;padding:24px var(--gr) 24px var(--gl)}
+.authcard{width:min(400px,100%);background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:28px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:14px}
+.authcard h1{margin:6px 0 0;font-size:22px;letter-spacing:-.02em}.authcard p{margin:0}
+.field{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500}
+.field input{padding:9px 11px;font-size:14px}
+.err{background:color-mix(in srgb,var(--red) 12%,transparent);color:var(--red);padding:9px 12px;border-radius:8px;font-size:13px}
+.info{background:var(--accent-soft);color:var(--fg);padding:9px 12px;border-radius:8px;font-size:13px}
+.authlinks{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:13px;z-index:40;max-width:calc(100% - 32px)}
+@media (prefers-reduced-motion:no-preference){.drawer{animation:slide .18s ease-out}@keyframes slide{from{transform:translateX(24px);opacity:.6}}}
+@media (max-width:640px){.board{scroll-snap-type:x mandatory}.col{scroll-snap-align:start;flex-basis:84vw}.props{grid-template-columns:88px 1fr}.lrow .id,.lrow .ptag{display:none}.row1 .btn:not(.primary){padding:6px 9px}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+/* ═══════════ SETTINGS — paste your two Supabase values here ═══════════
+   Supabase → Project Settings → API → "Project URL" and "anon public" key */
+const SUPABASE_URL = 'https://epictdzctjgbsctobejh.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVwaWN0ZHpjdGpnYnNjdG9iZWpoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMwMzk1NTIsImV4cCI6MjEwODYxNTU1Mn0.AOFai2W36-RmzBX7-4BCq-B9B7a4N5mXB3p0ziAUveE';
+/* ════════════════════════════════════════════════════════════════════ */
+
+(() => {
+const KEY='SSS';
+const STATUSES=[{k:'backlog',n:'Backlog'},{k:'todo',n:'Todo'},{k:'progress',n:'In Progress'},{k:'review',n:'In Review'},{k:'done',n:'Done'},{k:'canceled',n:'Canceled'}];
+const PRIOS=[{k:1,n:'Urgent'},{k:2,n:'High'},{k:3,n:'Medium'},{k:4,n:'Low'},{k:0,n:'No priority'}];
+const PCOLORS=['#2f5bd3','#2e9b62','#c98a0b','#d14343','#7a5bd6','#0f8fa3','#c2417a','#6b7a2a'];
+const TABLES=['profiles','projects','tasks','invites'];
+const $=s=>document.querySelector(s);
+const el=(tag,attrs={},...kids)=>{const e=document.createElement(tag);for(const[k,v]of Object.entries(attrs||{})){if(v==null||v===false)continue;if(k==='class')e.className=v;else if(k==='text')e.textContent=v;else if(k==='html')e.innerHTML=v;else if(k==='value')e.value=v;else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);else e.setAttribute(k,v===true?'':v)}for(const c of kids.flat(9)){if(c==null||c===false)continue;e.append(c.nodeType?c:document.createTextNode(c))}return e};
+const store={get(k,d){try{const v=localStorage.getItem('sss.'+k);return v==null?d:JSON.parse(v)}catch{return d}},set(k,v){try{localStorage.setItem('sss.'+k,JSON.stringify(v))}catch{}}};
+const app=$('#app');
+
+const configured=typeof supabase!=='undefined'&&!SUPABASE_URL.startsWith('PASTE')&&!SUPABASE_KEY.startsWith('PASTE');
+const sb=configured?supabase.createClient(SUPABASE_URL,SUPABASE_KEY):null;
+
+let session=null,recovery=false,shellBuilt=false,channel=null;
+const S={profiles:[],projects:[],tasks:[],invites:[],loading:true};
+const U={view:store.get('view',innerWidth<640?'list':'board'),mine:store.get('mine',false),person:'',project:store.get('project',''),prio:store.get('prio',''),hideDone:store.get('hideDone',false),q:''};
+let overlay=null; // {type:'task',id} | {type:'new',status} | {type:'settings',tab}
+let unsubComments=null,comments=[];
+
+/* ---------- helpers ---------- */
+const me=()=>session&&S.profiles.find(p=>p.id===session.user.id);
+const isAdmin=()=>me()?.role==='admin';
+const prof=id=>id?S.profiles.find(p=>p.id===id):null;
+const proj=id=>id?S.projects.find(p=>p.id===id):null;
+const dname=p=>p?(p.full_name||p.email.split('@')[0]):'Unassigned';
+const initials=p=>dname(p).split(/[\s._-]+/).filter(Boolean).map(w=>w[0]).join('').slice(0,2).toUpperCase();
+const sName=k=>STATUSES.find(s=>s.k===k)?.n||k;
+const pName=p=>PRIOS.find(s=>s.k===p)?.n||'No priority';
+function errText(e){const m=e?.message||String(e);
+  if(/not been invited|Database error saving new user/i.test(m))return 'This email has not been invited yet. Ask an admin to add it in Team & settings → Members.';
+  if(/Invalid login credentials/i.test(m))return 'Email or password is incorrect.';
+  if(/Email not confirmed/i.test(m))return 'Confirm your email first. Check your inbox for the link.';
+  if(/row-level security|permission/i.test(m))return 'You don’t have permission to do that.';
+  if(/Failed to fetch|NetworkError/i.test(m))return 'Can’t reach the server. Check your connection.';
+  return m}
+let toastT;function toast(m){document.querySelectorAll('.toast').forEach(x=>x.remove());const t=el('div',{class:'toast',role:'status',text:m});document.body.append(t);clearTimeout(toastT);toastT=setTimeout(()=>t.remove(),2800)}
+async function load(t){const o={profiles:['full_name',true],projects:['created_at',true],tasks:['number',false],invites:['created_at',true]}[t];
+  const {data,error}=await sb.from(t).select('*').order(o[0],{ascending:o[1]});if(!error&&data)S[t]=data}
+async function run(q,ok){const {data,error}=await q;if(error){toast(errText(error));return null}if(ok)toast(ok);await Promise.all(TABLES.map(load));refresh();return data??true}
+
+/* ---------- icons ---------- */
+function statusIcon(k,size=14){const c={backlog:'var(--mute)',todo:'var(--fg2)',progress:'var(--amber)',review:'var(--green)',done:'var(--accent)',canceled:'var(--mute)'}[k]||'var(--mute)';
+  const i={backlog:`<circle cx="7" cy="7" r="5.5" fill="none" stroke="${c}" stroke-width="1.5" stroke-dasharray="2 2.2"/>`,
+    todo:`<circle cx="7" cy="7" r="5.5" fill="none" stroke="${c}" stroke-width="1.5"/>`,
+    progress:`<circle cx="7" cy="7" r="5.5" fill="none" stroke="${c}" stroke-width="1.5"/><path d="M7 7V3.5A3.5 3.5 0 0 1 7 10.5Z" fill="${c}"/>`,
+    review:`<circle cx="7" cy="7" r="5.5" fill="none" stroke="${c}" stroke-width="1.5"/><path d="M7 7V3.5A3.5 3.5 0 1 1 3.5 7Z" fill="${c}"/>`,
+    done:`<circle cx="7" cy="7" r="6.2" fill="${c}"/><path d="M4.3 7.2 6.2 9 9.7 5.2" fill="none" stroke="var(--surface)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>`,
+    canceled:`<circle cx="7" cy="7" r="6.2" fill="${c}"/><path d="M5 5l4 4M9 5l-4 4" stroke="var(--surface)" stroke-width="1.4" stroke-linecap="round"/>`}[k]||'';
+  return el('span',{class:'ico',title:sName(k),html:`<svg width="${size}" height="${size}" viewBox="0 0 14 14" aria-hidden="true">${i}</svg>`})}
+function prioIcon(p){let i;if(p===1)i=`<rect x="1" y="1" width="12" height="12" rx="3" fill="var(--red)"/><path d="M7 3.8v4" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/><circle cx="7" cy="10.1" r="1" fill="#fff"/>`;
+  else if(!p)i=`<path d="M2.5 7h2M6 7h2M9.5 7h2" stroke="var(--mute)" stroke-width="1.5" stroke-linecap="round"/>`;
+  else{const lv={2:3,3:2,4:1}[p];i=[0,1,2].map(n=>`<rect x="${2+n*3.6}" y="${9-n*2.6}" width="2.4" height="${3+n*2.6}" rx=".8" fill="${n<lv?'var(--fg2)':'var(--line-strong)'}"/>`).join('')}
+  return el('span',{class:'ico',title:pName(p),html:`<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">${i}</svg>`})}
+function avatar(p,size=20){if(!p)return el('span',{class:'av empty',title:'Unassigned',style:`width:${size}px;height:${size}px`});return el('span',{class:'av',title:dname(p),style:`width:${size}px;height:${size}px;font-size:${Math.round(size*.42)}px`,text:initials(p)})}
+function projTag(id){const p=proj(id);return p?el('span',{class:'ptag'},el('i',{style:`background:${p.color}`}),p.name):null}
+function dueTag(t){if(!t.due_date)return null;const dt=new Date(t.due_date+'T00:00:00'),today=new Date();today.setHours(0,0,0,0);const d=Math.round((dt-today)/864e5);
+  const label=d===0?'Today':d===1?'Tomorrow':d===-1?'Yesterday':dt.toLocaleDateString(undefined,{month:'short',day:'numeric'});const over=d<0&&t.status!=='done'&&t.status!=='canceled';
+  return el('span',{class:'due'+(over?' over':'')},el('span',{class:'ico',html:'<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><rect x="1.5" y="2.5" width="9" height="8" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M1.5 5h9M4 1.3v2M8 1.3v2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>'}),label)}
+const X='<svg width="14" height="14" viewBox="0 0 14 14"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+const PLUS='<svg width="12" height="12" viewBox="0 0 12 12"><path d="M6 1.5v9M1.5 6h9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
+
+/* ---------- auth screens ---------- */
+function setupScreen(){app.replaceChildren(el('div',{class:'center'},el('div',{class:'authcard'},
+  el('div',{class:'brand'},el('span',{class:'mark',text:KEY}),'Tasks'),el('h1',{text:'One step left'}),
+  el('p',{class:'muted',text:typeof supabase==='undefined'?'The app couldn’t load its database library. Check your internet connection and reload.':'Open this file, find SUPABASE_URL and SUPABASE_KEY near the bottom, and paste the two values from Supabase → Project Settings → API.'}))))}
+function authScreen(mode='in',msg){
+  const name=el('input',{id:'name',autocomplete:'name',placeholder:'Fatma Salah',required:true});
+  const email=el('input',{id:'email',type:'email',autocomplete:'email',placeholder:'name@ssseg.com',required:true});
+  const pw=el('input',{id:'password',type:'password',minlength:'6',required:true,autocomplete:mode==='up'?'new-password':'current-password'});
+  const err=el('div',{class:'err',hidden:true}),info=el('div',{class:'info',hidden:!msg,text:msg||''});
+  const btn=el('button',{class:'btn primary wide',text:mode==='in'?'Sign in':mode==='up'?'Create account':'Send reset link'});
+  const form=el('form',{class:'authcard'},
+    el('div',{class:'brand'},el('span',{class:'mark',text:KEY}),'Tasks'),
+    el('h1',{text:mode==='in'?'Sign in':mode==='up'?'Create your account':'Reset password'}),
+    el('p',{class:'muted',text:mode==='up'?'Use the work email your admin invited.':mode==='reset'?'We’ll email you a link to set a new password.':'Your team’s tasks, in one place.'}),
+    mode==='up'&&el('label',{class:'field'},'Full name',name),
+    el('label',{class:'field'},'Work email',email),
+    mode!=='reset'&&el('label',{class:'field'},'Password',pw),
+    err,info,btn,
+    el('div',{class:'authlinks'},
+      mode!=='in'&&el('button',{type:'button',class:'link',onclick:()=>authScreen('in')},'Back to sign in'),
+      mode==='in'&&el('button',{type:'button',class:'link',onclick:()=>authScreen('up')},'First time? Create an account'),
+      mode==='in'&&el('button',{type:'button',class:'link',onclick:()=>authScreen('reset')},'Forgot password')));
+  form.addEventListener('submit',async e=>{e.preventDefault();btn.disabled=true;err.hidden=true;info.hidden=true;
+    try{const redirect=location.origin+location.pathname;
+      if(mode==='in'){const {error}=await sb.auth.signInWithPassword({email:email.value,password:pw.value});if(error)throw error}
+      else if(mode==='up'){const {data,error}=await sb.auth.signUp({email:email.value,password:pw.value,options:{data:{full_name:name.value.trim()},emailRedirectTo:redirect}});if(error)throw error;
+        if(!data.session){authScreen('in','Account created. Check your email for a confirmation link, then sign in.');return}}
+      else{const {error}=await sb.auth.resetPasswordForEmail(email.value,{redirectTo:redirect});if(error)throw error;info.textContent='If this email has an account, a reset link is on its way.';info.hidden=false}
+    }catch(x){err.textContent=errText(x);err.hidden=false}btn.disabled=false});
+  shellBuilt=false;app.replaceChildren(el('div',{class:'center'},form));(mode==='up'?name:email).focus();
+}
+function recoveryScreen(){const pw=el('input',{id:'recoverPw',type:'password',minlength:'6',required:true,autocomplete:'new-password'});const err=el('div',{class:'err',hidden:true});
+  const f=el('form',{class:'authcard'},el('h1',{text:'Set a new password'}),el('label',{class:'field'},'New password',pw),err,el('button',{class:'btn primary wide'},'Save password'));
+  f.addEventListener('submit',async e=>{e.preventDefault();const {error}=await sb.auth.updateUser({password:pw.value});if(error){err.textContent=error.message;err.hidden=false}else{recovery=false;start()}});
+  shellBuilt=false;app.replaceChildren(el('div',{class:'center'},f))}
+
+/* ---------- workspace shell ---------- */
+function buildShell(){
+  const q=el('input',{id:'q',type:'search',placeholder:`Search tasks or ${KEY}-12`,'aria-label':'Search tasks'});
+  let qt;q.addEventListener('input',()=>{clearTimeout(qt);qt=setTimeout(()=>{U.q=q.value;renderMain()},120)});
+  const acct=el('button',{class:'acct',id:'acct','aria-label':'Account',onclick:e=>{e.stopPropagation();accountMenu(acct)}});
+  app.replaceChildren(el('div',{class:'shell'},
+    el('header',{class:'top'},
+      el('div',{class:'row1'},el('div',{class:'brand'},el('span',{class:'mark',text:KEY}),'Tasks'),
+        el('div',{class:'seg',role:'group','aria-label':'View'},
+          el('button',{id:'vBoard',onclick:()=>{U.view='board';store.set('view','board');refresh()}},'Board'),
+          el('button',{id:'vList',onclick:()=>{U.view='list';store.set('view','list');refresh()}},'List')),
+        el('span',{class:'spacer'}),
+        el('button',{class:'btn',onclick:()=>openOverlay({type:'settings',tab:'members'})},'Team & settings'),
+        el('button',{class:'btn primary',onclick:()=>openOverlay({type:'new',status:'todo'}),html:PLUS+' New task'}),acct),
+      el('div',{class:'row2'},
+        el('label',{class:'search',html:'<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.3" stroke="currentColor" stroke-width="1.4"/><path d="M9.3 9.3 12.5 12.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>'},q),
+        el('button',{class:'chip',id:'fMine',onclick:()=>{U.mine=!U.mine;U.person='';store.set('mine',U.mine);refresh()}},'My tasks'),
+        el('select',{class:'sel',id:'fPerson','aria-label':'Assignee',onchange:e=>{U.person=e.target.value;U.mine=false;refresh()}}),
+        el('select',{class:'sel',id:'fProject','aria-label':'Project',onchange:e=>{U.project=e.target.value;store.set('project',U.project);refresh()}}),
+        el('select',{class:'sel',id:'fPrio','aria-label':'Priority',onchange:e=>{U.prio=e.target.value;store.set('prio',U.prio);refresh()}}),
+        el('button',{class:'chip',id:'fDone',onclick:()=>{U.hideDone=!U.hideDone;store.set('hideDone',U.hideDone);refresh()}},'Hide done'),
+        el('span',{class:'count mono',id:'count'}))),
+    el('main',{class:'main',id:'main'})));
+  shellBuilt=true;
+}
+function accountMenu(anchor){closeMenu();const r=anchor.getBoundingClientRect();const m=me();
+  const pop=el('div',{class:'menupop',id:'menupop',style:`top:${r.bottom+8}px;right:${Math.max(12,innerWidth-r.right)}px`},
+    el('div',{class:'who'},el('strong',{text:dname(m)}),el('span',{class:'muted',text:session.user.email})),
+    el('button',{class:'btn ghost wide',onclick:()=>{closeMenu();openOverlay({type:'settings',tab:'profile'})}},'My profile'),
+    el('button',{class:'btn wide',onclick:()=>sb.auth.signOut()},'Sign out'));
+  document.body.append(pop)}
+function closeMenu(){$('#menupop')?.remove()}
+document.addEventListener('click',e=>{if(!e.target.closest('#menupop')&&!e.target.closest('#acct'))closeMenu()});
+
+function syncControls(){
+  $('#vBoard').setAttribute('aria-pressed',U.view==='board');$('#vList').setAttribute('aria-pressed',U.view==='list');
+  $('#fMine').setAttribute('aria-pressed',U.mine);$('#fDone').setAttribute('aria-pressed',U.hideDone);
+  const opts=(sel,first,items,val)=>{sel.replaceChildren(el('option',{value:''},first),...items.map(([v,n])=>el('option',{value:v},n)));sel.value=items.some(([v])=>v===val)?val:''};
+  opts($('#fPerson'),'Everyone',S.profiles.map(p=>[p.id,dname(p)]),U.person);
+  opts($('#fProject'),'All projects',S.projects.map(p=>[p.id,p.name]),U.project);
+  opts($('#fPrio'),'Any priority',PRIOS.map(p=>[String(p.k),p.n]),U.prio);
+  const a=$('#acct');a.replaceChildren(avatar(me(),28));
+}
+function visible(){const q=U.q.trim().toLowerCase();const m=me();return S.tasks.filter(t=>{
+  if(U.mine&&t.assignee_id!==m?.id)return false;if(U.person&&t.assignee_id!==U.person)return false;
+  if(U.project&&t.project_id!==U.project)return false;if(U.prio!==''&&String(t.priority)!==U.prio)return false;
+  if(U.hideDone&&(t.status==='done'||t.status==='canceled'))return false;
+  if(q&&!`${KEY}-${t.number} ${t.title} ${t.description}`.toLowerCase().includes(q))return false;return true})}
+const byPrio=(a,b)=>((a.priority||9)-(b.priority||9))||String(b.updated_at).localeCompare(String(a.updated_at));
+const move=(id,status)=>run(sb.from('tasks').update({status}).eq('id',id));
+
+function renderMain(){
+  const main=$('#main');if(!main)return;const sc=main.querySelector('.board,.list');const sx=sc?.scrollLeft||0,sy=sc?.scrollTop||0;
+  main.replaceChildren();const list=visible();$('#count').textContent=`${list.length} of ${S.tasks.length}`;
+  if(S.loading){main.append(el('div',{class:'empty'},el('p',{class:'muted',text:'Loading the board…'})));return}
+  if(!me()){main.append(el('div',{class:'empty'},el('h2',{text:'Your account isn’t on the team yet'}),el('p',{class:'muted',text:'Ask an admin to invite your email, then sign in again.'}),el('button',{class:'btn',onclick:()=>sb.auth.signOut()},'Sign out')));return}
+  if(!S.tasks.length){main.append(el('div',{class:'empty'},
+    el('span',{html:'<svg width="48" height="48" viewBox="0 0 48 48" fill="none"><rect x="5" y="9" width="11" height="30" rx="3" stroke="var(--line-strong)" stroke-width="2"/><rect x="19" y="9" width="11" height="22" rx="3" stroke="var(--line-strong)" stroke-width="2"/><rect x="33" y="9" width="11" height="14" rx="3" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/></svg>'}),
+    el('h2',{text:'No tasks yet'}),el('p',{class:'muted',html:'Create the first task, assign it to a teammate, and move it across the board as work moves. Press <kbd>C</kbd> anytime to add one.'}),
+    el('button',{class:'btn primary',onclick:()=>openOverlay({type:'new',status:'todo'})},'Create the first task')));return}
+  if(U.view==='board'){const b=el('div',{class:'board'});
+    for(const s of STATUSES){if(U.hideDone&&(s.k==='done'||s.k==='canceled'))continue;
+      const items=list.filter(t=>t.status===s.k).sort(byPrio);
+      const col=el('section',{class:'col'},el('div',{class:'colhead'},statusIcon(s.k),s.n,el('span',{class:'n mono',text:String(items.length)}),
+        el('button',{class:'add','aria-label':'Add task to '+s.n,html:PLUS,onclick:()=>openOverlay({type:'new',status:s.k})})),
+        el('div',{class:'cards'},items.length?items.map(card):el('div',{class:'colempty',text:'Nothing here'})));
+      col.addEventListener('dragover',e=>{e.preventDefault();col.classList.add('drop')});
+      col.addEventListener('dragleave',e=>{if(!col.contains(e.relatedTarget))col.classList.remove('drop')});
+      col.addEventListener('drop',e=>{e.preventDefault();col.classList.remove('drop');const id=e.dataTransfer.getData('text/plain');const t=S.tasks.find(x=>x.id===id);if(t&&t.status!==s.k)move(id,s.k)});
+      b.append(col)}
+    main.append(b);b.scrollLeft=sx;
+  }else{const l=el('div',{class:'list'});
+    for(const s of STATUSES){const items=list.filter(t=>t.status===s.k).sort(byPrio);if(!items.length)continue;
+      l.append(el('div',{class:'group'},el('div',{class:'ghead'},statusIcon(s.k),s.n,el('span',{class:'n mono',text:String(items.length)})),
+        items.map(t=>el('button',{class:'lrow',onclick:()=>openOverlay({type:'task',id:t.id})},prioIcon(t.priority),el('span',{class:'id mono',text:`${KEY}-${t.number}`}),statusIcon(t.status),
+          el('span',{class:'t',text:t.title}),el('span',{class:'r'},projTag(t.project_id),dueTag(t),avatar(prof(t.assignee_id)))))))}
+    if(!l.children.length)l.append(el('div',{class:'empty'},el('p',{class:'muted',text:'No tasks match these filters.'})));
+    main.append(l);l.scrollTop=sy}
+}
+function card(t){const c=el('button',{class:'card'+(t.status==='done'||t.status==='canceled'?' done':''),draggable:'true',onclick:()=>openOverlay({type:'task',id:t.id})},
+  el('div',{class:'meta'},prioIcon(t.priority),el('span',{class:'mono',text:`${KEY}-${t.number}`}),el('span',{class:'spacer'}),avatar(prof(t.assignee_id))),
+  el('div',{class:'t',text:t.title}),(t.project_id||t.due_date)?el('div',{class:'tags'},projTag(t.project_id),dueTag(t)):null);
+  c.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain',t.id);c.classList.add('dragging')});c.addEventListener('dragend',()=>c.classList.remove('dragging'));return c}
+
+function refresh(){if(!shellBuilt)return;syncControls();renderMain();refreshOverlay()}
+
+/* ---------- shared fields ---------- */
+const statusField=(v,on)=>el('div',{class:'v'},statusIcon(v),el('select',{'aria-label':'Status',onchange:e=>on(e.target.value)},STATUSES.map(s=>el('option',{value:s.k,selected:s.k===v},s.n))));
+const prioField=(v,on)=>el('div',{class:'v'},prioIcon(v),el('select',{'aria-label':'Priority',onchange:e=>on(+e.target.value)},PRIOS.map(p=>el('option',{value:String(p.k),selected:p.k===v},p.n))));
+const assigneeField=(v,on)=>el('div',{class:'v'},avatar(prof(v)),el('select',{'aria-label':'Assignee',onchange:e=>on(e.target.value||null)},
+  el('option',{value:''},'Unassigned'),S.profiles.map(p=>el('option',{value:p.id,selected:p.id===v},dname(p)+(p.id===me()?.id?' (you)':'')))));
+function projectField(v,on){const inp=el('input',{type:'text',placeholder:'Project name','aria-label':'New project name',hidden:true});const ok=el('button',{type:'button',class:'btn',hidden:true},'Add');
+  const sel=el('select',{'aria-label':'Project'},el('option',{value:''},'No project'),S.projects.map(p=>el('option',{value:p.id,selected:p.id===v},p.name)),el('option',{value:'__new'},'+ New project…'));
+  sel.addEventListener('change',()=>{if(sel.value==='__new'){inp.hidden=ok.hidden=false;inp.focus()}else{inp.hidden=ok.hidden=true;on(sel.value||null)}});
+  const add=async()=>{const n=inp.value.trim();if(!n)return;const d=await run(sb.from('projects').insert({name:n,color:PCOLORS[S.projects.length%PCOLORS.length]}).select().single());if(d&&d.id)on(d.id)};
+  ok.addEventListener('click',add);inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();add()}});
+  return el('div',{class:'v'},sel,inp,ok)}
+
+/* ---------- overlays ---------- */
+function closeOverlay(){overlay=null;if(unsubComments){sb.removeChannel(unsubComments);unsubComments=null}comments=[];document.querySelectorAll('.scrim,.drawer,.modal').forEach(x=>x.remove())}
+function openOverlay(o){closeOverlay();closeMenu();overlay=o;
+  if(o.type==='new')return newTask(o.status);
+  document.body.append(el('div',{class:'scrim',onclick:closeOverlay}),el('aside',{class:'drawer',role:'dialog'}));
+  if(o.type==='task'){const loadC=()=>sb.from('comments').select('*').eq('task_id',o.id).order('created_at').then(({data})=>{if(data){comments=data;drawComments()}});loadC();
+    unsubComments=sb.channel('c-'+o.id).on('postgres_changes',{event:'*',schema:'public',table:'comments',filter:`task_id=eq.${o.id}`},loadC).subscribe()}
+  refreshOverlay(true)}
+function refreshOverlay(full){if(!overlay||overlay.type==='new')return;const dr=$('.drawer');if(!dr)return;
+  const typing=dr.contains(document.activeElement)&&/INPUT|TEXTAREA/.test(document.activeElement.tagName);
+  if(overlay.type==='task'){const t=S.tasks.find(x=>x.id===overlay.id);if(!t){closeOverlay();return}if(!full&&typing){drawProps(t);return}drawTask(dr,t)}
+  else{if(!full&&typing){drawSettingsLists();return}drawSettings(dr)}}
+document.addEventListener('keydown',e=>{const typing=/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName||'');
+  if(e.key==='Escape'){if($('#menupop'))closeMenu();else if(overlay&&!typing)closeOverlay();else if(typing)document.activeElement.blur()}
+  if(e.key==='c'&&!typing&&!e.metaKey&&!e.ctrlKey&&!overlay&&shellBuilt&&me()){e.preventDefault();openOverlay({type:'new',status:'todo'})}});
+
+function newTask(status){const m=me();
+  const d={title:'',description:'',status,priority:0,assignee_id:U.mine?m?.id||null:U.person||null,project_id:U.project||null,due_date:''};
+  const title=el('textarea',{class:'titlein',id:'newTitle',rows:'1',placeholder:'Task title','aria-label':'Task title'});
+  const desc=el('textarea',{class:'descin',id:'newDesc',placeholder:'Add details, links, acceptance criteria…','aria-label':'Description'});
+  const props=el('div',{class:'props'});
+  const draw=()=>props.replaceChildren(
+    el('label',{text:'Status'}),statusField(d.status,v=>{d.status=v;draw()}),
+    el('label',{text:'Priority'}),prioField(d.priority,v=>{d.priority=v;draw()}),
+    el('label',{text:'Assignee'}),assigneeField(d.assignee_id,v=>{d.assignee_id=v;draw()}),
+    el('label',{text:'Project'}),projectField(d.project_id,v=>{d.project_id=v;draw()}),
+    el('label',{text:'Due date'}),el('div',{class:'v'},el('input',{type:'date',id:'newDue','aria-label':'Due date',value:d.due_date,onchange:e=>d.due_date=e.target.value})));
+  draw();
+  const create=el('button',{class:'btn primary'},'Create task');
+  const submit=async()=>{const tt=title.value.trim();if(!tt){title.focus();toast('Give the task a title first');return}create.disabled=true;
+    const r=await run(sb.from('tasks').insert({title:tt,description:desc.value.trim(),status:d.status,priority:d.priority,assignee_id:d.assignee_id,project_id:d.project_id,due_date:d.due_date||null}).select('number').single());
+    if(r){toast(`Created ${KEY}-${r.number}`);closeOverlay()}else create.disabled=false};
+  create.addEventListener('click',submit);title.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();submit()}});
+  document.body.append(el('div',{class:'scrim',onclick:closeOverlay}),el('div',{class:'modal',role:'dialog','aria-label':'New task'},
+    el('div',{class:'dhead'},el('span',{text:'New task'}),el('span',{class:'spacer'}),el('button',{class:'iconbtn','aria-label':'Close',html:X,onclick:closeOverlay})),
+    el('div',{class:'dbody'},title,desc,props),
+    el('div',{class:'foot'},el('span',{class:'muted small',text:'Enter to create · Esc to cancel'}),el('span',{class:'spacer'}),create)));
+  title.focus()}
+
+function drawTask(dr,t){const patch=f=>run(sb.from('tasks').update(f).eq('id',t.id));
+  const prevC=$('#cText')?.value||'';
+  const title=el('textarea',{class:'titlein',id:'dTitle',rows:'1','aria-label':'Task title'});title.value=t.title;
+  title.addEventListener('blur',()=>{const v=title.value.trim();if(v&&v!==t.title)patch({title:v});else title.value=t.title});
+  title.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();title.blur()}});
+  const desc=el('textarea',{class:'descin',id:'dDesc',placeholder:'Add details, links, acceptance criteria…','aria-label':'Description'});desc.value=t.description||'';
+  desc.addEventListener('blur',()=>{if(desc.value!==(t.description||''))patch({description:desc.value})});
+  const ctext=el('textarea',{id:'cText',placeholder:'Write a comment or update…','aria-label':'Comment'});ctext.value=prevC;
+  const post=el('button',{class:'btn primary'},'Comment');
+  post.addEventListener('click',async()=>{const v=ctext.value.trim();if(!v)return;post.disabled=true;
+    const {error}=await sb.from('comments').insert({task_id:t.id,body:v,author_id:me()?.id});if(error)toast(errText(error));else{ctext.value='';const {data}=await sb.from('comments').select('*').eq('task_id',t.id).order('created_at');if(data){comments=data;drawComments()}}post.disabled=false});
+  let confirm=false;const del=el('button',{class:'btn danger'},'Delete');
+  del.addEventListener('click',async()=>{if(!confirm){confirm=true;del.textContent='Click again to delete';return}if(await run(sb.from('tasks').delete().eq('id',t.id).select())){toast(`Deleted ${KEY}-${t.number}`);closeOverlay()}});
+  del.addEventListener('blur',()=>{confirm=false;del.textContent='Delete'});
+  dr.replaceChildren(
+    el('div',{class:'dhead'},el('span',{class:'mono',text:`${KEY}-${t.number}`}),el('span',{class:'spacer'}),el('button',{class:'iconbtn','aria-label':'Close',html:X,onclick:closeOverlay})),
+    el('div',{class:'dbody'},title,el('div',{class:'props',id:'dProps'}),desc,
+      el('div',{class:'sec'},el('h3',{text:'Activity'}),el('div',{id:'cList'}),el('div',{class:'cbox'},ctext,el('div',{class:'act'},post)))),
+    el('div',{class:'foot'},el('span',{class:'muted small',text:`Created ${new Date(t.created_at).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})} by ${dname(prof(t.created_by))}`}),el('span',{class:'spacer'}),del));
+  drawProps(t);drawComments()}
+function drawProps(t){const box=$('#dProps');if(!box)return;const patch=f=>run(sb.from('tasks').update(f).eq('id',t.id));
+  box.replaceChildren(
+    el('label',{text:'Status'}),statusField(t.status,v=>patch({status:v})),
+    el('label',{text:'Priority'}),prioField(t.priority,v=>patch({priority:v})),
+    el('label',{text:'Assignee'}),assigneeField(t.assignee_id,v=>patch({assignee_id:v})),
+    el('label',{text:'Project'}),projectField(t.project_id,v=>patch({project_id:v})),
+    el('label',{text:'Due date'}),el('div',{class:'v'},el('input',{type:'date',id:'dDue','aria-label':'Due date',value:t.due_date||'',onchange:e=>patch({due_date:e.target.value||null})}),dueTag(t)))}
+function drawComments(){const box=$('#cList');if(!box)return;const m=me();
+  box.replaceChildren(...(comments.length?comments.map(c=>{const a=prof(c.author_id);return el('div',{class:'comment'},avatar(a,24),el('div',{class:'b'},
+    el('div',{class:'who'},dname(a),el('time',{text:new Date(c.created_at).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}),
+      (c.author_id===m?.id||isAdmin())&&el('button',{class:'link small',onclick:async()=>{const {error}=await sb.from('comments').delete().eq('id',c.id);if(error)toast(errText(error));else{comments=comments.filter(x=>x.id!==c.id);drawComments()}}},'Delete')),
+    el('div',{class:'txt',text:c.body})))}):[el('p',{class:'muted small',text:'No comments yet.'})]))}
+
+/* ---------- team & settings ---------- */
+function twoClick(btn,label,fn){let armed=false;const orig=btn.textContent;btn.addEventListener('click',()=>{if(armed){armed=false;fn()}else{armed=true;btn.textContent=label}});btn.addEventListener('blur',()=>{armed=false;btn.textContent=orig})}
+function drawSettings(dr){const tab=overlay.tab;
+  const tabs=el('div',{class:'seg',role:'tablist'},[['members','Members'],['projects','Projects'],['profile','My profile']].map(([k,n])=>el('button',{'aria-pressed':String(tab===k),onclick:()=>{overlay.tab=k;drawSettings(dr)}},n)));
+  const body=el('div',{class:'dbody'});const m=me();
+  if(tab==='members'){
+    body.append(el('div',{class:'sec'},el('h3',{id:'memH'}),el('div',{id:'memList'})),el('div',{class:'sec',id:'invSec'},el('h3',{text:'Invited · waiting to sign up'}),el('div',{id:'invList'})));
+    if(isAdmin()){const em=el('input',{type:'email',id:'inviteEmail',required:true,placeholder:'name@ssseg.com','aria-label':'Email to invite'});
+      const role=el('select',{'aria-label':'Role'},el('option',{value:'member'},'Member'),el('option',{value:'admin'},'Admin'));
+      const f=el('form',{class:'addbox'},el('h3',{text:'Invite a teammate'}),el('div',{class:'inline'},em,role,el('button',{class:'btn primary'},'Invite')),
+        el('p',{class:'muted small',text:'Send them the app link. They tap “First time? Create an account” with this email, and they’re in.'}));
+      f.addEventListener('submit',async e=>{e.preventDefault();const v=em.value.trim().toLowerCase();if(S.profiles.some(p=>p.email===v)){toast('That person is already a member.');return}
+        if(await run(sb.from('invites').upsert({email:v,role:role.value,invited_by:m?.id}).select(),`Invited ${v}`))em.value=''});
+      body.append(f)}else body.append(el('p',{class:'muted small',text:'Only admins can invite or remove members.'}))
+  }else if(tab==='projects'){
+    const pi=el('input',{type:'text',id:'projName',placeholder:'e.g. Clubhouse membership','aria-label':'Project name'});
+    const f=el('form',{class:'addbox'},el('h3',{text:'New project'}),el('div',{class:'inline'},pi,el('button',{class:'btn primary'},'Add project')));
+    f.addEventListener('submit',async e=>{e.preventDefault();const n=pi.value.trim();if(!n)return;if(await run(sb.from('projects').insert({name:n,color:PCOLORS[S.projects.length%PCOLORS.length]}).select(),'Project added'))pi.value=''});
+    body.append(el('div',{class:'sec'},el('h3',{id:'projH'}),el('div',{id:'projList'})),f)
+  }else if(m){
+    const nm=el('input',{type:'text',id:'myName','aria-label':'Display name',value:m.full_name||''});
+    const f1=el('form',{class:'addbox'},el('h3',{text:'Display name'}),el('div',{class:'inline'},nm,el('button',{class:'btn primary'},'Save')),el('p',{class:'muted small',text:`${m.email} · ${m.role==='admin'?'Admin':'Member'}`}));
+    f1.addEventListener('submit',e=>{e.preventDefault();run(sb.from('profiles').update({full_name:nm.value.trim()}).eq('id',m.id).select(),'Name updated')});
+    const pw=el('input',{type:'password',id:'newPw',minlength:'6','aria-label':'New password',placeholder:'New password',autocomplete:'new-password'});
+    const f2=el('form',{class:'addbox'},el('h3',{text:'Change password'}),el('div',{class:'inline'},pw,el('button',{class:'btn'},'Update')));
+    f2.addEventListener('submit',async e=>{e.preventDefault();if(pw.value.length<6){toast('Use at least 6 characters');return}const {error}=await sb.auth.updateUser({password:pw.value});if(error)toast(errText(error));else{toast('Password changed');pw.value=''}});
+    body.append(f1,f2,el('button',{class:'btn',onclick:()=>sb.auth.signOut()},'Sign out'))}
+  dr.replaceChildren(el('div',{class:'dhead'},tabs,el('span',{class:'spacer'}),el('button',{class:'iconbtn','aria-label':'Close',html:X,onclick:closeOverlay})),body);
+  drawSettingsLists()}
+function drawSettingsLists(){const m=me(),admin=isAdmin();
+  const ml=$('#memList');
+  if(ml){$('#memH').textContent=`Members · ${S.profiles.length}`;
+    ml.replaceChildren(...S.profiles.map(p=>{const open=S.tasks.filter(t=>t.assignee_id===p.id&&t.status!=='done'&&t.status!=='canceled').length,done=S.tasks.filter(t=>t.assignee_id===p.id&&t.status==='done').length;
+      let roleEl;if(admin&&p.id!==m?.id){roleEl=el('select',{'aria-label':'Role for '+dname(p),onchange:e=>run(sb.from('profiles').update({role:e.target.value}).eq('id',p.id).select(),'Role updated')},
+          el('option',{value:'member',selected:p.role==='member'},'Member'),el('option',{value:'admin',selected:p.role==='admin'},'Admin'))}
+      else roleEl=el('span',{class:'badge',text:p.role==='admin'?'Admin':'Member'});
+      let rm=null;if(admin&&p.id!==m?.id){rm=el('button',{class:'btn ghost danger'},'Remove');twoClick(rm,'Confirm',()=>run(sb.from('profiles').delete().eq('id',p.id).select(),'Member removed'))}
+      return el('div',{class:'mrow'},avatar(p,30),el('div',{class:'nm'},el('div',{},dname(p),p.id===m?.id&&el('span',{class:'muted',text:' (you)'})),
+        el('div',{class:'sub'},p.email+' · ',el('span',{class:'mono',text:`${open} open · ${done} done`}))),roleEl,
+        el('button',{class:'btn ghost',onclick:()=>{U.person=p.id;U.mine=false;closeOverlay();refresh()}},'Tasks'),rm)}));
+    const inv=$('#invList'),sec=$('#invSec');sec.hidden=!(admin&&S.invites.length);
+    inv.replaceChildren(...S.invites.map(i=>el('div',{class:'mrow'},el('span',{class:'av empty',style:'width:30px;height:30px'}),
+      el('div',{class:'nm'},el('div',{text:i.email}),el('div',{class:'sub',text:`${i.role==='admin'?'Admin':'Member'} · invited ${new Date(i.created_at).toLocaleDateString()}`})),
+      el('button',{class:'btn ghost danger',onclick:()=>run(sb.from('invites').delete().eq('email',i.email).select(),'Invite cancelled')},'Cancel invite'))))}
+  const pl=$('#projList');
+  if(pl){$('#projH').textContent=`Projects · ${S.projects.length}`;
+    pl.replaceChildren(...(S.projects.length?S.projects.map(p=>{
+      const nm=el('input',{type:'text',class:'inlinename','aria-label':'Project name',value:p.name});
+      nm.addEventListener('blur',()=>{const v=nm.value.trim();if(v&&v!==p.name)run(sb.from('projects').update({name:v}).eq('id',p.id).select())});
+      const del=el('button',{class:'btn ghost danger'},'Delete');twoClick(del,'Confirm',()=>run(sb.from('projects').delete().eq('id',p.id).select(),'Project deleted'));
+      return el('div',{class:'mrow'},el('button',{class:'dot',style:`background:${p.color}`,title:'Change color','aria-label':'Change color',
+        onclick:()=>run(sb.from('projects').update({color:PCOLORS[(PCOLORS.indexOf(p.color)+1)%PCOLORS.length]}).eq('id',p.id).select())}),
+        nm,el('span',{class:'sub mono',text:`${S.tasks.filter(t=>t.project_id===p.id).length} tasks`}),del)})
+      :[el('p',{class:'muted small',text:'No projects yet. Add one to group related tasks.'})]))}
+}
+
+/* ---------- boot ---------- */
+async function start(){
+  if(!session){if(channel){sb.removeChannel(channel);channel=null}closeOverlay();authScreen('in');return}
+  if(recovery){recoveryScreen();return}
+  if(!shellBuilt)buildShell();
+  S.loading=true;refresh();
+  await Promise.all(TABLES.map(load));S.loading=false;refresh();
+  if(!channel){const timers={};channel=sb.channel('workspace');
+    for(const t of TABLES)channel.on('postgres_changes',{event:'*',schema:'public',table:t},()=>{clearTimeout(timers[t]);timers[t]=setTimeout(async()=>{await load(t);refresh()},150)});
+    channel.subscribe()}
+}
+if(!configured){setupScreen();return}
+let booted=false;
+sb.auth.onAuthStateChange((event,s)=>{const prev=session?.user?.id;session=s;
+  // Defer: calling Supabase from inside this callback can stall the auth client.
+  setTimeout(()=>{if(event==='PASSWORD_RECOVERY'){recovery=true;start();return}
+    if(!booted||prev!==s?.user?.id||event==='SIGNED_OUT'){booted=true;start()}},0)});
+})();
+</script>
+</body>
+</html>
