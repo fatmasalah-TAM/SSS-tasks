@@ -1,14 +1,24 @@
 {
-  "name": "SSS Tasks",
-  "short_name": "SSS Tasks",
-  "description": "The SSS team's tasks and projects.",
+  "name": "Ovrto",
+  "short_name": "Ovrto",
+  "description": "Over to you. Every task shows whose turn it is.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#f5f6f8",
-  "theme_color": "#2f5bd3",
+  "background_color": "#F3F5F4",
+  "theme_color": "#0D0D0F",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
   ]
 }
