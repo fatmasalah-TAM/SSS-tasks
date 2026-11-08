@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-oeXGHE9cCifFrbNCd2sdMXHHrRL0/iKc+PJaQha/olE=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-t9++EoZnpXkuC2V7YplR7EcPY4uGsfEbE1Vd0kpiMYI=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-oeXGHE9cCifFrbNCd2sdMXHHrRL0/iKc+PJaQha/olE=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-uDcexAfyZxSlTqtnoOV9uaQ4nf1XWs1SsZfYaeBihi4=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<meta name="ovrto-build" content="2377221928f8">
+<meta name="ovrto-build" content="57bf91fb0ec3">
 <title>Ovrto</title>
 <meta name="description" content="Over to you. Every task shows whose turn it is.">
 <meta name="theme-color" content="#0D0D0F">
@@ -3266,10 +3266,10 @@ function aiPanel() {
   const draw = async () => {
     const a = await aiStatus();
     const key = h('input', { type: 'password', placeholder: a.enabled ? 'A key is saved. Paste a new one to replace it' : 'Paste your Gemini API key', 'aria-label': 'Gemini API key', autocomplete: 'off' });
-    const model = h('input', { type: 'text', value: a.model || 'gemini-flash-latest', 'aria-label': 'AI model', style: { maxWidth: '220px' } });
+    const model = h('input', { type: 'text', value: a.model || 'gemini-3.5-flash', 'aria-label': 'AI model', style: { maxWidth: '220px' } });
     const save = h('button', { class: 'btn pri', onclick: async () => {
       const k = key.value.trim(); if (!k && !a.enabled) { key.focus(); return toast('Paste the key first'); }
-      const done = busy(save, 'Saving…'); const { error } = await sb.rpc('set_ai_key', { ws: S.ws.id, k: k || null, m: model.value.trim() || 'gemini-flash-latest' }); done();
+      const done = busy(save, 'Saving…'); const { error } = await sb.rpc('set_ai_key', { ws: S.ws.id, k: k || null, m: model.value.trim() || 'gemini-3.5-flash' }); done();
       if (error) return toast(errText(error)); aiOn = null; toast(k ? 'AI key saved' : 'AI model saved'); draw();
     } }, a.enabled ? 'Save' : 'Turn on AI');
     const test = h('button', { class: 'btn', onclick: async () => {
@@ -3621,7 +3621,7 @@ addEventListener('online', () => { if (S.ws) { flushOutbox(); setupRealtime(); c
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { checkUpdate(); if (S.ws) { flushOutbox(); setupRealtime(); catchUp(); } } });
 
 /* a new version was uploaded: phones (and apps saved to the home screen) pick it up by themselves */
-const BUILD = '2377221928f8';
+const BUILD = '57bf91fb0ec3';
 let updLast = 0, updShown = false;
 async function checkUpdate(force) {
   if (!force && Date.now() - updLast < 60000) return; updLast = Date.now();
@@ -5186,7 +5186,7 @@ async function aiDraft({ text, audio } = {}) {
   track(audio ? 'ai_voice' : 'ai_write');
   const body = { op: 'draft', ws: S.ws.id, text: text || '', ctx: aiCtx(), lang: 'en' };
   if (audio) body.audio = { mime: audio.type || 'audio/wav', data: await blobB64(audio) };
-  const res = await withTimeout(sb.functions.invoke('notify', { body }), 75000).catch(() => ({ timedOut: true }));
+  const res = await withTimeout(sb.functions.invoke('notify', { body }), 100000).catch(() => ({ timedOut: true }));
   if (res.timedOut) return { error: 'The AI took too long. Try again (shorter voice notes are faster).' };
   const { data, error } = res;
   if (error || !data?.draft) return { error: data?.error || (error && /Function not found|404/.test(error.message || '') ? 'The notify function isn’t deployed yet.' : 'AI didn’t answer. Check your connection and try again.') };
@@ -5206,7 +5206,7 @@ function looksFranco(text) {
 async function cleanFranco(local) {
   if (!(await aiReady())) return;
   const orig = { title: local.title, description: local.description || '' };
-  const res = await withTimeout(sb.functions.invoke('notify', { body: { op: 'clean', ws: S.ws.id, title: orig.title, description: orig.description } }), 45000).catch(() => null);
+  const res = await withTimeout(sb.functions.invoke('notify', { body: { op: 'clean', ws: S.ws.id, title: orig.title, description: orig.description } }), 70000).catch(() => null);
   const d = res?.data; if (!d || d.error || !d.title) return;
   const t = taskOf(local.id); if (!t || t.title !== orig.title || (t.description || '') !== orig.description) return; // someone changed it meanwhile: leave it
   const next = { title: String(d.title).slice(0, 200), description: typeof d.description === 'string' ? d.description : orig.description };
