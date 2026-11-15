@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-oeXGHE9cCifFrbNCd2sdMXHHrRL0/iKc+PJaQha/olE=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-BtbbKVKfdDlQIssDF5xjp0Eu9XfLyI+a7tzB5y6kWoQ=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-oeXGHE9cCifFrbNCd2sdMXHHrRL0/iKc+PJaQha/olE=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-fk0mTuyMO/SP+abXj9yjxTRIfhyamYEkUC4uawyd1HI=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<meta name="ovrto-build" content="a9de42a37d9e">
+<meta name="ovrto-build" content="b7660ab6f9a1">
 <title>Ovrto</title>
 <meta name="description" content="Over to you. Every task shows whose turn it is.">
 <meta name="theme-color" content="#0D0D0F">
@@ -1011,6 +1011,40 @@ body:has(.sheet) .toasts{bottom:calc(88px + var(--sab))}
 .lvopen{display:flex;flex-direction:column;gap:2px;text-align:start;flex:1;min-width:0}
 .gotmark{width:18px;flex:none;color:var(--accent);font-weight:700}
 
+/* ── motion: Ovrto answers every touch ── */
+:root{--ease:cubic-bezier(.2,.8,.2,1)}
+:is(button,.pjrow,.card,.row,.opt,.navi,.chipbtn,.kindopt,.pjnum,.pjcard,.leavebar,.gsearch){transition:transform .16s var(--ease),background-color .15s,box-shadow .18s,border-color .15s,color .15s}
+:is(.btn,.chipbtn,.kindopt,.pjnum,.opt,.navi,.gsearch,.x,.ptab,.tabs button):not(:disabled):active{transform:scale(.95)}
+:is(.card,.row,.pjrow,.pjcard,.leavebar):active{transform:scale(.985)}
+.ripple-box{position:absolute;inset:0;overflow:hidden;border-radius:inherit;pointer-events:none;z-index:0}
+.ripple{position:absolute;border-radius:50%;background:currentColor;opacity:.14;transform:scale(0);animation:ripple .55s var(--ease) forwards}
+@keyframes ripple{to{transform:scale(1);opacity:0}}
+.main .scroll.enter{animation:pageIn .3s var(--ease)}
+@keyframes pageIn{from{opacity:0;transform:translateY(10px)}}
+.itemin{animation:itemIn .36s var(--ease) both}
+@keyframes itemIn{from{opacity:0;transform:translateY(10px) scale(.99)}}
+.moved .tabs [aria-current=page] svg,.moved .navi[aria-current=page] svg{animation:tabPop .4s var(--ease)}
+@keyframes tabPop{40%{transform:scale(1.22) translateY(-1px)}}
+.moved .ptab[aria-current=page]{animation:tabPop .35s var(--ease)}
+.scrim{animation:fadeIn .2s ease-out}
+@keyframes fadeIn{from{opacity:0}}
+.sheet.right{animation:sheetR .28s var(--ease)}
+@keyframes sheetR{from{opacity:0;transform:translateX(28px)}}
+.sheet.center{animation:sheetC .24s var(--ease)}
+@keyframes sheetC{from{opacity:0;transform:translateX(-50%) translateY(12px) scale(.98)}}
+@media (max-width:820px){.sheet.right,.sheet.center{animation:sheetUp .32s var(--ease)}}
+@keyframes sheetUp{from{opacity:.4;transform:translateY(60px)}}
+.pop,.cmdk{animation:popIn .18s var(--ease)}
+@keyframes popIn{from{opacity:0;transform:translateY(-6px) scale(.98)}}
+.toast{animation:toastIn .32s var(--ease)}
+@keyframes toastIn{from{opacity:0;transform:translateY(14px) scale(.95)}}
+.pw-eye svg,.vbtns svg{transition:transform .2s var(--ease)}.pw-eye:active svg{transform:scale(.8)}
+/* search: always one tap away */
+.gsearch{display:flex;align-items:center;gap:8px;margin:0 4px 10px;height:36px;padding:0 10px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--mute);font-size:13.5px;text-align:start;width:calc(100% - 8px)}
+.gsearch .t{flex:1}.gsearch kbd{font:500 11px var(--mono);color:var(--mute)}@media (hover:hover){.gsearch:hover{border-color:var(--line-strong);color:var(--fg)}}
+.cmdk .opt .sub{font-size:12px;color:var(--mute);flex:none}
+.cmdk .opt svg{flex:none;color:var(--mute)}
+
 </style>
 </head>
 <body>
@@ -1895,6 +1929,7 @@ function render() {
   const oldScroll = $('.main .scroll', app); const sx = oldScroll?.scrollLeft || 0, sy = oldScroll?.scrollTop || 0;
   app.replaceChildren(side, main, tabs);
   const ns = $('.main .scroll', app); if (ns) { ns.scrollLeft = sx; ns.scrollTop = sy; }
+  if (S.loaded) motionIn(app);
   tourKick();
 }
 const tourKick = debounce(() => tours.kick(), 500);
@@ -1912,6 +1947,7 @@ function renderSide() {
   return h('aside', { class: 'side', 'aria-label': 'Navigation' },
     h('div', { class: 'brand' }, ...brandLockup(appName()),
       h('button', { class: 'wschip', title: 'Switch workspace', onclick: e => wsMenu(e.currentTarget) }, S.ws.name), bellButton()),
+    h('button', { class: 'gsearch', 'data-gsearch': '1', onclick: () => cmdk.open() }, icon('search', 16), h('span', { class: 't', text: 'Search' }), h('kbd', { text: /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘K' : 'Ctrl K' })),
     h('button', { class: 'navi', onclick: () => cmdk.open(), style: { color: 'var(--mute)', marginBottom: '6px', border: '1px solid var(--line)' } }, icon('search', 16), h('span', { class: 't', text: 'Search or jump to…' }), h('kbd', { text: navigator.platform?.includes('Mac') ? '⌘K' : 'Ctrl K' })),
     h('nav', { class: 'nav' },
       navItem({ v: 'myturn' }, 'My turn', icon('turn'), myTurnCount()),
@@ -1990,7 +2026,7 @@ function pageHead(title, sub, tools, extra) {
     ? h('button', { class: 'ptitle', 'data-tour': 'view-title', onclick: () => viewSwitcher() }, h('span', { class: 't', text: title }), h('span', { class: 'chev' }, icon('chev', 20)))
     : h('h1', { class: 'ptitle', 'data-tour': 'view-title' }, h('span', { class: 't', text: title }));
   return h('header', { class: 'head' },
-    h('div', { class: 'hrow' }, t, h('span', { class: 'sp' }), tools || null, isPhone() ? bellButton() : null),
+    h('div', { class: 'hrow' }, t, h('span', { class: 'sp' }), tools || null, isPhone() ? h('button', { class: 'x gsearch-m', 'data-gsearch': '1', 'aria-label': 'Search', title: 'Search', onclick: () => cmdk.open() }, icon('search', 20)) : null, isPhone() ? bellButton() : null),
     sub ? h('div', { class: 'hsub' }, sub) : null, extra || null);
 }
 
@@ -3653,7 +3689,8 @@ const cmdk = (() => {
   function open() {
     track('search');
     close(); closePop();
-    const inp = h('input', { type: 'search', placeholder: 'Search tasks, jump to a view, or type a command…', 'aria-label': 'Command bar' });
+    const inp = h('input', { type: 'search', placeholder: 'Search everything in Ovrto…', 'aria-label': 'Search everything' });
+    if (!V.loaded && S.ws) loadVault().then(() => el && draw());
     const box = h('div', { class: 'opts', role: 'listbox' });
     const scrim = h('div', { class: 'scrim', style: { zIndex: '60' }, onclick: close });
     el = [scrim, h('div', { class: 'cmdk', role: 'dialog', 'aria-label': 'Command bar' }, inp, box)];
@@ -3665,17 +3702,28 @@ const cmdk = (() => {
         { label: 'New task', sub: 'C', fn: () => openCreate() }, { label: 'Report a bug', fn: () => openCreate({ type: 'bug' }) },
         { label: 'Go to My turn', fn: () => go({ v: 'myturn' }) }, { label: 'Open notifications', fn: () => openNotifs() }, ...(isAdmin() ? [{ label: 'Add members', fn: () => openSettings('workspace', 'invites') }] : []), { label: 'Go to Review', fn: () => go({ v: 'review' }) },
         { label: 'Go to Work', fn: () => go({ v: 'work' }) }, { label: 'Go to Bugs', fn: () => go({ v: 'bugs' }) }, { label: 'Go to Sprint', fn: () => go({ v: 'sprint' }) },
-        { label: 'Go to Clients', fn: () => go({ v: 'clients' }) }, { label: 'Go to All tasks', fn: () => go({ v: 'all' }) },
+        { label: 'Go to Clients', fn: () => go({ v: 'clients' }) }, { label: 'Go to All tasks', fn: () => go({ v: 'all' }) }, { label: 'Go to Projects', fn: () => go({ v: 'projects' }) }, { label: 'Go to Access', fn: () => go({ v: 'vault' }) }, { label: 'Going on leave', fn: () => openLeave() },
         ...S.views.map(v => ({ label: 'View: ' + v.name, fn: () => go({ v: 'view', id: v.id }) })), ...S.projects.map(p => ({ label: 'Project: ' + p.name, fn: () => go({ v: 'project', id: p.id }) })),
         { label: 'Open chat', fn: () => go({ v: 'chat' }) }, ...(isAdmin() ? [{ label: 'Client pages (status links)', fn: () => openSettings('workspace', 'clientlinks') }, { label: 'Insights', fn: () => go({ v: 'insights' }) }] : []), { label: 'New message to…', fn: () => pickDmPerson() }, { label: 'New channel…', fn: () => newChannel() },
         { label: 'Import tasks from a file…', fn: () => openImport() }, { label: 'Download the import template', fn: () => downloadTemplate() }, { label: 'Export…', fn: () => openExport() }, { label: 'Settings', fn: () => openSettings(isAdmin() ? 'workspace' : 'me') }, { label: 'Help & tours', fn: () => openHelp() },
         { label: 'Switch theme', fn: () => savePrefs({ theme: S.prefs.theme === 'dark' ? 'light' : 'dark' }) },
       ];
-      const tasks = S.tasks.filter(t => !q || `${taskKey(t)} ${t.title}`.toLowerCase().includes(q)).sort(SORTS.updated).slice(0, q ? 8 : 5);
+      // everything here was already limited by the server to what this person may see; admin-only places are left out below
+      const nq = norm(q); const has = s => nq && norm(s).includes(nq);
+      const tasks = S.tasks.filter(t => !q || `${taskKey(t)} ${t.title}`.toLowerCase().includes(q) || (q.length > 2 && has(t.description))).sort(SORTS.updated).slice(0, q ? 8 : 5);
+      const more = [];
+      if (q) {
+        for (const p of S.projects.filter(p => has(p.name)).slice(0, 4)) more.push({ g: 'Projects', label: p.name, sub: pKind(p) === 'client' ? 'Client' : 'Our own', ic: 'folder', fn: () => go({ v: 'project', id: p.id }) });
+        for (const p of S.projects) for (const d of (p.docs || []).filter(d => has(d.title) || (q.length > 2 && has(d.body))).slice(0, 3)) more.push({ g: 'Docs', label: d.title, sub: p.name, ic: 'folder', fn: () => { go({ v: 'project', id: p.id, tab: 'docs' }); setTimeout(() => openDoc(p, d), 200); } });
+        for (const p of S.members.map(m => prof(m.user_id)).filter(p => p && p.id !== uid() && (has(dname(p)) || has(p.email))).slice(0, 4)) more.push({ g: 'People', label: dname(p), sub: 'Message', ic: 'person', fn: () => openDm(p.id) });
+        for (const i of (V.items || []).filter(i => canOpenItem(i) && (has(i.name) || has(i.url) || has(i.kind))).slice(0, 4)) more.push({ g: 'Logins', label: i.name, sub: i.kind, ic: 'key', fn: () => { go({ v: 'vault' }); if (vaultUnlocked()) setTimeout(() => openLoginView(i), 200); } });
+      }
       const c2 = cmds.filter(c => !q || c.label.toLowerCase().includes(q)).slice(0, q ? 8 : 6);
       box.replaceChildren();
       if (tasks.length) { box.append(h('div', { class: 'ph', text: 'Tasks' })); for (const t of tasks) items.push({ el: h('button', { class: 'opt' }, plate(t), h('span', { text: t.title, style: { flex: '1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }), stIcon(stOf(t.status_id))), fn: () => openTask(t.id) }); }
       items.forEach(i => box.append(i.el));
+      let lastG = null;
+      for (const m of more) { if (m.g !== lastG) { box.append(h('div', { class: 'ph', text: m.g })); lastG = m.g; } const it = { el: h('button', { class: 'opt' }, icon(m.ic, 16), h('span', { text: m.label, style: { flex: '1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }), m.sub ? h('span', { class: 'sub', text: m.sub }) : null), fn: m.fn }; items.push(it); box.append(it.el); }
       if (c2.length) { box.append(h('div', { class: 'ph', text: 'Actions' })); for (const c of c2) { const it = { el: h('button', { class: 'opt' }, h('span', { text: c.label, style: { flex: '1' } }), c.sub ? h('kbd', { text: c.sub }) : null), fn: c.fn }; items.push(it); box.append(it.el); } }
       if (!items.length) box.append(h('div', { class: 'hint', text: 'Nothing found' }));
       act = Math.min(act, items.length - 1); items.forEach((it, i) => { it.el.classList.toggle('act', i === act); it.el.onclick = () => { close(); it.fn(); }; });
@@ -3798,7 +3846,7 @@ addEventListener('online', () => { if (S.ws) { flushOutbox(); setupRealtime(); c
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { checkUpdate(); if (S.ws) { flushOutbox(); setupRealtime(); catchUp(); } } });
 
 /* a new version was uploaded: phones (and apps saved to the home screen) pick it up by themselves */
-const BUILD = 'a9de42a37d9e';
+const BUILD = 'b7660ab6f9a1';
 let updLast = 0, updShown = false;
 async function checkUpdate(force) {
   if (!force && Date.now() - updLast < 60000) return; updLast = Date.now();
@@ -6326,6 +6374,30 @@ function openHandover(l) {
       mineL && st !== 'over' ? h('button', { class: 'btn ghost danger', style: { marginTop: '16px' }, onclick: e => confirmIn(sh, { text: 'Cancel this leave? Tasks stay where they are now.', yes: 'Cancel leave', danger: true, onYes: async () => { closeSheet(true); const { error } = await sb.from('leaves').delete().eq('id', l.id); if (error) return toast(errText(error)); S.leaves = S.leaves.filter(x => x.id !== l.id); refresh(); } }) }, 'Cancel leave') : null));
   } });
 }
+
+/* ═════════════ Motion: every page arrives, every touch answers ═════════════
+   Only when you move somewhere (not on live updates), so the screen never twitches while you read. */
+let motionKey = '';
+const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+function motionIn(app) {
+  const k = JSON.stringify(S.route); if (k === motionKey) return; const first = !motionKey; motionKey = k;
+  if (calm()) return;
+  const sc = $('.main .scroll', app); sc?.classList.add('enter');
+  const items = $$('.main :is(.card,.row,.pjrow,.pjcard,.pjnum,.leavebar,.vcard,.colhead,.empty)', app).slice(0, 18);
+  items.forEach((el, i) => { el.style.animationDelay = (first ? 150 : 0) + i * 22 + 'ms'; el.classList.add('itemin'); });
+  app.classList.add('moved');
+  setTimeout(() => { app.classList.remove('moved'); sc?.classList.remove('enter'); items.forEach(el => { el.classList.remove('itemin'); el.style.animationDelay = ''; }); }, 1000);
+}
+/* a soft ripple from exactly where you touched */
+const RIPPLE = '.btn,.card,.row,.pjrow,.pjcard,.pjnum,.opt,.leavebar,.chipbtn,.kindopt,.navi,.gsearch,.more-i';
+addEventListener('pointerdown', e => {
+  if (calm() || e.button > 0) return; const t = e.target.closest?.(RIPPLE); if (!t || t.disabled) return;
+  const r = t.getBoundingClientRect(); const d = Math.max(r.width, r.height) * 2.2;
+  if (getComputedStyle(t).position === 'static') t.style.position = 'relative';
+  const box = h('span', { class: 'ripple-box' }); const dot = h('span', { class: 'ripple', style: { width: d + 'px', height: d + 'px', left: e.clientX - r.left - d / 2 + 'px', top: e.clientY - r.top - d / 2 + 'px' } });
+  box.append(dot); t.append(box); setTimeout(() => box.remove(), 600);
+}, { passive: true });
+addEventListener('touchstart', () => {}, { passive: true }); // lets :active work on iPhone
 
 /* ═════════════ Owner dashboard: which teams signed up, who is active, which features they use (counts only) ═════════════ */
 var ownerAdmin = null; // only admins of the first workspace see this
