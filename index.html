@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-oeXGHE9cCifFrbNCd2sdMXHHrRL0/iKc+PJaQha/olE=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-fk0mTuyMO/SP+abXj9yjxTRIfhyamYEkUC4uawyd1HI=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-oeXGHE9cCifFrbNCd2sdMXHHrRL0/iKc+PJaQha/olE=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-/8n102A1iw0FIv+afa0r8LueFo95yHKfdFyYN71w3Vc=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<meta name="ovrto-build" content="b7660ab6f9a1">
+<meta name="ovrto-build" content="44d2f66921d7">
 <title>Ovrto</title>
 <meta name="description" content="Over to you. Every task shows whose turn it is.">
 <meta name="theme-color" content="#0D0D0F">
@@ -767,7 +767,8 @@ kbd{border-radius:5px;border-bottom-width:1px}
 .brand svg,.wordmark,.cp-brand{color:var(--accent-ink,#2A44B0)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .brand svg,:root:not([data-theme="light"]) .wordmark,:root:not([data-theme="light"]) .cp-brand{color:#8FA3FF}}
 :root[data-theme="dark"] .brand svg,:root[data-theme="dark"] .wordmark,:root[data-theme="dark"] .cp-brand{color:#8FA3FF}
-.pw-wrap{position:relative;display:block;flex:1 1 180px;min-width:0}
+.pw-wrap{position:relative;display:block;min-width:0}
+[style*="display: flex"]>.pw-wrap{flex:1 1 180px}
 .pw-wrap input{width:100%;padding-inline-end:44px}
 .pw-eye{position:absolute;inset-inline-end:4px;top:50%;transform:translateY(-50%);width:38px;height:38px;border:0;background:none;color:var(--mute);display:grid;place-items:center;border-radius:8px;cursor:pointer}
 .pw-eye:focus-visible{outline:2px solid var(--accent)}
@@ -1947,8 +1948,7 @@ function renderSide() {
   return h('aside', { class: 'side', 'aria-label': 'Navigation' },
     h('div', { class: 'brand' }, ...brandLockup(appName()),
       h('button', { class: 'wschip', title: 'Switch workspace', onclick: e => wsMenu(e.currentTarget) }, S.ws.name), bellButton()),
-    h('button', { class: 'gsearch', 'data-gsearch': '1', onclick: () => cmdk.open() }, icon('search', 16), h('span', { class: 't', text: 'Search' }), h('kbd', { text: /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘K' : 'Ctrl K' })),
-    h('button', { class: 'navi', onclick: () => cmdk.open(), style: { color: 'var(--mute)', marginBottom: '6px', border: '1px solid var(--line)' } }, icon('search', 16), h('span', { class: 't', text: 'Search or jump to…' }), h('kbd', { text: navigator.platform?.includes('Mac') ? '⌘K' : 'Ctrl K' })),
+    h('button', { class: 'navi', 'data-gsearch': '1', onclick: () => cmdk.open(), style: { color: 'var(--mute)', marginBottom: '6px', border: '1px solid var(--line)' } }, icon('search', 16), h('span', { class: 't', text: 'Search or jump to…' }), h('kbd', { text: navigator.platform?.includes('Mac') ? '⌘K' : 'Ctrl K' })),
     h('nav', { class: 'nav' },
       navItem({ v: 'myturn' }, 'My turn', icon('turn'), myTurnCount()),
       navItem({ v: 'review' }, 'Review', icon('review'), reviewCount()),
@@ -2306,7 +2306,7 @@ function viewMyTurn() {
     h('div', { class: 'sechead' }, h('h3', { text: title }), h('span', { class: 'ct', text: String(list.length) })),
     list.length ? h('div', {}, list.map(taskRow)) : h('div', { class: 'colempty', text: emptyTxt }));
   const head = pageHead('My turn', h('span', { text: `${hello} · ${now.length ? `${now.length} waiting on you` : 'Nothing is waiting on you'}` }),
-    isPhone() ? h('button', { class: 'x', 'aria-label': 'Search', onclick: () => cmdk.open() }, icon('search')) : h('button', { class: 'btn pri', onclick: () => openCreate() }, icon('plus', 16), 'New task'));
+    isPhone() ? null : h('button', { class: 'btn pri', onclick: () => openCreate() }, icon('plus', 16), 'New task'));
   // a team of one: a quiet nudge to bring the others in (until someone joins, or the admin hides it)
   const lonely = isAdmin() && S.members.length < 2 && !S.invites.length && !store.get('hideInviteNudge.' + S.ws.id, false) ? h('div', { class: 'info invite-nudge', role: 'note' },
     h('span', { text: 'It’s just you here so far. Ovrto works best when the whole team is in.' }),
@@ -3703,7 +3703,7 @@ const cmdk = (() => {
         { label: 'Go to My turn', fn: () => go({ v: 'myturn' }) }, { label: 'Open notifications', fn: () => openNotifs() }, ...(isAdmin() ? [{ label: 'Add members', fn: () => openSettings('workspace', 'invites') }] : []), { label: 'Go to Review', fn: () => go({ v: 'review' }) },
         { label: 'Go to Work', fn: () => go({ v: 'work' }) }, { label: 'Go to Bugs', fn: () => go({ v: 'bugs' }) }, { label: 'Go to Sprint', fn: () => go({ v: 'sprint' }) },
         { label: 'Go to Clients', fn: () => go({ v: 'clients' }) }, { label: 'Go to All tasks', fn: () => go({ v: 'all' }) }, { label: 'Go to Projects', fn: () => go({ v: 'projects' }) }, { label: 'Go to Access', fn: () => go({ v: 'vault' }) }, { label: 'Going on leave', fn: () => openLeave() },
-        ...S.views.map(v => ({ label: 'View: ' + v.name, fn: () => go({ v: 'view', id: v.id }) })), ...S.projects.map(p => ({ label: 'Project: ' + p.name, fn: () => go({ v: 'project', id: p.id }) })),
+        ...S.views.map(v => ({ label: 'View: ' + v.name, fn: () => go({ v: 'view', id: v.id }) })), 
         { label: 'Open chat', fn: () => go({ v: 'chat' }) }, ...(isAdmin() ? [{ label: 'Client pages (status links)', fn: () => openSettings('workspace', 'clientlinks') }, { label: 'Insights', fn: () => go({ v: 'insights' }) }] : []), { label: 'New message to…', fn: () => pickDmPerson() }, { label: 'New channel…', fn: () => newChannel() },
         { label: 'Import tasks from a file…', fn: () => openImport() }, { label: 'Download the import template', fn: () => downloadTemplate() }, { label: 'Export…', fn: () => openExport() }, { label: 'Settings', fn: () => openSettings(isAdmin() ? 'workspace' : 'me') }, { label: 'Help & tours', fn: () => openHelp() },
         { label: 'Switch theme', fn: () => savePrefs({ theme: S.prefs.theme === 'dark' ? 'light' : 'dark' }) },
@@ -3846,7 +3846,7 @@ addEventListener('online', () => { if (S.ws) { flushOutbox(); setupRealtime(); c
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { checkUpdate(); if (S.ws) { flushOutbox(); setupRealtime(); catchUp(); } } });
 
 /* a new version was uploaded: phones (and apps saved to the home screen) pick it up by themselves */
-const BUILD = 'b7660ab6f9a1';
+const BUILD = '44d2f66921d7';
 let updLast = 0, updShown = false;
 async function checkUpdate(force) {
   if (!force && Date.now() - updLast < 60000) return; updLast = Date.now();
@@ -5590,7 +5590,7 @@ function viewInsights() {
   loadInsightActs(); track('insights');
   const days = insightsState.days;
   const seg = h('div', { class: 'seg', role: 'group', 'aria-label': 'Period' }, ...[[14, '2 weeks'], [30, '30 days'], [90, '90 days']].map(([d, l]) => h('button', { 'aria-pressed': String(days === d), onclick: () => { insightsState.days = d; render(); } }, l)));
-  const head = pageHead('Insights', h('span', { text: 'Where tasks waited, and for how long' }), h('button', { class: 'btn sm', onclick: () => openWeeklyReport() }, icon('export', 14), 'Weekly report'), seg);
+  const head = pageHead('Insights', h('span', { text: 'Where tasks waited, and for how long' }), h('button', { class: 'btn sm' + (isPhone() ? ' icon' : ''), 'aria-label': 'Weekly report', title: 'Weekly report', onclick: () => openWeeklyReport() }, icon('export', 14), isPhone() ? null : 'Weekly report'), seg);
   if (!insightsState.acts) return [head, h('div', { class: 'scroll' }, insightsState.error ? h('p', { class: 'note', style: { padding: '20px' }, text: insightsState.error }) : loadingRow('Reading the history of every task…'))];
   const d = insightsData(days);
   if (!d.people.length && !d.done) return [head, h('div', { class: 'scroll' }, emptyState('INSIGHTS', 'Not enough history yet. Insights fill in as tasks move between people.', null))];
@@ -5714,7 +5714,7 @@ function projectTabs() {
 
 /* the list of all projects, clients first */
 function viewProjects() {
-  const tools = h('div', { class: 'tools' }, h('button', { class: 'btn pri', 'data-new-project': '1', onclick: () => openNewProject() }, icon('plus', 16), 'New project'));
+  const tools = h('div', { class: 'tools' }, h('button', { class: 'btn pri' + (isPhone() ? ' icon' : ''), 'data-new-project': '1', 'aria-label': 'New project', title: 'New project', onclick: () => openNewProject() }, icon('plus', 16), isPhone() ? null : 'New project'));
   const head = pageHead('Projects', null, tools);
   const card = p => {
     const ts = pTasks(p.id); const left = ts.filter(t => !isClosed(t)).length; const bugs = ts.filter(t => isBug(t) && !isClosed(t)).length;
@@ -6063,10 +6063,12 @@ function viewVault() {
   if (!V.loaded) { loadVault().then(() => render()); return [pageHead('Access'), h('div', { class: 'scroll' }, h('p', { class: 'note', style: { padding: '24px' }, text: 'Loading…' }))]; }
   if (V.unavailable) return [pageHead('Access'), h('div', { class: 'scroll' }, h('div', { class: 'pjpage' }, h('section', { class: 'vcard' }, icon('key', 28), h('h2', { text: 'Access is almost ready' }), h('p', { text: 'Its database part is waiting to be switched on. Check back soon.' }))))];
   const me_ = myKey(); const unlocked = vaultUnlocked();
+  const extra = [unlocked ? { label: 'Lock now', icon: 'lock', fn: () => vaultLock() } : null, isAdmin() ? { label: 'Keepers…', icon: 'gear', fn: () => openKeepers() } : null].filter(Boolean);
   const tools = h('div', { class: 'tools' },
-    unlocked ? h('button', { class: 'btn icon ghost', title: 'Lock', 'aria-label': 'Lock', onclick: () => vaultLock() }, icon('lock')) : null,
-    isAdmin() ? h('button', { class: 'btn icon ghost', title: 'Keepers', 'aria-label': 'Keepers', onclick: () => openKeepers() }, icon('gear')) : null,
-    unlocked ? h('button', { class: 'btn pri', 'data-new-login': '1', onclick: () => openLogin() }, icon('plus', 16), isPhone() ? 'Login' : 'Add login') : null);
+    isPhone() ? (extra.length ? h('button', { class: 'btn icon ghost', title: 'More', 'aria-label': 'More', onclick: e => menu(e.currentTarget, extra) }, icon('more')) : null) : [
+      unlocked ? h('button', { class: 'btn icon ghost', title: 'Lock', 'aria-label': 'Lock', onclick: () => vaultLock() }, icon('lock')) : null,
+      isAdmin() ? h('button', { class: 'btn icon ghost', title: 'Keepers', 'aria-label': 'Keepers', onclick: () => openKeepers() }, icon('gear')) : null],
+    unlocked ? h('button', { class: 'btn pri' + (isPhone() ? ' icon' : ''), 'data-new-login': '1', 'aria-label': 'Add login', title: 'Add login', onclick: () => openLogin() }, icon('plus', 16), isPhone() ? null : 'Add login') : null);
   const head = pageHead('Access', h('span', { text: 'Logins for servers, stores and dashboards. Locked on your device.' }), tools);
   let body;
   if (!me_) body = vaultSetupCard();
@@ -6197,7 +6199,7 @@ function openLoginView(item) {
     const people = h('div', { class: 'pjlist' }, hs.map(g => h('div', { class: 'pjrow' }, avatar(prof(g.user_id), { size: 'xs' }),
       h('span', { class: 'grow' }, h('b', { text: dname(prof(g.user_id)) || 'Someone' }), h('span', { class: 'sm mute', text: [keepers().includes(g.user_id) ? 'Keeper' : null, g.until ? 'until ' + fmtDate(g.until) : null, g.granted_by && g.granted_by !== g.user_id ? 'shared by ' + first(prof(g.granted_by)) : null].filter(Boolean).join(' · ') })),
       (g.user_id !== uid() && (mineCreator || g.granted_by === uid())) || g.user_id === uid() ? h('button', { class: 'btn sm ghost', onclick: () => { closeSheet(true); unshare(item, g.user_id); } }, g.user_id === uid() ? 'Leave' : 'Remove') : null)));
-    body.replaceChildren(
+    body.replaceChildren(...[
       h('div', { class: 'vhead' }, h('span', { class: 'vkind', text: item.kind }), item.project_id ? h('span', { class: 'sm mute', text: pjOf(item.project_id)?.name || '' }) : null),
       item.url ? h('div', { class: 'vline' }, h('span', { class: 'sm mute', text: 'Link' }), h('a', { class: 'vval', href: /^\w+:\/\//.test(item.url) ? item.url : 'https://' + item.url, target: '_blank', rel: 'noopener', text: item.url })) : null,
       line('Username', sec.username), line('Password', sec.password, true), sec.notes ? h('div', { class: 'vline col' }, h('span', { class: 'sm mute', text: 'Notes' }), h('p', { class: 'sm', style: { margin: 0, whiteSpace: 'pre-wrap' }, text: sec.notes })) : null,
@@ -6205,7 +6207,7 @@ function openLoginView(item) {
       h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px' } },
         h('button', { class: 'btn', onclick: e => pickShare(e.currentTarget, item) }, icon('invite', 16), 'Share with…'),
         h('button', { class: 'btn ghost', onclick: () => { closeSheet(true); openLogin(item, sec); } }, 'Edit'),
-        mineCreator ? h('button', { class: 'btn ghost danger', onclick: e => confirmIn(sh, { text: `Delete “${item.name}” for everyone?`, yes: 'Delete', danger: true, onYes: async () => { closeSheet(true); const { error } = await sb.from('vault_items').delete().eq('id', item.id); if (error) return toast(errText(error)); V.items = V.items.filter(i => i.id !== item.id); V.grants = V.grants.filter(g => g.item_id !== item.id); toast('Login deleted'); refresh(); } }) }, 'Delete') : null));
+        mineCreator ? h('button', { class: 'btn ghost danger', onclick: e => confirmIn(sh, { text: `Delete “${item.name}” for everyone?`, yes: 'Delete', danger: true, onYes: async () => { closeSheet(true); const { error } = await sb.from('vault_items').delete().eq('id', item.id); if (error) return toast(errText(error)); V.items = V.items.filter(i => i.id !== item.id); V.grants = V.grants.filter(g => g.item_id !== item.id); toast('Login deleted'); refresh(); } }) }, 'Delete') : null)].filter(Boolean));
   } });
 }
 function memberOptions(exclude = []) {
@@ -6314,8 +6316,8 @@ async function openLeave() {
       if (!vaultUnlocked()) { const p = passField('lvPass', 'Your access passphrase', 'current-password'); const b = h('button', { class: 'btn' }, 'Unlock');
         b.addEventListener('click', async () => { if (await vaultUnlock(p.value)) drawItems(); else toast('Wrong passphrase'); });
         return itemsPart.replaceChildren(h('p', { class: 'sm mute', text: `Unlock to share your ${plural(myItems.length, 'login')} until you’re back.` }), h('div', { style: { display: 'flex', gap: '6px' } }, pwEye(p), b), h('button', { class: 'lnk sm', onclick: () => openVaultForgot() }, 'Forgot your passphrase?')); }
-      itemsPart.replaceChildren(h('div', { class: 'pjlist lvlist' }, myItems.map(i => h('label', { class: 'pjrow' }, box(iSel, i.id), h('span', { class: 'vkind', text: i.kind }), h('span', { class: 'grow' }, h('b', { text: i.name }), h('span', { class: 'sm mute', text: pjOf(i.project_id)?.name || '' }))))),
-        cover && !V.keys[cover] ? h('p', { class: 'sm pjalert', text: `${first(prof(cover))} hasn’t set up access yet. They’ll be asked to, and a keeper can share these with them.` }) : null);
+      itemsPart.replaceChildren(...[h('div', { class: 'pjlist lvlist' }, myItems.map(i => h('label', { class: 'pjrow' }, box(iSel, i.id), h('span', { class: 'vkind', text: i.kind }), h('span', { class: 'grow' }, h('b', { text: i.name }), h('span', { class: 'sm mute', text: pjOf(i.project_id)?.name || '' }))))),
+        cover && !V.keys[cover] ? h('p', { class: 'sm pjalert', text: `${first(prof(cover))} hasn’t set up access yet. They’ll be asked to, and a keeper can share these with them.` }) : null].filter(Boolean));
     };
     coverBtn.addEventListener('click', e => picker(e.currentTarget, { options: memberOptions([uid()]).map(o => Object.assign(o, { sub: '' })), value: cover, placeholder: 'Who covers you?', onPick: v => { cover = v; coverBtn.textContent = dname(prof(v)); drawItems(); sync(); } }));
     const note = autoGrow(h('textarea', { id: 'lvNote', rows: '2', placeholder: 'Anything they should know: who to call, what is urgent', style: { width: '100%' } }));
