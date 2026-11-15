@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-oeXGHE9cCifFrbNCd2sdMXHHrRL0/iKc+PJaQha/olE=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-UGCs2BUBXFtrJOU0Op2a3FyiA6hy4KHFPF+d0tlJQK4=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-oeXGHE9cCifFrbNCd2sdMXHHrRL0/iKc+PJaQha/olE=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-VlW9zLuRCaQu2wmQ2LVhVNxl/bVwXti3eHZN9OmgQ54=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<meta name="ovrto-build" content="dc78ca4f1275">
+<meta name="ovrto-build" content="789743500bb8">
 <title>Ovrto</title>
 <meta name="description" content="Over to you. Every task shows whose turn it is.">
 <meta name="theme-color" content="#0D0D0F">
@@ -1664,7 +1664,7 @@ const DEFAULT_COLS = ['key', 'title', 'type', 'status', 'developer', 'priority',
 function routeConfig(r = S.route) {
   if (BUILTIN[r.v]?.config) return BUILTIN[r.v].config();
   if (r.v === 'view') { const v = S.views.find(x => x.id === r.id); if (v) return Object.assign({ filters: [], group: 'status', sort: 'priority', layout: 'board', columns: DEFAULT_COLS }, clone(v.config)); }
-  if (r.v === 'project') return { filters: [{ f: 'project', op: 'any', v: [r.id] }], group: 'status', sort: 'priority', layout: S.prefs?.layout || 'board', columns: DEFAULT_COLS };
+  if (r.v === 'project') return { filters: [], group: 'status', sort: 'priority', layout: S.prefs?.layout || 'board', columns: DEFAULT_COLS };
   return BUILTIN.all.config();
 }
 function routeTitle(r = S.route) {
@@ -1758,7 +1758,8 @@ function matches(t, flt) {
 let searchQ = '';
 function visibleTasks(cfg = vc()) {
   const q = searchQ.trim().toLowerCase();
-  return S.tasks.filter(t => matches(t, cfg.filters || []) && (!q || `${taskKey(t)} ${t.title} ${t.description}`.toLowerCase().includes(q)));
+  const pj = S.route.v === 'project' ? S.route.id : null; // a project page shows only its own tasks, without a filter chip
+  return S.tasks.filter(t => (!pj || t.project_id === pj) && matches(t, cfg.filters || []) && (!q || `${taskKey(t)} ${t.title} ${t.description}`.toLowerCase().includes(q)));
 }
 const SORTS = {
   priority: (a, b) => ((a.priority || 9) - (b.priority || 9)) || (b.updated_at || '').localeCompare(a.updated_at || ''),
@@ -3742,7 +3743,7 @@ addEventListener('online', () => { if (S.ws) { flushOutbox(); setupRealtime(); c
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { checkUpdate(); if (S.ws) { flushOutbox(); setupRealtime(); catchUp(); } } });
 
 /* a new version was uploaded: phones (and apps saved to the home screen) pick it up by themselves */
-const BUILD = 'dc78ca4f1275';
+const BUILD = '789743500bb8';
 let updLast = 0, updShown = false;
 async function checkUpdate(force) {
   if (!force && Date.now() - updLast < 60000) return; updLast = Date.now();
