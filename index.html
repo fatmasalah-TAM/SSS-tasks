@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-oeXGHE9cCifFrbNCd2sdMXHHrRL0/iKc+PJaQha/olE=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-VlW9zLuRCaQu2wmQ2LVhVNxl/bVwXti3eHZN9OmgQ54=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-oeXGHE9cCifFrbNCd2sdMXHHrRL0/iKc+PJaQha/olE=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-YWkSrQp2uDSPKxsd4EL+Sa7F5fur88Uik+8lqiaXFuc=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<meta name="ovrto-build" content="789743500bb8">
+<meta name="ovrto-build" content="7ce3163cbd89">
 <title>Ovrto</title>
 <meta name="description" content="Over to you. Every task shows whose turn it is.">
 <meta name="theme-color" content="#0D0D0F">
@@ -2469,6 +2469,7 @@ function openMore() {
       h('button', { class: 'more-me', onclick: () => { closeSheet(true); openSettings('me'); } }, avatar(m, { size: 'lg' }), h('span', { class: 'who' }, h('b', { text: dname(m) }), h('span', { class: 'sm mute', text: m?.email || '' })), icon('chev', 16)),
       h('div', { class: 'more-g' },
         it('bell', 'Notifications', () => openNotifs(), n ? h('span', { class: 'badge', text: n > 99 ? '99+' : String(n) }) : null),
+        it('folder', 'Projects', () => go({ v: 'projects' })),
         canInvite() ? it('invite', 'Add members', () => openInviteSheet()) : null,
         isAdmin() ? it('chart', 'Insights', () => go({ v: 'insights' })) : null,
         isAdmin() ? it('export', 'Weekly report', () => openWeeklyReport()) : null,
@@ -3743,7 +3744,7 @@ addEventListener('online', () => { if (S.ws) { flushOutbox(); setupRealtime(); c
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { checkUpdate(); if (S.ws) { flushOutbox(); setupRealtime(); catchUp(); } } });
 
 /* a new version was uploaded: phones (and apps saved to the home screen) pick it up by themselves */
-const BUILD = '789743500bb8';
+const BUILD = '7ce3163cbd89';
 let updLast = 0, updShown = false;
 async function checkUpdate(force) {
   if (!force && Date.now() - updLast < 60000) return; updLast = Date.now();
