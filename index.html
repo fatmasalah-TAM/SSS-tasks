@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-oeXGHE9cCifFrbNCd2sdMXHHrRL0/iKc+PJaQha/olE=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-5dlSWamn0AphFRFgzIdjZtmOpzCIXiq8J/4HhaAL554=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-oeXGHE9cCifFrbNCd2sdMXHHrRL0/iKc+PJaQha/olE=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-BtbbKVKfdDlQIssDF5xjp0Eu9XfLyI+a7tzB5y6kWoQ=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<meta name="ovrto-build" content="e7dba0d47a90">
+<meta name="ovrto-build" content="a9de42a37d9e">
 <title>Ovrto</title>
 <meta name="description" content="Over to you. Every task shows whose turn it is.">
 <meta name="theme-color" content="#0D0D0F">
@@ -767,7 +767,7 @@ kbd{border-radius:5px;border-bottom-width:1px}
 .brand svg,.wordmark,.cp-brand{color:var(--accent-ink,#2A44B0)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .brand svg,:root:not([data-theme="light"]) .wordmark,:root:not([data-theme="light"]) .cp-brand{color:#8FA3FF}}
 :root[data-theme="dark"] .brand svg,:root[data-theme="dark"] .wordmark,:root[data-theme="dark"] .cp-brand{color:#8FA3FF}
-.pw-wrap{position:relative;display:block}
+.pw-wrap{position:relative;display:block;flex:1 1 180px;min-width:0}
 .pw-wrap input{width:100%;padding-inline-end:44px}
 .pw-eye{position:absolute;inset-inline-end:4px;top:50%;transform:translateY(-50%);width:38px;height:38px;border:0;background:none;color:var(--mute);display:grid;place-items:center;border-radius:8px;cursor:pointer}
 .pw-eye:focus-visible{outline:2px solid var(--accent)}
@@ -3367,7 +3367,7 @@ function setMe(body) {
   body.append(panel('Language', 'lang', langPanel()));
   const np = h('input', { type: 'password', id: 'newPw', minlength: '6', placeholder: 'New password', autocomplete: 'new-password', 'aria-label': 'New password' });
   body.append(panel('Account', 'account', h('div', { class: 'pbody' },
-    h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } }, np, h('button', { class: 'btn', onclick: async e => { if (np.value.length < 6) return toast('Use at least 6 characters'); const done = busy(e.currentTarget, 'Saving…'); const { error } = await sb.auth.updateUser({ password: np.value }); done(); if (error) toast(errText(error)); else { np.value = ''; toast('Password changed'); } } }, 'Change password')),
+    h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } }, pwEye(np), h('button', { class: 'btn', onclick: async e => { if (np.value.length < 6) return toast('Use at least 6 characters'); const done = busy(e.currentTarget, 'Saving…'); const { error } = await sb.auth.updateUser({ password: np.value }); done(); if (error) toast(errText(error)); else { np.value = ''; toast('Password changed'); } } }, 'Change password')),
     h('button', { class: 'lnk sm', 'data-reset-mail': '1', style: { alignSelf: 'flex-start' }, onclick: async e => { const done = busy(e.currentTarget, 'Sending…'); const { error } = await sb.auth.resetPasswordForEmail(me()?.email || S.user?.email, { redirectTo: location.origin + location.pathname }); done(); toast(error ? errText(error) : `Reset link sent to ${me()?.email || 'your email'}`); } }, 'Forgot your password? Email me a reset link'),
     h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } }, isAdmin() ? h('button', { class: 'btn', onclick: () => openCreateWs() }, icon('plus', 14), 'Create a workspace') : null, h('button', { class: 'btn danger', onclick: () => signOut() }, 'Sign out')))));
 }
@@ -3798,7 +3798,7 @@ addEventListener('online', () => { if (S.ws) { flushOutbox(); setupRealtime(); c
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { checkUpdate(); if (S.ws) { flushOutbox(); setupRealtime(); catchUp(); } } });
 
 /* a new version was uploaded: phones (and apps saved to the home screen) pick it up by themselves */
-const BUILD = 'e7dba0d47a90';
+const BUILD = 'a9de42a37d9e';
 let updLast = 0, updShown = false;
 async function checkUpdate(force) {
   if (!force && Date.now() - updLast < 60000) return; updLast = Date.now();
@@ -6040,7 +6040,7 @@ function vaultSetupCard() {
   return h('section', { class: 'vcard' }, icon('key', 28), h('h2', { text: 'Set up your access' }),
     h('p', { text: 'Pick a passphrase only you know. It unlocks the logins shared with you on this device. Ovrto never sees it.' }),
     h('p', { class: 'sm mute', text: ks ? `If you forget it, ${ks} can share your logins with you again.` : 'Write it down somewhere safe. If you forget it, someone who has the logins must share them with you again.' }),
-    a, b, go_);
+    pwEye(a), pwEye(b), go_);
 }
 function vaultUnlockCard() {
   const a = passField('vpass', 'Your passphrase', 'current-password'); const go_ = h('button', { class: 'btn pri' }, 'Unlock');
@@ -6048,7 +6048,7 @@ function vaultUnlockCard() {
   go_.addEventListener('click', run); a.addEventListener('keydown', e => { if (e.key === 'Enter') run(); });
   setTimeout(() => a.focus(), 60);
   return h('section', { class: 'vcard' }, icon('lock', 28), h('h2', { text: 'Unlock access' }), h('p', { text: `${plural(V.items.length, 'login')} shared with you. It locks again after 15 minutes.` }),
-    waitingPeople().length ? h('p', { class: 'sm pjalert', text: `${waitingPeople().map(p => first(prof(p))).join(', ')} made a new passphrase. Unlock to give their logins back.` }) : null, a, go_,
+    waitingPeople().length ? h('p', { class: 'sm pjalert', text: `${waitingPeople().map(p => first(prof(p))).join(', ')} made a new passphrase. Unlock to give their logins back.` }) : null, pwEye(a), go_,
     h('button', { class: 'lnk sm', 'data-forgot': '1', onclick: () => openVaultForgot() }, 'Forgot your passphrase?'));
 }
 /* Nobody can email a passphrase back: Ovrto never had it. So "forgot" makes a new one, and the logins come back
@@ -6104,7 +6104,7 @@ function openVaultNewPass() {
     sh.append(h('div', { class: 'sbody' },
       h('p', { text: 'Ovrto never knew your passphrase, so it can’t send it to you. Make a new one instead.' }),
       h('p', { class: 'sm mute', text: ks.length ? `Your logins will come back automatically the next time ${ks.join(' or ')} opens Access.` : 'Your logins will come back the next time someone who has them opens Access.' }),
-      h('label', { class: 'field' }, 'New passphrase', a), h('label', { class: 'field' }, 'Type it again', b)),
+      h('label', { class: 'field' }, 'New passphrase', pwEye(a)), h('label', { class: 'field' }, 'Type it again', pwEye(b))),
       h('div', { class: 'sfoot' }, h('span', { class: 'sp' }), h('button', { class: 'btn ghost', onclick: () => closeSheet() }, 'Cancel'), go_));
     setTimeout(() => a.focus(), 80);
   } });
@@ -6265,7 +6265,7 @@ async function openLeave() {
       if (!myItems.length) return itemsPart.replaceChildren(h('p', { class: 'note', text: 'No logins shared with you.' }));
       if (!vaultUnlocked()) { const p = passField('lvPass', 'Your access passphrase', 'current-password'); const b = h('button', { class: 'btn' }, 'Unlock');
         b.addEventListener('click', async () => { if (await vaultUnlock(p.value)) drawItems(); else toast('Wrong passphrase'); });
-        return itemsPart.replaceChildren(h('p', { class: 'sm mute', text: `Unlock to share your ${plural(myItems.length, 'login')} until you’re back.` }), h('div', { style: { display: 'flex', gap: '6px' } }, p, b), h('button', { class: 'lnk sm', onclick: () => openVaultForgot() }, 'Forgot your passphrase?')); }
+        return itemsPart.replaceChildren(h('p', { class: 'sm mute', text: `Unlock to share your ${plural(myItems.length, 'login')} until you’re back.` }), h('div', { style: { display: 'flex', gap: '6px' } }, pwEye(p), b), h('button', { class: 'lnk sm', onclick: () => openVaultForgot() }, 'Forgot your passphrase?')); }
       itemsPart.replaceChildren(h('div', { class: 'pjlist lvlist' }, myItems.map(i => h('label', { class: 'pjrow' }, box(iSel, i.id), h('span', { class: 'vkind', text: i.kind }), h('span', { class: 'grow' }, h('b', { text: i.name }), h('span', { class: 'sm mute', text: pjOf(i.project_id)?.name || '' }))))),
         cover && !V.keys[cover] ? h('p', { class: 'sm pjalert', text: `${first(prof(cover))} hasn’t set up access yet. They’ll be asked to, and a keeper can share these with them.` }) : null);
     };
