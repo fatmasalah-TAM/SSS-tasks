@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-oeXGHE9cCifFrbNCd2sdMXHHrRL0/iKc+PJaQha/olE=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-WMjenBJgDyZiwDmM3nYCr6xfD32q/iWa2571UU4usaI=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-oeXGHE9cCifFrbNCd2sdMXHHrRL0/iKc+PJaQha/olE=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-H4/FXBFGovWpR8RozrG6a+BS01hdpQIP5/8Vw8v/+jk=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<meta name="ovrto-build" content="6898a263571d">
+<meta name="ovrto-build" content="3c4d3f75ab69">
 <title>Ovrto</title>
 <meta name="description" content="Over to you. Every task shows whose turn it is.">
 <meta name="theme-color" content="#0D0D0F">
@@ -1175,6 +1175,12 @@ body:has(.sheet) .toasts{bottom:calc(88px + var(--sab))}
 .tstat{display:flex;flex-direction:column;justify-content:flex-start}
 .quickacts{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
 
+.thero .cosplit{margin-top:12px;background:rgb(255 255 255/.55);border-radius:12px;display:inline-flex;padding:3px}
+.thero .cosplit button{border:0;background:none;color:var(--band-fg);padding:6px 12px;border-radius:9px;font-size:13px}
+.thero .cosplit button[aria-pressed="true"]{background:var(--act);color:var(--on-act)}
+:root[data-theme="dark"] .thero .cosplit{background:rgb(0 0 0/.3)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .thero .cosplit{background:rgb(0 0 0/.3)}}
+
 </style>
 </head>
 <body>
@@ -2087,7 +2093,7 @@ function renderSide() {
       ...sideOrder([
         ['home', homeKind() ? navItem({ v: 'home' }, HOME_NAME[homeKind()], icon(HOME_ICON[homeKind()])) : null],
         ['myturn', navItem({ v: 'myturn' }, 'My turn', icon('turn'), myTurnCount())],
-        ['company', canSeeMoney() ? navItem({ v: 'company' }, 'Company', icon('company')) : null],
+        ['company', canSeeSomeMoney() ? navItem({ v: 'company' }, canSeeMoney() ? 'Company' : 'Hardware', icon('company')) : null],
         ['review', navItem({ v: 'review' }, 'Review', icon('review'), reviewCount())],
         ['chat', navItem({ v: 'chat' }, 'Chat', icon('chat'), null, chatBadge() || null)],
         ['work', navItem({ v: 'work' }, 'Work', icon('work'))],
@@ -2733,7 +2739,7 @@ function openMore() {
       morePins().length ? h('div', { class: 'more-g', 'data-dept-pins': '1' }, h('div', { class: 'more-h', text: `For ${myDept().l}` }), morePins().map(v => it(PAGE_ICON[v], PAGE_LABEL[v], () => go({ v })))) : null,
       h('div', { class: 'more-g' },
         it('bell', 'Notifications', () => openNotifs(), n ? h('span', { class: 'badge', text: n > 99 ? '99+' : String(n) }) : null),
-        canSeeMoney() && !pinned('company') ? it('company', 'Company', () => go({ v: 'company' })) : null,
+        canSeeSomeMoney() && !pinned('company') ? it('company', canSeeMoney() ? 'Company' : 'Hardware', () => go({ v: 'company' })) : null,
         pinned('projects') ? null : it('folder', 'Projects', () => go({ v: 'projects' })),
         pinned('vault') ? null : it('key', 'Access', () => go({ v: 'vault' })),
         it('leave', 'Going on leave', () => openLeave()),
@@ -4043,7 +4049,7 @@ addEventListener('online', () => { if (S.ws) { flushOutbox(); setupRealtime(); c
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { checkUpdate(); if (S.ws) { flushOutbox(); setupRealtime(); catchUp(); } } });
 
 /* a new version was uploaded: phones (and apps saved to the home screen) pick it up by themselves */
-const BUILD = '6898a263571d';
+const BUILD = '3c4d3f75ab69';
 let updLast = 0, updShown = false;
 async function checkUpdate(force) {
   if (!force && Date.now() - updLast < 60000) return; updLast = Date.now();
@@ -5897,7 +5903,7 @@ function clientWhatsApp(cf, o, l) {
    A project is 'client' (work we do for a customer) or 'internal' (something we build for ourselves).
    Everything here is derived from tasks that already exist, so nobody has to keep a second record up to date. */
 const P_TABS0 = [['overview', 'Overview'], ['work', 'Work'], ['bugs', 'Bugs'], ['docs', 'Docs']];
-const pTabs = () => canSeeMoney() ? [...P_TABS0, ['money', 'Money']] : P_TABS0;
+const pTabs = () => canSeeProjMoney(S.projects.find(p => p.id === S.route.id)) ? [...P_TABS0, ['money', 'Money']] : P_TABS0;
 const pTab = () => (S.route.v === 'project' && pTabs().some(t => t[0] === S.route.tab) ? S.route.tab : 'overview');
 const pTasks = id => S.tasks.filter(t => t.project_id === id);
 const pKind = p => (p?.kind === 'client' ? 'client' : 'internal');
@@ -5919,7 +5925,7 @@ function viewProjects() {
     const ts = pTasks(p.id); const left = ts.filter(t => !isClosed(t)).length; const bugs = ts.filter(t => isBug(t) && !isClosed(t)).length;
     return h('button', { class: 'pjcard', 'data-project': p.id, onclick: () => go({ v: 'project', id: p.id }) },
       h('span', { class: 'swatch', style: { background: p.color } }),
-      h('span', { class: 'grow' }, h('b', { text: p.name }), h('span', { class: 'sm mute', text: [plural(left, 'task') + ' left', bugs ? plural(bugs, 'open bug') : null].filter(Boolean).join(' · ') })),
+      h('span', { class: 'grow' }, h('b', { text: p.name }), h('span', { class: 'sm mute', text: [pDept(p) === 'hardware' ? 'Hardware' : null, plural(left, 'task') + ' left', bugs ? plural(bugs, 'open bug') : null].filter(Boolean).join(' · ') })),
       h('span', { class: 'go' }, icon('back', 16)));
   };
   const group = (title, hint, list) => h('section', { class: 'pjgroup' }, h('h2', { text: title }),
@@ -5928,13 +5934,13 @@ function viewProjects() {
   const loose = S.tasks.filter(t => !t.project_id && !isClosed(t)).length;
   const body = !S.projects.length
     ? emptyState('0 PROJECTS', 'Group your work by client or by project. Each one gets its own page.', { label: 'New project', fn: () => openNewProject() })
-    : h('div', { class: 'pjpage' }, canSeeMoney() && M.loaded !== S.ws.id ? (loadMoney().then(() => refresh()), null) : moneyTotals(), group('Clients', 'No clients yet.', cl), group('Our own projects', 'No internal projects yet.', own),
+    : h('div', { class: 'pjpage' }, canSeeSomeMoney() && M.loaded !== S.ws.id ? (loadMoney().then(() => refresh()), null) : moneyTotals(), group('Clients', 'No clients yet.', cl), group('Our own projects', 'No internal projects yet.', own),
       loose ? h('p', { class: 'note' }, `${plural(loose, 'open task')} not in any project. `, h('button', { class: 'lnk', onclick: () => go({ v: 'all' }) }, 'See all tasks')) : null);
   return [head, h('div', { class: 'scroll' }, body)];
 }
 function openNewProject() {
   openSheet({ title: 'New project', kind: 'center', build: sh => {
-    let kind = null;
+    let kind = null; let dept = ['hardware', 'embedded', 'field', 'support', 'hwlead'].includes(myMember()?.department) ? 'hardware' : 'software';
     const name = h('input', { type: 'text', id: 'npName', placeholder: 'Name', 'aria-label': 'Project name', style: { width: '100%' } });
     const go_ = h('button', { class: 'btn pri', disabled: true }, 'Create');
     const opt = (k, t, s) => h('button', { class: 'kindopt', 'aria-pressed': 'false', 'data-kind': k, onclick: e => { kind = k; $$('.kindopt', sh).forEach(b => b.setAttribute('aria-pressed', String(b === e.currentTarget))); name.placeholder = k === 'client' ? 'Client name, e.g. Palm Hills' : 'Project name, e.g. ERP Finance'; sync(); name.focus(); } }, h('b', { text: t }), h('span', { class: 'sm mute', text: s }));
@@ -5943,12 +5949,13 @@ function openNewProject() {
     name.addEventListener('keydown', e => { if (e.key === 'Enter' && !go_.disabled) go_.click(); });
     go_.addEventListener('click', async () => {
       const n = name.value.trim(); if (!n || !kind) return;
-      const row = { id: uuid(), workspace_id: S.ws.id, name: n, color: kind === 'client' ? '#2A44B0' : '#0B6B70', kind, about: '', docs: [], created_at: nowIso() };
+      const row = { id: uuid(), workspace_id: S.ws.id, name: n, color: kind === 'client' ? '#2A44B0' : '#0B6B70', kind, department: dept, about: '', docs: [], created_at: nowIso() };
       closeSheet(true);
       if (await cfgUpsert('projects', row, `${n} created`)) { track('project_new'); go({ v: 'project', id: row.id }); }
     });
     sh.append(h('div', { class: 'sbody' }, h('div', { class: 'field' }, 'Is this for a client, or our own?',
         h('div', { class: 'kindrow' }, opt('client', 'For a client', 'Work we do for a customer'), opt('internal', 'Our own', 'Something we build for us'))),
+      h('div', { class: 'field' }, 'Software or hardware?', h('div', { class: 'seg', role: 'group', 'data-np-dept': '1' }, [['software', 'Software'], ['hardware', 'Hardware']].map(([v, l]) => h('button', { 'aria-pressed': String(dept === v), 'data-dept-v': v, onclick: e => { dept = v; $$('[data-dept-v]', sh).forEach(b => b.setAttribute('aria-pressed', String(b === e.currentTarget))); } }, l)))),
       h('label', { class: 'field' }, 'Name', name)),
       h('div', { class: 'sfoot' }, h('span', { class: 'sp' }), h('button', { class: 'btn ghost', onclick: () => closeSheet() }, 'Cancel'), go_));
   } });
@@ -5964,7 +5971,7 @@ function viewProject() {
     tab === 'bugs' ? h('button', { class: 'btn pri', onclick: () => openCreate({ type: 'bug', preset: { project_id: p.id } }) }, icon('plus', 16), 'Report bug')
       : tab === 'docs' ? h('button', { class: 'btn pri', 'data-new-doc': '1', onclick: () => openDoc(p) }, icon('plus', 16), 'New doc')
       : h('button', { class: 'btn icon ghost', 'aria-label': 'Project settings', title: 'Project settings', onclick: e => projectMenu(e.currentTarget, p) }, icon('more')));
-  const head = pageHead(p.name, h('span', {}, pKind(p) === 'client' ? 'Client' : 'Our own project', p.about ? ' · ' + p.about : ''), tools, projectTabs());
+  const head = pageHead(p.name, h('span', {}, pKind(p) === 'client' ? 'Client' : 'Our own project', pDept(p) === 'hardware' ? ' · Hardware' : ' · Software', p.about ? ' · ' + p.about : ''), tools, projectTabs());
   const body = tab === 'bugs' ? projectBugs(p) : tab === 'docs' ? projectDocs(p) : tab === 'money' ? projectMoney(p) : projectOverview(p);
   return [head, h('div', { class: 'scroll' }, h('div', { class: 'pjpage' }, body))];
 }
@@ -5993,8 +6000,9 @@ function projectWork(p) {
 function projectMenu(a, p) {
   menu(a, [
     { label: pKind(p) === 'client' ? 'Change to our own project' : 'Change to a client', fn: () => cfgUpsert('projects', Object.assign({}, p, { kind: pKind(p) === 'client' ? 'internal' : 'client' }), 'Project type changed') },
+    isAdmin() || canSeeMoney() ? { label: pDept(p) === 'hardware' ? 'Move to Software' : 'Move to Hardware', fn: () => cfgUpsert('projects', Object.assign({}, p, { department: pDept(p) === 'hardware' ? 'software' : 'hardware' }), pDept(p) === 'hardware' ? 'Moved to Software' : 'Moved to Hardware') } : null,
     { label: 'Rename or delete', icon: 'gear', fn: () => openSettings('items', 'projects') },
-  ]);
+  ].filter(Boolean));
 }
 function projectOverview(p) {
   const ts = pTasks(p.id); const open = ts.filter(t => !isClosed(t)); const bugs = open.filter(isBug);
@@ -6251,17 +6259,22 @@ function openDeployView(d) {
 /* ═════════════ Money: what a project brings in, what it costs, and what is left ═════════════
    Only the workspace owner and the people they pick see any of it (the database enforces this).
    Salaries are never per person: only the team's monthly total, split by the share of time a project takes. */
-const M = { rows: {}, settings: null, salary: null, loaded: null };
+const M = { rows: {}, settings: null, salary: null, hwSalary: null, loaded: null };
 const canSeeMoney = () => !!S.ws && (S.ws.owner_id === uid() || (S.ws.money_viewers || []).includes(uid()));
 const isWsOwner = () => !!S.ws && S.ws.owner_id === uid();
+/* Software / Hardware: the people the owner picks for "hardware money only" (e.g. the hardware CTO) see hardware projects' money */
+const pDept = p => (p && p.department) || 'software';
+const canSeeHwMoney = () => !!S.ws && !canSeeMoney() && (S.ws.money_hw_viewers || []).includes(uid());
+const canSeeSomeMoney = () => canSeeMoney() || canSeeHwMoney();
+const canSeeProjMoney = p => canSeeMoney() || (canSeeHwMoney() && pDept(p) === 'hardware');
 /* salaries: only the owner and the people they pick (e.g. the CEO); other money people see money without them */
 const canSeeSalaries = () => canSeeMoney() && (S.ws.owner_id === uid() || (S.ws.salary_viewers || []).includes(uid()));
 async function loadMoney() {
-  if (!canSeeMoney()) return; const ws = S.ws.id;
+  if (!canSeeSomeMoney()) return; const ws = S.ws.id;
   const [a, b, c] = await Promise.all([sb.from('project_money').select('*').eq('workspace_id', ws), sb.from('money_settings').select('*').eq('workspace_id', ws),
     canSeeSalaries() ? sb.from('team_salaries').select('*').eq('workspace_id', ws) : Promise.resolve({ data: [] })]);
   if (S.ws?.id !== ws) return;
-  M.rows = {}; for (const r of a.data || []) M.rows[r.project_id] = r; M.settings = (b.data || [])[0] || { workspace_id: ws, currency: 'EGP' }; M.salary = canSeeSalaries() ? ((c.data || [])[0]?.team_monthly ?? null) : null; M.loaded = ws;
+  M.rows = {}; for (const r of a.data || []) M.rows[r.project_id] = r; M.settings = (b.data || [])[0] || { workspace_id: ws, currency: 'EGP' }; M.salary = canSeeSalaries() ? ((c.data || [])[0]?.team_monthly ?? null) : null; M.hwSalary = canSeeSalaries() ? ((c.data || [])[0]?.hw_monthly ?? null) : null; M.loaded = ws;
 }
 const moneyOf = pid => M.rows[pid] || { project_id: pid, workspace_id: S.ws.id, contract: {}, payments: [], costs: [], share: null };
 const cur = () => M.settings?.currency || 'EGP';
@@ -6276,7 +6289,8 @@ function moneyMath(pid) {
   const once = (m.costs || []).filter(x => x.every !== 'month').reduce((n, x) => n + (Number(x.amount) || 0), 0);
   const monthly = (m.costs || []).filter(x => x.every === 'month').reduce((n, x) => n + (Number(x.amount) || 0), 0);
   const costs = once + monthly * months;
-  const team = canSeeSalaries() && M.salary && m.share != null ? (Number(M.salary) * Number(m.share) / 100) * months : null;
+  const pay = pDept(S.projects.find(p => p.id === pid)) === 'hardware' ? M.hwSalary : M.salary;
+  const team = canSeeSalaries() && pay && m.share != null ? (Number(pay) * Number(m.share) / 100) * months : null;
   return { value, received, outstanding: value - received, late, costs, monthly, months, before: value - costs, team, net: team == null ? null : value - costs - team, share: m.share };
 }
 /* how much of the team's finished work went to this project lately: a starting point for the share */
@@ -6312,7 +6326,7 @@ function projectMoney(p) {
       : h('p', { class: 'note', text: 'Servers, licences, hardware: anything this project costs besides the team.' })),
     canSeeSalaries() ? sec('The team', ['Edit', () => editShare(p)], h('div', { class: 'pjlist' }, h('div', { class: 'pjrow' }, h('span', { class: 'grow' },
       h('b', { text: x.team != null ? `${fmtMoney(x.team)} so far` : 'Not set yet' }),
-      h('span', { class: 'sm mute', text: M.salary ? (m.share != null ? `${m.share}% of the team’s time × ${fmtMoney(Number(M.salary))} a month × ${x.months.toFixed(1)} months` : `Set what share of the team’s time this project takes${suggestedShare(p.id) != null ? ` (about ${suggestedShare(p.id)}% of tasks done lately)` : ''}`) : 'Set the team’s total monthly salaries first' }))))) : null,
+      h('span', { class: 'sm mute', text: salOf(p) ? (m.share != null ? `${m.share}% of the team’s time × ${fmtMoney(Number(salOf(p)))} a month × ${x.months.toFixed(1)} months` : `Set what share of the team’s time this project takes${suggestedShare(p.id) != null ? ` (about ${suggestedShare(p.id)}% of tasks done lately)` : ''}`) : 'Set the team’s total monthly salaries first' }))))) : null,
     h('section', { class: 'moneysum' }, h('div', { class: 'mrow' }, h('span', { text: 'Contract' }), h('b', { text: fmtMoney(x.value) })), h('div', { class: 'mrow' }, h('span', { text: 'Costs' }), h('b', { text: '− ' + fmtMoney(x.costs) })),
       h('div', { class: 'mrow tot' }, h('span', { text: 'Profit before the team' }), h('b', { text: fmtMoney(x.before) })),
       x.team != null ? [h('div', { class: 'mrow' }, h('span', { text: 'Team' }), h('b', { text: '− ' + fmtMoney(x.team) })), h('div', { class: 'mrow tot' + (x.net < 0 ? ' bad' : '') }, h('span', { text: 'Profit after the team' }), h('b', { text: fmtMoney(x.net) }))] : null),
@@ -6320,14 +6334,23 @@ function projectMoney(p) {
   ];
   return out;
 }
+const salOf = p => pDept(p) === 'hardware' ? M.hwSalary : M.salary;
 function moneyPeople() {
   const ids = [S.ws.owner_id, ...(S.ws.money_viewers || [])].filter(Boolean);
   return h('section', {}, h('h2', {}, 'Who sees money', isWsOwner() ? h('button', { class: 'lnk sm', style: { marginInlineStart: 'auto' }, 'data-money-people': '1', onclick: e => pickMoneyPeople(e.currentTarget) }, 'Change') : null),
     h('div', { class: 'pjpeople' }, ids.map(id => h('span', { class: 'pjperson' }, avatar(prof(id), { size: 'xs' }), h('span', { text: first(prof(id)) || 'Someone' }), id === S.ws.owner_id ? h('span', { class: 'sm mute', text: 'owner' }) : null))),
     h('p', { class: 'note', text: 'Nobody else sees any of this, admins included.' }),
+    h('h2', { class: 'gapt' }, 'Hardware money only', isWsOwner() ? h('button', { class: 'lnk sm', style: { marginInlineStart: 'auto' }, 'data-hw-money-people': '1', onclick: e => pickHwMoneyPeople(e.currentTarget) }, 'Change') : null),
+    (S.ws.money_hw_viewers || []).length ? h('div', { class: 'pjpeople' }, (S.ws.money_hw_viewers || []).map(id => h('span', { class: 'pjperson' }, avatar(prof(id), { size: 'xs' }), h('span', { text: first(prof(id)) || 'Someone' })))) : null,
+    h('p', { class: 'note', text: 'They see contracts and payments of Hardware projects only, and no salaries. For the head of hardware.' }),
     h('h2', { class: 'gapt' }, 'Who sees salaries', isWsOwner() ? h('button', { class: 'lnk sm', style: { marginInlineStart: 'auto' }, 'data-salary-people': '1', onclick: e => pickSalaryPeople(e.currentTarget) }, 'Change') : null),
     h('div', { class: 'pjpeople' }, [S.ws.owner_id, ...(S.ws.salary_viewers || [])].filter(Boolean).map(id => h('span', { class: 'pjperson' }, avatar(prof(id), { size: 'xs' }), h('span', { text: first(prof(id)) || 'Someone' }), id === S.ws.owner_id ? h('span', { class: 'sm mute', text: 'owner' }) : null))),
     h('p', { class: 'note', text: 'Only the team’s monthly total, never per person. The others above see contracts and payments, and profit before the team.' }));
+}
+function pickHwMoneyPeople(anchor) {
+  const all = S.ws.money_viewers || [];
+  picker(anchor, { options: S.members.map(m => m.user_id).filter(id => id !== S.ws.owner_id && !all.includes(id)).map(id => ({ v: id, label: dname(prof(id)) })).sort((a, b) => a.label.localeCompare(b.label)), multi: true, value: S.ws.money_hw_viewers || [], placeholder: 'Who sees hardware money?',
+    onPick: async v => { const list = [...(v || [])]; const { error } = await sb.from('workspaces').update({ money_hw_viewers: list }).eq('id', S.ws.id); if (error) return toast(errText(error)); S.ws.money_hw_viewers = list; toast('Saved'); refresh(); } });
 }
 function pickSalaryPeople(anchor) {
   const can = (S.ws.money_viewers || []);
@@ -6377,19 +6400,20 @@ function editCost(p, y) {
 }
 function editShare(p) {
   const m = moneyOf(p.id); const sug = suggestedShare(p.id);
-  moneyForm('The team on this project', [{ key: 'team', id: 'mTeam', label: 'All salaries together, per month (the whole team)', type: 'number', value: M.salary, ph: 'e.g. 250000' },
+  const hw = pDept(p) === 'hardware';
+  moneyForm('The team on this project', [{ key: 'team', id: 'mTeam', label: hw ? 'All hardware salaries together, per month (the hardware team)' : 'All software salaries together, per month (the software team)', type: 'number', value: salOf(p), ph: 'e.g. 250000' },
     { key: 'share', id: 'mShare', label: `Share of the team’s time on ${p.name}, in %${sug != null ? ` (about ${sug}% of tasks done lately)` : ''}`, type: 'number', value: m.share ?? sug, ph: 'e.g. 20' }],
     async v => {
       if (v.share != null && (v.share < 0 || v.share > 100)) { toast('Share is between 0 and 100'); return false; }
-      if (v.team !== (M.salary ?? null)) { const row = { workspace_id: S.ws.id, team_monthly: v.team, updated_by: uid(), updated_at: nowIso() };
-        const { error } = await sb.from('team_salaries').upsert(row); if (error) { toast(errText(error)); return false; } M.salary = v.team; }
+      if (v.team !== (salOf(p) ?? null)) { const row = { workspace_id: S.ws.id, team_monthly: hw ? M.salary : v.team, hw_monthly: hw ? v.team : M.hwSalary, updated_by: uid(), updated_at: nowIso() };
+        const { error } = await sb.from('team_salaries').upsert(row); if (error) { toast(errText(error)); return false; } if (hw) M.hwSalary = v.team; else M.salary = v.team; }
       return saveMoney(p.id, { share: v.share }, 'Saved');
     });
 }
 /* the money line on the projects list, for those who see money */
 function moneyTotals() {
-  if (!canSeeMoney() || M.loaded !== S.ws?.id) return null;
-  let value = 0, received = 0, late = 0; for (const p of S.projects) { const x = moneyMath(p.id); value += x.value; received += x.received; late += x.late.length; }
+  if (!canSeeSomeMoney() || M.loaded !== S.ws?.id) return null;
+  let value = 0, received = 0, late = 0; for (const p of S.projects.filter(canSeeProjMoney)) { const x = moneyMath(p.id); value += x.value; received += x.received; late += x.late.length; }
   if (!value) return null;
   return h('div', { class: 'pjnums' }, h('div', { class: 'pjnum' }, h('b', { text: fmtMoney(value) }), h('span', { text: 'in contracts' })), h('div', { class: 'pjnum' }, h('b', { text: fmtMoney(received) }), h('span', { text: 'received' })),
     h('div', { class: 'pjnum' }, h('b', { text: fmtMoney(value - received) }), h('span', { text: 'still to come' })), h('div', { class: 'pjnum' + (late ? ' bad' : '') }, h('b', { text: String(late) }), h('span', { text: late === 1 ? 'late payment' : 'late payments' })));
@@ -6399,11 +6423,14 @@ function moneyTotals() {
    One look at the business: money in and still to come, payments that are late, every project's money and progress,
    and who in the team has room. Only the workspace owner and the people they pick for money see it.
    Salaries appear only as the team's monthly total, never per person. */
-function companyData() {
+const HW_DEPTS = ['hardware', 'embedded', 'field', 'support', 'hwlead'];
+/* All / Software / Hardware: the hardware head always sees Hardware */
+const coSplit = () => canSeeMoney() ? store.get('coSplit.' + S.ws.id, 'all') : 'hardware';
+function companyData(split = coSplit()) {
   const today = todayIso(); const month = today.slice(0, 7); const in30 = new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10);
   const week = Date.now() - 7 * 864e5;
   const d = { value: 0, received: 0, monthIn: 0, profit: 0, teamSet: true, late: [], lateAmt: 0, coming: [], projects: [] };
-  for (const p of S.projects) {
+  for (const p of S.projects.filter(p => canSeeProjMoney(p) && (split === 'all' || pDept(p) === split))) {
     const x = moneyMath(p.id); const m = moneyOf(p.id);
     d.value += x.value; d.received += x.received;
     if (x.value) { d.profit += x.net != null ? x.net : x.before; if (x.net == null) d.teamSet = false; }
@@ -6419,19 +6446,21 @@ function companyData() {
   d.late.sort((a, b) => a.y.due.localeCompare(b.y.due)); d.coming.sort((a, b) => a.y.due.localeCompare(b.y.due));
   d.projects.sort((a, b) => (b.x.value - a.x.value) || (b.open - a.open) || a.p.name.localeCompare(b.p.name));
   let people = []; try { people = reportData('this').people; } catch (e) { people = []; }
+  if (split === 'hardware') { const hw = new Set(S.members.filter(m => HW_DEPTS.includes(m.department)).map(m => m.user_id)); people = people.filter(x => hw.has(x.id)); }
   d.people = people;
   return d;
 }
 function viewCompany() {
-  if (!canSeeMoney()) return [h('div', { class: 'scroll' }, pageHead('Company'), emptyState('OWNER ONLY', 'This page shows the business’s money. Only the workspace owner and the people they pick see it.', { label: 'Back to My turn', fn: () => go({ v: 'myturn' }) }))];
+  if (!canSeeSomeMoney()) return [h('div', { class: 'scroll' }, pageHead('Company'), emptyState('OWNER ONLY', 'This page shows the business’s money. Only the workspace owner and the people they pick see it.', { label: 'Back to My turn', fn: () => go({ v: 'myturn' }) }))];
   if (M.loaded !== S.ws.id) { loadMoney().then(() => refresh()); return [h('div', { class: 'scroll' }, pageHead('Company'), h('p', { class: 'note', style: { padding: '20px var(--gr) 0 var(--gl)' }, text: 'Loading…' }))]; }
   const d = companyData();
   const viewers = [S.ws.owner_id, ...(S.ws.money_viewers || [])].filter(Boolean).length;
   const stat = (n, label, cls, sel) => h('button', { class: 'tstat' + (cls ? ' ' + cls : ''), onclick: sel ? () => $(sel)?.scrollIntoView({ behavior: 'smooth', block: 'start' }) : null }, h('b', { text: n }), h('span', { text: label }));
   const monthName = new Date().toLocaleDateString(UI_LOC, { month: 'long' });
   const hero = h('header', { class: 'thero' }, h('div', { class: 'hrow' },
-    h('div', { style: { minWidth: '0', flex: '1' } }, h('h1', { class: 'ptitle', text: S.ws.name }),
-      h('div', { class: 'thsub', text: viewers > 1 ? `The business at a glance · ${viewers} people see this` : 'The business at a glance · only you see this' })),
+    h('div', { style: { minWidth: '0', flex: '1' } }, h('h1', { class: 'ptitle', text: canSeeMoney() ? S.ws.name : 'Hardware' }),
+      h('div', { class: 'thsub', text: !canSeeMoney() ? 'Hardware projects · money and work' : viewers > 1 ? `The business at a glance · ${viewers} people see this` : 'The business at a glance · only you see this' }),
+      canSeeMoney() && S.projects.some(p => pDept(p) === 'hardware') ? h('div', { class: 'seg cosplit', role: 'group', 'data-cosplit': coSplit() }, [['all', 'All'], ['software', 'Software'], ['hardware', 'Hardware']].map(([v, l]) => h('button', { 'aria-pressed': String(coSplit() === v), onclick: () => { store.set('coSplit.' + S.ws.id, v); render(); } }, l))) : null),
     isPhone() ? h('button', { class: 'x', 'data-gsearch': '1', 'aria-label': 'Search', title: 'Search', onclick: () => cmdk.open() }, icon('search', 22)) : null,
     isPhone() ? bellButton() : null));
   const stats = h('div', { class: 'tstats co4' },
@@ -6457,11 +6486,12 @@ function viewCompany() {
       h('div', { class: 'coline mute' }, h('span', { text: [plural(r.open, 'task') + ' left', plural(r.bugs, 'open bug'), `${r.done} done this week`].join(' · ') }), r.lateTasks ? h('span', { class: 'over', text: `${r.lateTasks} late` }) : null)); };
   const capGroups = [['free', 'Can take new tasks'], ['some', 'Room for 1–2 small tasks'], ['full', 'Full this week']];
   const team = h('div', { class: 'cocard static' },
-    canSeeSalaries() ? h('div', { class: 'coline' }, h('span', { text: 'All salaries together' }), h('b', { text: M.salary ? fmtMoney(Number(M.salary)) + ' a month' : 'Not set yet' })) : null,
+    canSeeSalaries() && coSplit() !== 'hardware' ? h('div', { class: 'coline' }, h('span', { text: 'Software salaries together' }), h('b', { text: M.salary ? fmtMoney(Number(M.salary)) + ' a month' : 'Not set yet' })) : null,
+    canSeeSalaries() && coSplit() !== 'software' ? h('div', { class: 'coline' }, h('span', { text: 'Hardware salaries together' }), h('b', { text: M.hwSalary ? fmtMoney(Number(M.hwSalary)) + ' a month' : 'Not set yet' })) : null,
     ...capGroups.map(([k, l]) => { const ps = d.people.filter(x => x.cap[0] === k); return !ps.length ? null : h('div', { class: 'cocap' }, h('span', { class: 'rp-cap ' + k, text: `${l} (${ps.length})` }), h('span', { class: 'notr names', text: ps.length ? ps.map(x => first(prof(x.id)) || x.name).join(', ') : '—' })); }),
     h('p', { class: 'note', text: canSeeSalaries() ? 'Salaries are never shown per person. Room is based on each person’s open and late tasks.' : 'Room is based on each person’s open and late tasks.' }));
   return [h('div', { class: 'scroll turnpage cosite' }, hero, stats,
-    sec('This week', 'co-brief', briefCard()),
+    canSeeMoney() ? sec('This week', 'co-brief', briefCard()) : null,
     nothing ? h('div', { class: 'tsec' }, h('div', { class: 'info', role: 'note', style: { marginTop: '16px' } }, h('span', { text: 'No money yet. Open a project, go to its Money tab and add the contract and payments. They show up here.' }))) : null,
     d.late.length ? sec('Late payments', 'co-late', h('div', { class: 'tlist' }, d.late.map(z => payRow(z, true))), d.late.length) : null,
     sec('Coming in the next 30 days', 'co-coming', d.coming.length ? h('div', { class: 'tlist' }, d.coming.map(z => payRow(z, false))) : h('div', { class: 'colempty', text: 'No payments due in the next 30 days.' }), d.coming.length),
@@ -6484,6 +6514,7 @@ const DEPTS = [
   { k: 'data', g: 'Software', l: 'Data / AI', home: 'home', areas: ['data', 'ai', 'analytics', 'report'], pins: ['work', 'insights'] },
   { k: 'hardware', g: 'Hardware', l: 'Hardware engineering', home: 'myturn', areas: ['gates', 'hardware', 'device', 'signage', 'parking'], pins: ['work', 'bugs', 'projects'] },
   { k: 'embedded', g: 'Hardware', l: 'Embedded / firmware', home: 'home', areas: ['gates', 'firmware', 'embedded', 'device'], pins: ['work', 'bugs', 'vault'] },
+  { k: 'hwlead', g: 'Hardware', l: 'Head of hardware / CTO', home: 'company', areas: ['gates', 'hardware', 'device', 'firmware', 'installation'], pins: ['company', 'projects', 'work', 'bugs'] },
   { k: 'field', g: 'Hardware', l: 'Installation & field', home: 'myturn', areas: ['gates', 'installation', 'site', 'field'], pins: ['work', 'clients', 'vault'] },
   { k: 'support', g: 'Hardware', l: 'Technical support', home: 'bugs', areas: [], pins: ['bugs', 'clients', 'vault'] },
   { k: 'product', g: 'Business', l: 'Product / PM', home: 'home', areas: [], pins: ['company', 'projects', 'insights', 'clients'] },
@@ -6502,7 +6533,7 @@ const myDept = () => deptOf(myMember()?.department);
 const PAGE_LABEL = { get home() { return HOME_NAME[homeKind()] || 'Home'; }, work: 'Work', bugs: 'Bugs', review: 'Review', projects: 'Projects', clients: 'Clients', vault: 'Access', insights: 'Insights', company: 'Company', myturn: 'My turn' };
 const PAGE_ICON = { get home() { return HOME_ICON[homeKind()] || 'turn'; }, work: 'work', bugs: 'bug', review: 'review', projects: 'folder', clients: 'client', vault: 'key', insights: 'chart', company: 'company', myturn: 'turn' };
 /* pages this person may open: Company needs money access, Insights needs admin */
-const pageAllowed = v => v === 'company' ? canSeeMoney() : v === 'insights' ? isAdmin() : v === 'home' ? !!homeKind() : true;
+const pageAllowed = v => v === 'company' ? canSeeSomeMoney() : v === 'insights' ? isAdmin() : v === 'home' ? !!homeKind() : true;
 const deptHome = d => (d && pageAllowed(d.home) ? d.home : 'myturn');
 /* the Area options this department works on (by name, so it follows the workspace's own areas) */
 function deptAreas(d = myDept()) {
