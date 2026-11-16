@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-oeXGHE9cCifFrbNCd2sdMXHHrRL0/iKc+PJaQha/olE=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-nyLG/Td7V/QE2De3cQ2SimShVWsxPwZw4k/qCTgNlc8=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-oeXGHE9cCifFrbNCd2sdMXHHrRL0/iKc+PJaQha/olE=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-IidAjnKrab/BveiQAQyMPEMPBNefxZdyHeE3O4TJH2E=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<meta name="ovrto-build" content="56e04c041779">
+<meta name="ovrto-build" content="e2a8c790868f">
 <title>Ovrto</title>
 <meta name="description" content="Over to you. Every task shows whose turn it is.">
 <meta name="theme-color" content="#0D0D0F">
@@ -401,8 +401,8 @@ textarea{resize:vertical;line-height:1.55}
 .toasts{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + var(--sab));z-index:80;display:flex;flex-direction:column;gap:8px;align-items:center;width:max-content;max-width:calc(100vw - 24px);pointer-events:none}
 @media (max-width:820px){.toasts{bottom:calc(76px + var(--sab))}}
 .toast{background:var(--fg);color:var(--bg);border-radius:8px;padding:10px 14px;font-size:14px;font-weight:600;display:flex;gap:14px;align-items:center;box-shadow:var(--sh-pop);pointer-events:auto}
-.toast button{color:var(--accent);font-weight:700;filter:brightness(1.4)}
-:root[data-theme="dark"] .toast button{filter:none;color:var(--accent-soft)}
+.toast button{color:var(--band);font-weight:700}
+:root[data-accent]:not([data-accent="cobalt"]) .toast button{color:var(--accent);filter:brightness(1.4)}
 .pill{position:fixed;top:calc(8px + var(--sat));left:50%;transform:translateX(-50%);z-index:70;background:var(--amber);color:#fff;font:600 12px var(--ui);padding:5px 12px;border-radius:999px;box-shadow:var(--sh-pop)}
 
 /* ── tour ── */
@@ -3544,7 +3544,6 @@ function setMe(body) {
   const np = h('input', { type: 'password', id: 'newPw', minlength: '6', placeholder: 'New password', autocomplete: 'new-password', 'aria-label': 'New password' });
   body.append(panel('Account', 'account', h('div', { class: 'pbody' },
     h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } }, pwEye(np), h('button', { class: 'btn', onclick: async e => { if (np.value.length < 6) return toast('Use at least 6 characters'); const done = busy(e.currentTarget, 'Saving…'); const { error } = await sb.auth.updateUser({ password: np.value }); done(); if (error) toast(errText(error)); else { np.value = ''; toast('Password changed'); } } }, 'Change password')),
-    h('button', { class: 'lnk sm', 'data-reset-mail': '1', style: { alignSelf: 'flex-start' }, onclick: async e => { const done = busy(e.currentTarget, 'Sending…'); const { error } = await sb.auth.resetPasswordForEmail(me()?.email || S.user?.email, { redirectTo: location.origin + location.pathname }); done(); toast(error ? errText(error) : `Reset link sent to ${me()?.email || 'your email'}`); } }, 'Forgot your password? Email me a reset link'),
     h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } }, isAdmin() ? h('button', { class: 'btn', onclick: () => openCreateWs() }, icon('plus', 14), 'Create a workspace') : null, h('button', { class: 'btn danger', onclick: () => signOut() }, 'Sign out')))));
 }
 function tzOptions(cur) { let zones = []; try { zones = Intl.supportedValuesOf('timeZone'); } catch { zones = [cur, 'Africa/Cairo', 'Europe/London', 'Europe/Berlin', 'Asia/Dubai', 'Asia/Kolkata', 'America/New_York', 'UTC']; } if (!zones.includes(cur)) zones.unshift(cur); return zones.map(z => h('option', { value: z, selected: z === cur }, z.replace(/_/g, ' '))); }
@@ -3986,7 +3985,7 @@ addEventListener('online', () => { if (S.ws) { flushOutbox(); setupRealtime(); c
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { checkUpdate(); if (S.ws) { flushOutbox(); setupRealtime(); catchUp(); } } });
 
 /* a new version was uploaded: phones (and apps saved to the home screen) pick it up by themselves */
-const BUILD = '56e04c041779';
+const BUILD = 'e2a8c790868f';
 let updLast = 0, updShown = false;
 async function checkUpdate(force) {
   if (!force && Date.now() - updLast < 60000) return; updLast = Date.now();
@@ -6833,15 +6832,15 @@ function openHandover(l) {
       h('p', { class: 'note', text: `${fmtDate(l.start_date)} – ${fmtDate(l.end_date)} · ${mineL ? (first(prof(l.cover_id)) || 'Nobody') + ' covers you' : first(prof(l.user_id)) + ' is away'}` }),
       l.note ? h('div', { class: 'block' }, h('h4', {}, 'Note'), h('p', { class: 'sm', style: { margin: 0, whiteSpace: 'pre-wrap' }, text: l.note })) : null,
       back,
-      h('h4', { class: 'vsub', text: `Tasks · ${ts.length}` }),
-      ts.length ? h('div', { class: 'pjlist' }, ts.map(t => h('div', { class: 'pjrow' }, tick(t.id), h('button', { class: 'grow lvopen', onclick: () => openTask(t.id) }, h('b', { text: t.title }),
-        h('span', { class: 'sm mute', text: `${taskKey(t)} · ${stOf(t.status_id)?.name || ''} · with ${first(prof(t.assignee_id)) || 'nobody'}` }), t.stopped?.text ? h('span', { class: 'sm stopline', text: '↳ ' + t.stopped.text }) : null))))
-        : h('p', { class: 'note', text: 'No tasks handed over.' }),
       h('h4', { class: 'vsub', text: `Logins · ${its.length}` }),
       its.length ? h('div', { class: 'pjlist' }, its.map(i => h('div', { class: 'pjrow' }, tick(i.id), i.kind ? h('span', { class: 'vkind', text: i.kind }) : null,
         h('button', { class: 'grow lvopen', onclick: () => { if (!V.items.includes(i)) return toast(myKey() ? `${giver} will share it automatically the next time they open Access` : 'Set up your access first, then it will be shared with you'); closeSheet(true); go({ v: 'vault' }); setTimeout(() => vaultUnlocked() && openLoginView(i), 300); } }, h('b', { text: i.name }), h('span', { class: 'sm mute', text: V.items.includes(i) ? 'Open in Access' : mineL ? (V.keys[l.cover_id] ? 'Shared when you unlock Access' : `Waiting for ${first(prof(l.cover_id))} to set up access`) : myKey() ? `Arrives when ${giver} opens Access` : 'Set up access to receive it' })))))
         : h('p', { class: 'note', text: 'No logins handed over.' }),
       !mineL && !myKey() ? h('button', { class: 'btn', onclick: () => { closeSheet(true); go({ v: 'vault' }); } }, icon('key', 16), 'Set up access to receive logins') : null,
+      h('h4', { class: 'vsub', text: `Tasks · ${ts.length}` }),
+      ts.length ? h('div', { class: 'pjlist' }, ts.map(t => h('div', { class: 'pjrow' }, tick(t.id), h('button', { class: 'grow lvopen', onclick: () => openTask(t.id) }, h('b', { text: t.title }),
+        h('span', { class: 'sm mute', text: `${taskKey(t)} · ${stOf(t.status_id)?.name || ''} · with ${first(prof(t.assignee_id)) || 'nobody'}` }), t.stopped?.text ? h('span', { class: 'sm stopline', text: '↳ ' + t.stopped.text }) : null))))
+        : h('p', { class: 'note', text: 'No tasks handed over.' }),
       mineL && st !== 'over' ? h('button', { class: 'btn ghost danger', style: { marginTop: '16px' }, onclick: e => confirmIn(sh, { text: 'Cancel this leave? Tasks stay where they are now.', yes: 'Cancel leave', danger: true, onYes: async () => { closeSheet(true); const { error } = await sb.from('leaves').delete().eq('id', l.id); if (error) return toast(errText(error)); S.leaves = S.leaves.filter(x => x.id !== l.id); refresh(); } }) }, 'Cancel leave') : null));
   } });
 }
