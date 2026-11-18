@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-oeXGHE9cCifFrbNCd2sdMXHHrRL0/iKc+PJaQha/olE=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-szvKK4xBg+Dveu/M5CSvmp4hG6XsdJhAU4nHralIVSw=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-oeXGHE9cCifFrbNCd2sdMXHHrRL0/iKc+PJaQha/olE=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-tgFDEL8PwU3VSqz5G6Lq1abYfN1kmOc7nISuhB7b8/M=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<meta name="ovrto-build" content="eab93e262f4f">
+<meta name="ovrto-build" content="6c16a8e41135">
 <title>Ovrto</title>
 <meta name="description" content="Over to you. Every task shows whose turn it is.">
 <meta name="theme-color" content="#0D0D0F">
@@ -4079,7 +4079,7 @@ addEventListener('online', () => { if (S.ws) { flushOutbox(); setupRealtime(); c
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { checkUpdate(); if (S.ws) { flushOutbox(); setupRealtime(); catchUp(); } } });
 
 /* a new version was uploaded: phones (and apps saved to the home screen) pick it up by themselves */
-const BUILD = 'eab93e262f4f';
+const BUILD = '6c16a8e41135';
 let updLast = 0, updShown = false;
 async function checkUpdate(force) {
   if (!force && Date.now() - updLast < 60000) return; updLast = Date.now();
@@ -6616,7 +6616,6 @@ const DEPTS = [
   { k: 'presales', g: 'Business', l: 'Pre-sales', home: 'home', areas: [], pins: ['deals', 'projects', 'clients'] },
   { k: 'success', g: 'Business', l: 'Customer success / accounts', home: 'myturn', areas: [], pins: ['clients', 'bugs', 'projects'] },
   { k: 'marketing', g: 'Business', l: 'Marketing', home: 'myturn', areas: [], pins: ['projects', 'work'] },
-  { k: 'presentation', g: 'Business', l: 'Presentation design', home: 'myturn', areas: [], pins: ['projects', 'deals', 'work'] },
   { k: 'finance', g: 'Business', l: 'Finance & accounts', home: 'myturn', areas: [], pins: ['company', 'projects'] },
   { k: 'operations', g: 'Business', l: 'Operations & procurement', home: 'myturn', areas: [], pins: ['projects', 'work'] },
   { k: 'hr', g: 'Business', l: 'HR & admin', home: 'myturn', areas: [], pins: ['work'] },
@@ -7147,18 +7146,17 @@ const AGENT_JOBS = {
   casestudy: { label: 'Case study', hint: 'From a finished project', pick: 'project', facts: x => ({ project: x.name, kind: pDept(x), about: x.about || '', finished: doneThisWeek(x.id, 365).slice(0, 40) }), out: 'copy' },
   purchase: { label: 'Purchase request', hint: 'Items, quantities, project, when and why', input: 'e.g. 8 QR readers and 200 m cable for Mivida by Dec 1', facts: () => ({ projects: S.projects.map(p => p.name) }), out: 'copy' },
   jobpost: { label: 'Job post', hint: 'About the job, what you’ll do, what we need', input: 'Which role? Anything special?', facts: () => ({ company: S.ws.name }), out: 'copy' },
-  deck: { label: 'Presentation outline', hint: 'Slide by slide: the point of each slide and what to show', input: 'Who is it for and what should they decide? e.g. Mivida board: choose SSS gates and the community app', facts: () => ({ projects: S.projects.map(p => ({ name: p.name, side: pDept(p) })), open_deals: (S.deals || []).filter(d => OPEN_STAGES.includes(d.stage)).map(d => ({ name: d.name, wants: kindName(d.kind), stage: stageName(d.stage) })) }), out: 'copy' },
   onboarding: { label: 'Onboarding checklist', hint: 'First two weeks for a new person', input: 'Which role or department?', facts: () => ({}), out: 'copy' },
 };
 const AGENTS = {
   backend: ['apiplan', 'sentback', 'standup', 'split', 'deploynotes'], frontend: ['screens', 'sentback', 'standup', 'split'],
   mobile: ['screens', 'sentback', 'standup', 'split', 'releasenotes'], devops: ['deploycheck', 'incident', 'deploynotes', 'standup'],
   data: ['experiment', 'standup', 'split'], design: ['uxcopy', 'screens', 'split'], qa: ['testcases', 'signoff', 'complaint'],
-  product: ['brd', 'weekplan', 'releasenotes', 'ceobrief', 'deck'], pm: ['weekplan', 'brd', 'releasenotes'], management: ['ceobrief', 'pnl', 'weekplan'],
+  product: ['brd', 'weekplan', 'releasenotes', 'ceobrief'], pm: ['weekplan', 'brd', 'releasenotes'], management: ['ceobrief', 'pnl', 'weekplan'],
   hwlead: ['hwbrief', 'changelog', 'fieldbug'], hardware: ['fieldbug', 'changelog', 'split'], embedded: ['changelog', 'fieldbug', 'split'],
   field: ['servicereport', 'surveynotes', 'fieldbug'], support: ['complaint', 'reply', 'fieldbug'],
-  sales: ['followups', 'callnote'], presales: ['proposal', 'demoplan', 'surveynotes', 'deck'], success: ['renewal', 'reply', 'complaint'],
-  marketing: ['social', 'casestudy', 'deck'], presentation: ['deck', 'casestudy', 'social'], finance: ['collections', 'pnl', 'purchase'], operations: ['purchase'], hr: ['jobpost', 'onboarding'],
+  sales: ['followups', 'callnote'], presales: ['proposal', 'demoplan', 'surveynotes'], success: ['renewal', 'reply', 'complaint'],
+  marketing: ['social', 'casestudy'], finance: ['collections', 'pnl', 'purchase'], operations: ['purchase'], hr: ['jobpost', 'onboarding'],
 };
 /* ── what an agent may read: only what this person can already see ── */
 const taskFacts = t => ({ key: taskKey(t), title: t.title, type: tyOf(t.type_id)?.name || '', status: stOf(t.status_id)?.name || '', description: String(t.description || '').slice(0, 3000),
