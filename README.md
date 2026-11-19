@@ -11,7 +11,8 @@ A plain web app: HTML, CSS and JavaScript, no framework. The data, sign-in, file
 `index.html` is **built**. Do not edit it by hand. Edit `src/`, then build.
 
 ```
-src/index.html      the page, with two markers where the styles and the script go
+src/index.html      the page, with three markers where the start-up script, styles and app script go
+src/boot.js         tiny script in the head (theme and language before first paint)
 src/css/app.css     all styles
 src/js/NN-name.js   the app script, one file per feature, joined in number order
 build.py            joins src/ into index.html (Python standard library only)

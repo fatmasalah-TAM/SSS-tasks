@@ -4,7 +4,8 @@
   python3 build.py          rebuild index.html from src/
   python3 build.py --check  fail if index.html is not what src/ builds (nothing is written)
 
-src/index.html  the page, with two markers where the styles and the script go
+src/index.html  the page, with three markers: the tiny start-up script, the styles, the app script
+src/boot.js     tiny script in the page head (theme and language before first paint)
 src/css/*.css   the styles, joined in name order
 src/js/*.js     the app script, joined in name order (the number in front sets the order)
 
@@ -30,7 +31,7 @@ def join(pattern):
 
 def build():
     page = read(os.path.join(SRC, 'index.html'))
-    for marker, part in (('/*@include css*/', 'css/*.css'), ('/*@include js*/', 'js/*.js')):
+    for marker, part in (('/*@include boot*/', 'boot.js'), ('/*@include css*/', 'css/*.css'), ('/*@include js*/', 'js/*.js')):
         if page.count(marker) != 1:
             sys.exit(f'build: src/index.html must contain {marker} exactly once')
         page = page.replace(marker, join(part))

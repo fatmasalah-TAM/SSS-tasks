@@ -1,0 +1,1 @@
+if(window.top!==window.self){try{window.top.location=window.self.location}catch(e){document.documentElement.style.display='none'}}try{const g=k=>JSON.parse(localStorage.getItem('baton.'+k)||'null'),t=g('theme'),r=document.documentElement;if(t&&t!=='system')r.setAttribute('data-theme',t);r.setAttribute('data-accent',g('accent')||'cobalt')}catch(e){}

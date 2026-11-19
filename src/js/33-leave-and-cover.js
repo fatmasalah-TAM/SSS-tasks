@@ -77,12 +77,17 @@ function openHandover(l) {
       const { error } = await sb.from('leaves').update({ handover: ho }).eq('id', l.id); if (error) return toast(errText(error)); l.handover = ho; } });
     const ts = (l.handover?.tasks || []).map(taskOf).filter(Boolean); const its = (l.handover?.items || []).map(id => V.items.find(i => i.id === id) || { id, name: l.handover?.names?.[id]?.name || 'A login', kind: l.handover?.names?.[id]?.kind || '' });
     const giver = first(prof(l.user_id)) || 'They';
-    const back = mineL && st === 'over' && !l.handover?.returned ? h('button', { class: 'btn pri', onclick: async () => {
+    /* tasks still with the cover (and not finished) come back; logins shared only for the leave stop */
+    const takeBack = async () => {
       const mineBack = ts.filter(t => t.assignee_id === l.cover_id && !isClosed(t));
       for (const t of mineBack) await patchTask(t.id, { assignee_id: uid() }, { noUndo: true });
       for (const i of its) if (V.grants.some(g => g.item_id === i.id && g.user_id === l.cover_id && g.until)) await unshare(i, l.cover_id);
-      const ho = Object.assign({}, l.handover, { returned: true }); await sb.from('leaves').update({ handover: ho }).eq('id', l.id); l.handover = ho;
-      closeSheet(true); toast(`${plural(mineBack.length, 'task')} back with you`); refresh(); } }, 'Take my tasks back') : null;
+      return mineBack.length;
+    };
+    const back = mineL && st === 'over' && !l.handover?.returned ? h('button', { class: 'btn pri', onclick: async () => {
+      closeSheet(true);
+      const n = await withWait(async () => { const n = await takeBack(); const ho = Object.assign({}, l.handover, { returned: true }); await sb.from('leaves').update({ handover: ho }).eq('id', l.id); l.handover = ho; return n; });
+      toast(`${plural(n, 'task')} back with you`); refresh(); } }, 'Take my tasks back') : null;
     sh.append(h('div', { class: 'sbody' },
       h('p', { class: 'note', text: `${fmtDate(l.start_date)} – ${fmtDate(l.end_date)} · ${mineL ? (first(prof(l.cover_id)) || 'Nobody') + ' covers you' : first(prof(l.user_id)) + ' is away'}` }),
       l.note ? h('div', { class: 'block' }, h('h4', {}, 'Note'), h('p', { class: 'sm', style: { margin: 0, whiteSpace: 'pre-wrap' }, text: l.note })) : null,
@@ -96,7 +101,10 @@ function openHandover(l) {
       ts.length ? h('div', { class: 'pjlist' }, ts.map(t => h('div', { class: 'pjrow' }, tick(t.id), h('button', { class: 'grow lvopen', onclick: () => openTask(t.id) }, h('b', { text: t.title }),
         h('span', { class: 'sm mute', text: `${taskKey(t)} · ${stOf(t.status_id)?.name || ''} · with ${first(prof(t.assignee_id)) || 'nobody'}` }), t.stopped?.text ? h('span', { class: 'sm stopline', text: '↳ ' + t.stopped.text }) : null))))
         : h('p', { class: 'note', text: 'No tasks handed over.' }),
-      mineL && st !== 'over' ? h('button', { class: 'btn ghost danger', style: { marginTop: '16px' }, onclick: e => confirmIn(sh, { text: 'Cancel this leave? Tasks stay where they are now.', yes: 'Cancel leave', danger: true, onYes: async () => { closeSheet(true); const { error } = await sb.from('leaves').delete().eq('id', l.id); if (error) return toast(errText(error)); S.leaves = S.leaves.filter(x => x.id !== l.id); refresh(); } }) }, 'Cancel leave') : null));
+      mineL && st !== 'over' ? h('button', { class: 'btn ghost danger', style: { marginTop: '16px' }, onclick: e => confirmIn(sh, { text: 'Cancel this leave? Your tasks and the logins you shared come back to you.', yes: 'Cancel leave', danger: true, onYes: async () => { closeSheet(true);
+        const r = await withWait(async () => { const n = await takeBack(); const { error } = await sb.from('leaves').delete().eq('id', l.id); return { n, error }; });
+        if (r.error) { refresh(); return toast(errText(r.error)); }
+        S.leaves = S.leaves.filter(x => x.id !== l.id); toast(r.n ? `Leave canceled · ${plural(r.n, 'task')} back with you` : 'Leave canceled'); refresh(); } }) }, 'Cancel leave') : null));
   } });
 }
 

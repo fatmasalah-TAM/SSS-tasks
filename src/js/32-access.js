@@ -174,9 +174,11 @@ function emailConfirmedRecently() {
     return (p.amr || []).some(a => ['otp', 'magiclink', 'email/otp'].includes(a.method) && Date.now() / 1000 - a.timestamp < 20 * 60);
   } catch { return false; }
 }
+/* read when the page opens: the app tidies the address bar during start-up, before this check runs */
+let vaultResetAsked = new URLSearchParams(location.search).has('vaultreset');
 function checkVaultReset() {
-  const u = new URL(location.href); if (!u.searchParams.has('vaultreset')) return;
-  u.searchParams.delete('vaultreset'); history.replaceState(history.state, '', u.pathname + (u.search || '') + u.hash);
+  const u = new URL(location.href); if (!u.searchParams.has('vaultreset') && !vaultResetAsked) return;
+  vaultResetAsked = false; u.searchParams.delete('vaultreset'); history.replaceState(history.state, '', u.pathname + (u.search || '') + u.hash);
   if (!emailConfirmedRecently()) return toast('That link has expired. Ask for a new one');
   go({ v: 'vault' }); loadVault().then(() => openVaultNewPass());
 }

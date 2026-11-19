@@ -427,7 +427,7 @@ textarea{resize:vertical;line-height:1.55}
 /* sign in: one centred column, always dark — the moving logo on top, the form under it */
 .auth{min-height:100%;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:56px;padding:calc(48px + var(--sat)) var(--gr) calc(48px + var(--sab)) var(--gl);
   --bg:#0B0B0D;--surface:#141418;--sunk:#0F0F12;--line:#25252B;--line-strong:#34343C;--fg:#F4F4F2;--fg2:#C4C4CB;--mute:#A1A1A8;--on-accent:#0B0B0D;
-  --red:#FF8A7A;--green:#5FCB8A;--accent:#8FA3FF;--accent-soft:#1C2342;--act:#8FA3FF;--on-act:#0B0B0D;--pill:#232A4D;color-scheme:dark;background:var(--bg);color:var(--fg)}
+  --red:#FF8A7A;--green:#5FCB8A;--accent:#8FA3FF;--accent-soft:#1C2342;--act:#8FA3FF;--on-act:#0B0B0D;--pill:#232A4D;color-scheme:dark;background:var(--bg);color:var(--fg);overflow-x:hidden;overflow-x:clip}
 .auth .art{position:relative;display:flex;flex-direction:column;align-items:center;gap:16px}
 .auth .art::before{content:"";position:absolute;left:50%;top:50%;width:460px;height:340px;margin:-170px 0 0 -230px;background:radial-gradient(closest-side,rgb(42 68 176/.42),transparent);pointer-events:none}
 .auth .art.play::before{animation:wm-glow .7s ease .6s both}

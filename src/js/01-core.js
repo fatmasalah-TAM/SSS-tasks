@@ -66,6 +66,12 @@ function trackedFetch(url, opts) {
   const done = () => { WAIT.n = Math.max(0, WAIT.n - 1); WAIT.lastEnd = Date.now(); if (!WAIT.n) waitHide(); };
   return fetch(url, opts).then(r => { done(); return r; }, e => { done(); throw e; });
 }
+/* long work the app runs itself (many saves in a row): show the mark after a second too */
+async function withWait(fn) {
+  WAIT.n++;
+  if (!WAIT.el && !WAIT.timer) WAIT.timer = setTimeout(() => { WAIT.timer = null; if (WAIT.n > 0) waitShow(); }, 1000);
+  try { return await fn(); } finally { WAIT.n = Math.max(0, WAIT.n - 1); WAIT.lastEnd = Date.now(); if (!WAIT.n) waitHide(); }
+}
 const sb = supabase.createClient(CFG.url, CFG.key, { global: { fetch: (u, o) => trackedFetch(u, o) } });
 
 /* ── state ── */
