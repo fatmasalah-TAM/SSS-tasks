@@ -22,6 +22,6 @@ export interface Ovrto {
   stOf(id: string): Status | undefined; catOf(t: Task): string; isClosed(t: Task): boolean; taskOf(id: string): Task | undefined;
   illFor(label: string): string | null;
   render(): void; go(route: { v: string; id?: string }): void; toast(msg: string, action?: unknown, ms?: number): void; track(feature: string): void;
-  openWeeklyReport(): void; openSearch(): void; viewSwitcher(): void; loadInsightActs(): void;
+  openFinished(days: number): void; openWeeklyReport(): void; openSearch(): void; viewSwitcher(): void; loadInsightActs(): void;
   legacy: { taskRow(t: Task): Node; bellButton(): Node };
 }

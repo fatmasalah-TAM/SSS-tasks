@@ -6,9 +6,14 @@ import { dur, insightsData, whoName } from '../lib/insights';
 
 const PERIODS: [number, string][] = [[14, '2 weeks'], [30, '30 days'], [90, '90 days']];
 
-function Kpi({ n, l, sub }: { n: string; l: string; sub?: string }) {
-  return <div className="kpi"><b>{n}</b><span>{l}</span>{sub ? <span className="sm mute">{sub}</span> : null}</div>;
+/** A number card. With `onOpen` it is a button that takes you to what the number counts. */
+function Kpi({ n, l, sub, onOpen, hint }: { n: string; l: string; sub?: string; onOpen?: () => void; hint?: string }) {
+  const body = <><b>{n}</b><span>{l}</span>{sub ? <span className="sm mute">{sub}</span> : null}</>;
+  if (!onOpen) return <div className="kpi">{body}</div>;
+  return <button className="kpi" title={hint} onClick={onOpen}>{body}</button>;
 }
+
+const showSection = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
 /** Where tasks waited, and for how long (built from each task's history). Admins only. */
 export function Insights() {
@@ -43,12 +48,12 @@ export function Insights() {
       <div className="scroll">
         <div className="ins">
           <div className="kpis">
-            <Kpi n={String(d.done)} l="tasks finished" sub={`in the last ${days} days`} />
+            <Kpi n={String(d.done)} l="tasks finished" sub={`in the last ${days} days`} onOpen={() => o.openFinished(days)} hint="See these tasks" />
             <Kpi n={dur(d.cycle)} l="typical time to finish" sub="from created to done (median)" />
-            <Kpi n={String(d.handoffs)} l="handoffs" sub="“over to you” moments" />
-            <Kpi n={String(d.stuck.length)} l="stuck now" sub="same person for 3+ days" />
+            <Kpi n={String(d.handoffs)} l="handoffs" sub="“over to you” moments" onOpen={() => showSection('ins-waited')} hint="See who held the turn" />
+            <Kpi n={String(d.stuck.length)} l="stuck now" sub="same person for 3+ days" onOpen={() => showSection('ins-stuck')} hint="See the stuck tasks" />
           </div>
-          <section className="card ins-card">
+          <section className="card ins-card" id="ins-waited">
             <h3>Where tasks waited</h3>
             <p className="note">Total time tasks sat with each person (their turn), in this period.</p>
             {d.people.map(p => (
@@ -64,7 +69,7 @@ export function Insights() {
               </div>
             ))}
           </section>
-          <section className="card ins-card">
+          <section className="card ins-card" id="ins-stuck">
             <h3>Stuck now</h3>
             <p className="note">Open tasks that have been with the same person for more than 3 days.</p>
             {d.stuck.length

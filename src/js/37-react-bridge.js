@@ -8,6 +8,7 @@ window.__ovrto = {
   stOf: id => stOf(id), catOf: t => catOf(t), isClosed: t => isClosed(t), taskOf: id => taskOf(id),
   illFor: label => ILLS[ILL_FOR(label || '')] || null,
   render: () => render(), go: r => go(r), toast: (m, a, ms) => toast(m, a, ms), track: f => track(f),
+  openFinished: days => { S.vc = Object.assign(BUILTIN.all.config(), { filters: [{ f: 'finished', op: 'any', v: [String(days)] }], layout: 'list' }); go({ v: 'all' }, true); },
   openWeeklyReport: () => openWeeklyReport(), openSearch: () => cmdk.open(), viewSwitcher: () => viewSwitcher(),
   loadInsightActs: () => loadInsightActs(),
   // not moved yet: React draws these through the old code (see LegacyNode)
