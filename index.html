@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-oeXGHE9cCifFrbNCd2sdMXHHrRL0/iKc+PJaQha/olE=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-jnSs+Rfl4LOgjfoq1dO/HcqHJeBgoKR+2fMdWbjpZ3E=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-oeXGHE9cCifFrbNCd2sdMXHHrRL0/iKc+PJaQha/olE=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-PEkoP/DX/CA7TcqLYC2OBYhEkMYsrtZda0QGQLL6XgM=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<meta name="ovrto-build" content="1143fc7a31d0">
+<meta name="ovrto-build" content="60125482f6ad">
 <title>Ovrto</title>
 <meta name="description" content="Over to you. Every task shows whose turn it is.">
 <meta name="theme-color" content="#0D0D0F">
@@ -4128,7 +4128,7 @@ addEventListener('online', () => { if (S.ws) { flushOutbox(); setupRealtime(); c
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { checkUpdate(); if (S.ws) { flushOutbox(); setupRealtime(); catchUp(); } } });
 
 /* a new version was uploaded: phones (and apps saved to the home screen) pick it up by themselves */
-const BUILD = '1143fc7a31d0';
+const BUILD = '60125482f6ad';
 let updLast = 0, updShown = false;
 async function checkUpdate(force) {
   if (!force && Date.now() - updLast < 60000) return; updLast = Date.now();
@@ -7487,9 +7487,11 @@ function emailConfirmedRecently() {
     return (p.amr || []).some(a => ['otp', 'magiclink', 'email/otp'].includes(a.method) && Date.now() / 1000 - a.timestamp < 20 * 60);
   } catch { return false; }
 }
+/* read when the page opens: the app tidies the address bar during start-up, before this check runs */
+let vaultResetAsked = new URLSearchParams(location.search).has('vaultreset');
 function checkVaultReset() {
-  const u = new URL(location.href); if (!u.searchParams.has('vaultreset')) return;
-  u.searchParams.delete('vaultreset'); history.replaceState(history.state, '', u.pathname + (u.search || '') + u.hash);
+  const u = new URL(location.href); if (!u.searchParams.has('vaultreset') && !vaultResetAsked) return;
+  vaultResetAsked = false; u.searchParams.delete('vaultreset'); history.replaceState(history.state, '', u.pathname + (u.search || '') + u.hash);
   if (!emailConfirmedRecently()) return toast('That link has expired. Ask for a new one');
   go({ v: 'vault' }); loadVault().then(() => openVaultNewPass());
 }
