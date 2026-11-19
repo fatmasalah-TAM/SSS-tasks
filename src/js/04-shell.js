@@ -24,8 +24,8 @@ function render() {
   applyTheme(); syncBadge(); splashOut();
   let app = $('#app > .app');
   if (!app) { app = h('div', { class: 'app' }); $('#app').replaceChildren(app); }
+  const oldScroll = $('.main .scroll', app); const sx = oldScroll?.scrollLeft || 0, sy = oldScroll?.scrollTop || 0; // before building: a React page is moved into the new screen while it is built
   const side = renderSide(); const main = S.loaded ? renderMain() : h('main', { class: 'main', 'aria-label': 'Loading', html: bootLoader() }); const tabs = renderTabs();
-  const oldScroll = $('.main .scroll', app); const sx = oldScroll?.scrollLeft || 0, sy = oldScroll?.scrollTop || 0;
   app.replaceChildren(side, main, tabs);
   const ns = $('.main .scroll', app); if (ns) { ns.scrollLeft = sx; ns.scrollTop = sy; }
   if (S.loaded) motionIn(app);
