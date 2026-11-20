@@ -29,7 +29,9 @@ async function loadChat() {
     sb.from('chat_reads').select('*').eq('user_id', uid()),
     sb.from('huddles').select('*').eq('workspace_id', ws),
   ]);
+  const cc = await sb.from('client_contacts').select('*').eq('workspace_id', ws);
   if (S.ws?.id !== ws) return;
+  if (!cc.error && cc.data) S.clientContacts = cc.data;
   if (!c.error && c.data) S.channels = c.data;
   if (!m.error && m.data) { const ids = new Set(m.data.map(x => x.id)); S.messages = S.messages.filter(x => x.workspace_id === ws && x.created_at < since && !ids.has(x.id)).concat(m.data); } // keep older messages you already opened
   if (!r.error && r.data) S.reactions = r.data;
@@ -39,7 +41,9 @@ async function loadChat() {
 function chOf(id) { return S.channels.find(c => c.id === id); }
 function msgOf(id) { return S.messages.find(m => m.id === id); }
 function dmOther(c) { return c?.kind === 'dm' ? prof(c.dm_users.find(u => u !== uid()) || uid()) : null; }
-function chName(c) { return !c ? '' : c.kind === 'dm' ? dname(dmOther(c)) : '#' + c.name; }
+function chName(c) { return !c ? '' : c.kind === 'dm' ? dname(dmOther(c)) : c.kind === 'client' ? c.name : '#' + c.name; }
+const contactOf = id => S.clientContacts.find(x => x.id === id) || (reloadContacts(), null);
+const reloadContacts = debounce(async () => { if (!S.ws) return; const r = await sb.from('client_contacts').select('*').eq('workspace_id', S.ws.id); if (r.data) { S.clientContacts = r.data; refreshChat(); } }, 1500);
 function myJoin() { return S.members.find(m => m.user_id === uid())?.joined_at || '1970-01-01'; }
 function lastRead(chId) { const c = chOf(chId); const r = S.reads[chId]; return r || [myJoin(), c?.created_at || ''].sort().pop(); }
 function unreadIn(chId) { const lr = lastRead(chId); return S.messages.filter(m => m.channel_id === chId && !m.parent_id && m.author_id !== uid() && m.created_at > lr).length; }
@@ -171,7 +175,9 @@ function chatList(cur) {
       lead, h('span', { class: 't', text: label }), hu ? h('span', { class: 'hu-dot', title: 'Huddle live', 'aria-label': 'Huddle live' }, icon('headset', 14)) : null,
       al ? h('span', { class: 'badge', text: al > 99 ? '99+' : String(al) }) : n ? h('span', { class: 'n', text: String(n) }) : null);
   };
+  const clients = S.channels.filter(c => c.kind === 'client').sort((a, b) => (lastMsgAt(b) || '').localeCompare(lastMsgAt(a) || '') || a.name.localeCompare(b.name));
   return h('nav', { class: 'chatlist', 'data-tour': 'chat-list', 'aria-label': 'Conversations' },
+    ...(clients.length ? [h('h4', {}, 'Clients'), ...clients.map(c => item(c, c.name, h('span', { class: 'ico' }, icon('client', 14)), () => openChat(c.id)))] : []),
     h('h4', {}, 'Channels', h('button', { 'aria-label': 'New channel', title: 'New channel', onclick: () => newChannel() }, icon('plus', 14))),
     ...chs.map(c => item(c, c.name, h('span', { class: 'ico hash', text: '#' }), () => openChat(c.id))),
     h('h4', {}, 'Direct messages', h('button', { 'aria-label': 'New message', title: 'New message', onclick: () => pickDmPerson() }, icon('plus', 14))),
@@ -186,11 +192,12 @@ function conversation(chId) {
   const canManage = c.kind === 'channel' && (c.created_by === uid() || isAdmin());
   const title = h('div', { class: 'cv-title' },
     isPhone() ? h('button', { class: 'x', 'aria-label': 'Back to chats', onclick: () => go({ v: 'chat' }) }, icon('back', 20)) : null,
-    c.kind === 'dm' ? avatar(other, { size: 'lg' }) : h('span', { class: 'hash big', text: '#' }),
+    c.kind === 'dm' ? avatar(other, { size: 'lg' }) : c.kind === 'client' ? h('span', { class: 'hash big' }, icon('client', 18)) : h('span', { class: 'hash big', text: '#' }),
     h('div', { class: 'cv-name' }, h('b', { text: c.kind === 'dm' ? dname(other) : c.name }),
-      h('span', { class: 'sm mute', text: c.kind === 'dm' ? 'Direct message' : (c.topic || `${S.members.length} people`) })),
+      h('span', { class: 'sm mute', text: c.kind === 'dm' ? 'Direct message' : c.kind === 'client' ? clientChatSub(c) : (c.topic || `${S.members.length} people`) })),
     h('span', { class: 'sp' }),
-    hu ? null : h('button', { class: 'btn sm', 'data-tour': 'huddle-btn', onclick: () => joinHuddle(chId) }, icon('headset', 16), 'Huddle'),
+    c.kind === 'client' ? h('button', { class: 'btn sm', onclick: () => clientPeopleSheet(c) }, icon('person', 14), 'People') : null,
+    hu || c.kind === 'client' ? null : h('button', { class: 'btn sm', 'data-tour': 'huddle-btn', onclick: () => joinHuddle(chId) }, icon('headset', 16), 'Huddle'),
     canManage ? h('button', { class: 'x', 'aria-label': 'Channel options', onclick: e => menu(e.currentTarget, [
       { label: 'Edit topic', icon: 'gear', fn: () => editChannel(c, 'topic') },
       { label: 'Rename', icon: 'gear', fn: () => editChannel(c, 'name') },
@@ -247,7 +254,8 @@ function messageList(chId, parentId) {
   return box;
 }
 function messageEl(m, { head, inThread }) {
-  const p = prof(m.author_id); const mine = m.author_id === uid();
+  const ct = m.client_contact_id ? contactOf(m.client_contact_id) : null;
+  const p = ct || m.client_contact_id ? { full_name: ct?.name || 'Client' } : prof(m.author_id); const mine = m.author_id === uid();
   if (m.kind === 'huddle') {
     const live = liveHuddle(m.channel_id) && S.huddles.find(x => x.channel_id === m.channel_id && new Date(x.started_at) - new Date(m.created_at) < 60e3 && new Date(m.created_at) - new Date(x.started_at) < 60e3);
     return h('div', { class: 'msg sys', 'data-msg': m.id }, h('span', { class: 'hu-ico' }, icon('headset', 16)),
@@ -279,7 +287,7 @@ function messageEl(m, { head, inThread }) {
   const el = h('div', { class: 'msg' + (head ? ' first' : '') + (m.mentions?.includes(uid()) ? ' me' : ''), 'data-msg': m.id },
     head ? avatar(p, { size: 'lg' }) : h('span', { class: 'mtime', text: clock(m.created_at) }),
     h('div', { class: 'mcol' },
-      head ? h('div', { class: 'mhead' }, h('b', { text: dname(p) || 'Former member' }), h('span', { class: 'mute sm', text: clock(m.created_at) })) : null,
+      head ? h('div', { class: 'mhead' }, h('b', { text: dname(p) || 'Former member' }), m.client_contact_id ? h('span', { class: 'cl-tag', text: 'Client' }) : null, h('span', { class: 'mute sm', text: clock(m.created_at) })) : null,
       body, m.edited_at && !editing ? h('span', { class: 'sm mute', text: '(edited)' }) : null, files, reactRow, thread),
     editing ? null : acts);
   // touch screens: press and hold a message to react, reply or edit
@@ -536,3 +544,69 @@ function huddlePanel() {
   return box;
 }
 
+
+/* ── client conversations: who answers, and the people at the client who each have their own link ── */
+function clientChatSub(c) {
+  const people = S.clientContacts.filter(x => x.channel_id === c.id && !x.revoked).length;
+  const team = (c.dm_users || []).length;
+  return `Client · ${people} ${people === 1 ? 'person' : 'people'} with a link · ${team} on our side`;
+}
+async function openClientChat(fieldId, optionId) {
+  const { data, error } = await sb.rpc('client_channel_open', { f: fieldId, opt: optionId });
+  if (error || !data) return toast(errText(error || 'Couldn’t open the conversation'));
+  await loadChat(); openChat(data);
+}
+function clientPeopleSheet(c) {
+  openSheet({ title: c.name, kind: 'center', key: 'clientpeople', build: sh => {
+    const body = h('div', { class: 'sbody cpp' }); sh.append(body);
+    const draw = () => {
+      c = chOf(c.id) || c;
+      const people = S.clientContacts.filter(x => x.channel_id === c.id && !x.revoked);
+      const team = (c.dm_users || []).filter(u => S.members.some(m => m.user_id === u));
+      body.replaceChildren(
+        h('h4', { text: 'Who answers this client' }),
+        h('p', { class: 'note', text: 'They see this conversation and get its alerts. Admins can always see it.' }),
+        h('div', { class: 'cpp-team' }, ...team.map(u => h('span', { class: 'fchip on' }, avatar(prof(u), { size: 'xs' }), h('span', { class: 'notr', text: dname(prof(u)) }))),
+          isAdmin() ? h('button', { class: 'fchip', onclick: e => picker(e.currentTarget, { multi: true, value: team, options: S.members.map(m => ({ v: m.user_id, label: dname(prof(m.user_id)), icon: avatar(prof(m.user_id), { size: 'xs' }) })),
+            onPick: async v => { const { error } = await sb.rpc('client_channel_people', { ch: c.id, users: v }); if (error) return toast(errText(error)); c.dm_users = v; const x = chOf(c.id); if (x) x.dm_users = v; draw(); refreshChat(); } }) }, icon('plus', 12), 'Choose') : null),
+        h('h4', { text: 'People at the client' }),
+        h('p', { class: 'note', text: 'Each person gets their own private link: they chat with you, see the status and report problems. Turn one off and only that link stops.' }),
+        people.length ? h('div', { class: 'cpp-list' }, ...people.map(p => h('div', { class: 'prow' },
+          h('div', { class: 'nm' }, h('div', { dir: 'auto', text: p.name }), h('div', { class: 'sub' }, p.phone ? h('span', { dir: 'ltr', class: 'notr', text: p.phone + ' · ' }) : null, h('span', { text: p.last_seen_at ? 'last opened ' + ago(p.last_seen_at) + ' ago' : 'not opened yet' }))),
+          isAdmin() ? h('div', { class: 'cl-acts' },
+            h('button', { class: 'btn sm', onclick: () => shareContactLink(p, 'copy') }, 'Copy link'),
+            p.phone ? h('button', { class: 'btn sm', 'aria-label': `Send ${p.name} their link on WhatsApp`, onclick: () => shareContactLink(p, 'wa') }, icon('whatsapp', 14), 'WhatsApp') : null,
+            h('button', { class: 'btn sm ghost danger', onclick: async e => { const done = busy(e.currentTarget, 'Turning off…'); const { error } = await sb.from('client_contacts').update({ revoked: true }).eq('id', p.id); done(); if (error) return toast(errText(error)); p.revoked = true; toast(`${p.name}’s link is off`); draw(); refreshChat(); } }, 'Turn off')) : null)))
+          : h('p', { class: 'sm mute', text: 'Nobody yet.' }),
+        isAdmin() ? addPersonForm(c, draw) : h('p', { class: 'note', text: 'Ask an admin to add people.' }));
+    };
+    draw();
+  } });
+}
+function addPersonForm(c, after) {
+  const name = h('input', { type: 'text', maxlength: '80', dir: 'auto', placeholder: 'e.g. Mona Adel', 'aria-label': 'Name' });
+  const phone = h('input', { type: 'tel', maxlength: '24', dir: 'ltr', placeholder: '+20 100 123 4567', 'aria-label': 'WhatsApp number' });
+  const add = h('button', { class: 'btn pri', type: 'submit' }, icon('plus', 14), 'Add and make their link');
+  return h('form', { class: 'cpp-add', onsubmit: async e => {
+    e.preventDefault();
+    if (name.value.trim().length < 2) { toast('Write the person’s name'); return name.focus(); }
+    const done = busy(add, 'Adding…');
+    const { data: tok, error } = await sb.rpc('client_contact_add', { ch: c.id, p_name: name.value.trim(), p_phone: phone.value.trim(), p_email: null });
+    if (error || !tok) { done(); return toast(errText(error || 'Couldn’t add them')); }
+    const r = await sb.from('client_contacts').select('*').eq('channel_id', c.id); done();
+    if (r.data) S.clientContacts = S.clientContacts.filter(x => x.channel_id !== c.id).concat(r.data);
+    const p = S.clientContacts.find(x => x.channel_id === c.id && x.name === name.value.trim() && !x.revoked);
+    track('client_person_added');
+    await copyText(personUrl(tok), `Link for ${name.value.trim()} made and copied`);
+    if (p?.phone) toast(`Send ${p.name} the link on WhatsApp?`, { label: 'WhatsApp', fn: () => shareContactLink(p, 'wa', tok) }, 10000, true);
+    name.value = ''; phone.value = ''; after();
+  } }, h('h4', { text: 'Add a person' }), h('div', { class: 'cpp-two' }, h('label', { class: 'field' }, 'Name', name), h('label', { class: 'field' }, 'WhatsApp number', phone)), add);
+}
+async function shareContactLink(p, how, tok) {
+  if (!tok) { const { data, error } = await sb.from('client_contact_keys').select('token').eq('contact_id', p.id); if (error || !data?.[0]) return toast(errText(error || 'Only admins can see the links')); tok = data[0].token; }
+  const url = personUrl(tok);
+  if (how === 'copy') return copyText(url, `${p.name}’s link copied`);
+  const nm = String(p.name || '').split(' ')[0];
+  const txt = isAr() ? `أهلًا ${nm}، ده لينكك الخاص مع فريق ${S.ws.name}: تقدر تكلمنا، وتتابع الشغل، وتبعت أي مشكلة.\n${url}` : `Hi ${nm}, this is your own link to the ${S.ws.name} team: chat with us, follow the work and report any problem.\n${url}`;
+  window.open(`https://wa.me/${waNumber(p.phone)}?text=` + encodeURIComponent(txt), '_blank', 'noopener');
+}

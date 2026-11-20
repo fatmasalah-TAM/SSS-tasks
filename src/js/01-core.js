@@ -77,7 +77,7 @@ const sb = supabase.createClient(CFG.url, CFG.key, { global: { fetch: (u, o) => 
 /* ── state ── */
 const S = {
   session: null, ws: null, wsList: [], members: [], profiles: {}, statuses: [], types: [], fields: [], rules: [],
-  views: [], projects: [], leaves: [], deploys: [], deals: [], tasks: [], notifs: [], invites: [], channels: [], messages: [], reactions: [], reads: {}, huddles: [], prefs: null, loaded: false, online: navigator.onLine,
+  views: [], projects: [], leaves: [], deploys: [], deals: [], tasks: [], notifs: [], invites: [], channels: [], clientContacts: [], messages: [], reactions: [], reads: {}, huddles: [], prefs: null, loaded: false, online: navigator.onLine,
   route: store.get('route', { v: 'myturn' }), vc: null, selected: null, outbox: store.get('outbox', []),
 };
 const CATS = ['backlog', 'unstarted', 'started', 'review', 'done', 'canceled'];

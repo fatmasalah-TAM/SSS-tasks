@@ -1,14 +1,24 @@
 /* ═════════════ client status page: a private read-only link per client (no sign-in) ═════════════ */
 var clientTok = (() => { try { const c = new URLSearchParams(location.search).get('c'); return c && /^[0-9a-f]{20,64}$/i.test(c) ? c : null; } catch { return null; } })();
 const clientUrl = tok => location.origin + location.pathname + '?c=' + tok;
+// a person at a client: their own private link (?p=), with the status page, problem reports and a chat with the team
+var personTok = (() => { try { const c = new URLSearchParams(location.search).get('p'); return c && /^[0-9a-f]{40}$/i.test(c) ? c : null; } catch { return null; } })();
+const personUrl = tok => location.origin + location.pathname + '?p=' + tok;
+async function portalData() {
+  if (!personTok) { const { data, error } = await sb.rpc('client_status', { tok: clientTok }); return { data, error }; }
+  const { data, error } = await sb.functions.invoke('client-portal', { body: { ptok: personTok } });
+  if (error || !data || data.error) return { data: null, error: error || (data?.error === 'link' ? null : data) };
+  const st = data.status || {};
+  return { data: { client: data.client, workspace: data.workspace, at: st.at || nowIso(), items: st.items || [], me: data.me, messages: data.messages || [] } };
+}
 
 async function clientPage() {
   // a client whose phone or browser is in Arabic sees the page in Arabic the first time
   try { if (localStorage.getItem('baton.lang') == null && /^ar\b/i.test(navigator.language || '')) return setLang('ar'); } catch {}
   if (clientPage.form) return; // never redraw over a report the client is typing
   document.getElementById('splash')?.remove();
-  $('#app').innerHTML = bootLoader().replace('Loading your tasks…', 'Loading…');
-  const { data, error } = await sb.rpc('client_status', { tok: clientTok });
+  if (!clientPage.drawn) $('#app').innerHTML = bootLoader().replace('Loading your tasks…', 'Loading…');
+  const { data, error } = await portalData();
   if (error || !data) {
     $('#app').replaceChildren(h('div', { class: 'cp' }, h('div', { class: 'cp-in' }, h('div', { class: 'cp-brand', html: ICONS.wordmark }),
       h('h1', { text: error ? 'Couldn’t load this page' : 'This link isn’t active' }),
@@ -25,7 +35,7 @@ async function clientPage() {
   const row = i => h('li', { class: 'cp-item' }, h('span', { class: 'cp-dot ' + i.category }),
     h('div', { class: 'cp-t' }, h('b', { dir: 'auto', text: i.title }),
       h('span', { class: 'sm mute' }, `${i.key}${i.bug ? ' · fix' : ''} · ${i.category === 'done' ? 'done ' + fmtDate((i.done_at || '').slice(0, 10)) : i.status}${i.due && i.category !== 'done' ? ' · due ' + fmtDate(i.due) : ''}`)));
-  const total = items.length, done = groups[3][3].length;
+  const total = items.length, done = groups[3][3].length; clientPage.drawn = true; clientPage.ws = data.workspace;
   $('#app').replaceChildren(h('div', { class: 'cp' }, h('div', { class: 'cp-in' },
     h('header', { class: 'cp-head' }, h('div', { class: 'cp-brand', html: ICONS.wordmark }),
       h('div', { class: 'seg notr cp-lang', role: 'group', 'aria-label': 'Language' },
@@ -33,6 +43,7 @@ async function clientPage() {
         h('button', { 'aria-pressed': String(isAr()), lang: 'ar', dir: 'rtl', onclick: () => isAr() || setLang('ar') }, 'العربية'))),
     h('h1', { dir: 'auto', text: data.client }),
     h('p', { class: 'mute', text: `From the ${data.workspace} team · updated ${new Date(data.at).toLocaleString(UI_LOC, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}` }),
+    personTok ? clientChatBox(data) : null,
     h('div', { class: 'cp-report' }, h('div', {}, h('b', { text: 'Found a problem?' }), h('span', { class: 'sm mute', text: 'Send it straight to the team. Add a screenshot if you can.' })),
       h('button', { class: 'btn pri', onclick: () => clientReportForm(data) }, icon('plus', 14), 'Report a problem')),
     total ? h('div', { class: 'cp-sum' }, ...groups.map(([k, l, , list]) => h('div', { class: 'cp-n ' + k }, h('b', { text: String(list.length) }), h('span', { text: l })))) : null,
@@ -41,7 +52,7 @@ async function clientPage() {
       : [h('p', { class: 'cp-empty', text: 'Nothing open right now.' })]),
     h('footer', { class: 'cp-foot sm mute', text: 'This page updates by itself. Only people with this link can see it.' }))));
   document.title = `${data.client} · status`;
-  clearTimeout(clientPage.t); clientPage.t = setTimeout(() => { if (document.visibilityState === 'visible') clientPage(); }, 120e3);
+  clearTimeout(clientPage.t); clientPage.t = setTimeout(function again() { if (document.visibilityState === 'visible' && !(CC.el && CC.el.contains(document.activeElement))) clientPage(); else clientPage.t = setTimeout(again, 30e3); }, 120e3);
 }
 
 /* ── admin: Settings → Client pages ── */
@@ -68,8 +79,9 @@ function clientLinksPanel() {
             h('button', { class: 'btn sm', onclick: () => { track('client_link_shared'); copyText(clientUrl(l.token), 'Link copied'); } }, 'Copy link'),
             h('button', { class: 'btn sm', 'aria-label': `Send ${o.label} an update on WhatsApp`, onclick: () => clientWhatsApp(cf, o, l) }, icon('whatsapp', 14), 'WhatsApp'),
             h('a', { class: 'btn sm ghost', href: clientUrl(l.token), target: '_blank', rel: 'noopener' }, 'Open'),
+            h('button', { class: 'btn sm', onclick: () => { closeAllSheets?.(true); openClientChat(cf.id, o.id); } }, icon('chat', 14), 'Chat'),
             h('button', { class: 'btn sm ghost danger', onclick: async e => { const done = busy(e.currentTarget, 'Turning off…'); const { error } = await sb.from('client_links').update({ revoked: true }).eq('token', l.token); done(); if (error) return toast(errText(error)); toast(`${o.label}’s link is off`); draw(); } }, 'Turn off'),
-          ] : [h('button', { class: 'btn sm pri', onclick: async e => {
+          ] : [h('button', { class: 'btn sm', onclick: () => { closeAllSheets?.(true); openClientChat(cf.id, o.id); } }, icon('chat', 14), 'Chat'), h('button', { class: 'btn sm pri', onclick: async e => {
             const done = busy(e.currentTarget, 'Making…');
             const { data, error } = await sb.from('client_links').insert({ workspace_id: S.ws.id, field_id: cf.id, option_id: o.id, label: o.label, created_by: uid() }).select().single(); done();
             if (error) return toast(errText(error)); await copyText(clientUrl(data.token), `Link for ${o.label} made and copied`); draw();
@@ -93,7 +105,7 @@ async function shrinkShot(file) { // phone screenshots are large: send at most 1
   return { name: file.name, type: 'image/jpeg', data, url: URL.createObjectURL(blob) };
 }
 function clientReportForm(data) {
-  const saved = (() => { try { return JSON.parse(localStorage.getItem('baton.clientme') || '{}') || {}; } catch { return {}; } })();
+  const saved = Object.assign({}, data.me || {}, (() => { try { return JSON.parse(localStorage.getItem('baton.clientme') || '{}') || {}; } catch { return {}; } })());
   let sev = 'normal'; const shots = [];
   const err = h('p', { class: 'cp-err', role: 'alert', hidden: true });
   const fld = (label, hint, input) => h('label', { class: 'field' }, label, hint ? h('span', { class: 'h', text: hint }) : null, input);
@@ -127,7 +139,7 @@ function clientReportForm(data) {
     if (!/^\+?[0-9]{8,15}$/.test(phone.value.replace(/[^0-9+]/g, ''))) return bad(CR_ERR.phone, phone);
     if (email.value.trim() && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.value.trim())) return bad(CR_ERR.email, email);
     const done = busy(send, 'Sending…');
-    let res; try { res = await sb.functions.invoke('client-report', { body: { tok: clientTok, title: title.value, details: details.value, severity: sev, name: name.value, phone: phone.value, email: email.value, files: shots.map(x => ({ name: x.name, type: x.type, data: x.data })) } }); }
+    let res; try { res = await sb.functions.invoke('client-report', { body: { tok: clientTok || personTok, title: title.value, details: details.value, severity: sev, name: name.value, phone: phone.value, email: email.value, files: shots.map(x => ({ name: x.name, type: x.type, data: x.data })) } }); }
     catch (x) { res = { error: x }; }
     done();
     const out = res?.data;
@@ -456,3 +468,74 @@ function askCause(t, then) {
 /* true when it opened the cause sheet instead of closing the bug right away */
 function causeFirst(t, then) { if (!isBug(t) || t.root_cause) return false; askCause(t, then); return true; }
 
+
+/* ── the client's side of the chat (person links only): one conversation with the team, kept in Ovrto's Chat ── */
+var CC = { el: null, list: null, msgs: [], timer: null, sending: false };
+const CC_ERR = { busy: 'You sent a lot of messages in a short time. Wait a few minutes, then try again.', files: 'Send pictures (JPG, PNG or WebP) or voice notes, up to 3 at a time.', link: 'This link isn’t active any more. Ask your contact for a new link.', empty: 'Write a message first.' };
+function clientChatBox(data) {
+  if (!CC.el) {
+    CC.msgs = data.messages || [];
+    CC.list = h('div', { class: 'cc-list', role: 'log', 'aria-live': 'polite', 'aria-label': 'Messages' });
+    const ta = h('textarea', { class: 'cc-in', rows: '1', dir: 'auto', maxlength: '4000', 'aria-label': 'Message', placeholder: 'Write a message…' });
+    ta.addEventListener('input', () => { ta.style.height = 'auto'; ta.style.height = Math.min(140, ta.scrollHeight) + 'px'; err.hidden = true; });
+    const err = h('p', { class: 'cp-err', role: 'alert', hidden: true });
+    const pending = []; const chips = h('div', { class: 'cp-shots' });
+    const drawPending = () => chips.replaceChildren(...pending.map((x, i) => h('div', { class: 'cp-shot' + (x.audio ? ' voice' : '') }, x.audio ? h('span', { class: 'cc-vchip' }, icon('mic', 16), h('span', { text: mmss(x.seconds || 0) })) : h('img', { src: x.url, alt: `Photo ${i + 1}` }),
+      h('button', { type: 'button', class: 'x', 'aria-label': `Remove attachment ${i + 1}`, onclick: () => { pending.splice(i, 1); drawPending(); } }, icon('x', 14)))));
+    const pick = h('input', { type: 'file', accept: 'image/*', multiple: true, hidden: true, onchange: async e => {
+      const l = [...e.target.files]; e.target.value = '';
+      for (const f of l) { if (pending.length >= 3) break; if (!/^image\//.test(f.type)) continue; try { pending.push(await shrinkShot(f)); } catch {} }
+      drawPending();
+    } });
+    const send = h('button', { type: 'button', class: 'btn pri cc-send', 'aria-label': 'Send' }, icon('send', 18));
+    const doSend = async extra => {
+      if (CC.sending) return;
+      const body = ta.value.trim(); const files = extra || pending.slice();
+      if (!body && !files.length) { ta.focus(); return; }
+      CC.sending = true; const done = busy(send, '');
+      let res; try { res = await sb.functions.invoke('client-portal', { body: { ptok: personTok, op: 'send', body: extra ? '' : body, files: files.map(x => ({ type: x.type, data: x.data, seconds: x.seconds || null })) } }); } catch (x) { res = { error: x }; }
+      done(); CC.sending = false;
+      const out = res?.data;
+      if (res?.error || !out || out.error) { err.textContent = CC_ERR[out?.error] || 'Couldn’t send it. Check your connection and try again.'; err.hidden = false; return; }
+      if (!extra) { ta.value = ''; ta.style.height = 'auto'; pending.splice(0); drawPending(); }
+      clientChatPoll();
+    };
+    send.addEventListener('click', () => doSend());
+    ta.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !matchMedia('(hover: none)').matches) { e.preventDefault(); doSend(); } });
+    const mic = h('button', { type: 'button', class: 'x', 'aria-label': 'Record a voice note', title: 'Record a voice note', onclick: async () => {
+      const v = await recordVoice('Voice note'); if (!v) return;
+      const type = (v.blob.type || 'audio/wav').split(';')[0];
+      const data64 = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(String(fr.result).split(',')[1]); fr.readAsDataURL(v.blob); });
+      doSend([{ type, data: data64, seconds: v.seconds, audio: true }]);
+    } }, icon('mic', 18));
+    const clip = h('button', { type: 'button', class: 'x', 'aria-label': 'Add a photo', title: 'Add a photo', onclick: () => pick.click() }, icon('clip', 18));
+    CC.el = h('section', { class: 'cp-g cc' }, h('h2', { text: 'Chat with the team' }),
+      h('p', { class: 'sm mute', text: `Messages go to the ${data.workspace} team. They answer here.` }),
+      CC.list, err, chips, h('div', { class: 'cc-row' }, clip, mic, pick, ta, send));
+    drawClientChat(true);
+    clearInterval(CC.timer); CC.timer = setInterval(() => { if (document.visibilityState === 'visible') clientChatPoll(); }, 6000);
+  }
+  return CC.el;
+}
+function drawClientChat(scroll) {
+  if (!CC.list) return;
+  const near = CC.list.scrollHeight - CC.list.scrollTop - CC.list.clientHeight < 80;
+  let lastDay = '';
+  CC.list.replaceChildren(...(CC.msgs.length ? [] : [h('p', { class: 'cc-empty mute', text: 'No messages yet. Say hello, ask a question, or send a photo.' })]),
+    ...CC.msgs.flatMap(m => {
+      const d = (m.at || '').slice(0, 10); const sep = d !== lastDay ? (lastDay = d, h('div', { class: 'cc-day', text: fmtDate(d) })) : null;
+      const files = (m.files || []).map(f => /^audio\//.test(f.type) ? h('audio', { controls: true, preload: 'none', src: f.url, 'aria-label': 'Voice note' })
+        : /^image\//.test(f.type) ? h('a', { class: 'cc-img', href: f.url, target: '_blank', rel: 'noopener' }, h('img', { src: f.url, alt: f.name, loading: 'lazy' }))
+        : h('a', { href: f.url, target: '_blank', rel: 'noopener', text: f.name }));
+      return [sep, h('div', { class: 'cc-msg ' + m.who }, m.who === 'me' ? null : h('b', { class: 'cc-who', dir: 'auto', text: m.who === 'team' ? `${m.name} · ${clientPage.ws || 'team'}` : m.name }),
+        m.body ? h('div', { class: 'cc-body', dir: 'auto', text: m.body }) : null, ...files, h('span', { class: 'cc-time', text: clock(m.at) }))].filter(Boolean);
+    }));
+  if (scroll || near) CC.list.scrollTop = CC.list.scrollHeight;
+}
+async function clientChatPoll() {
+  if (!personTok || !CC.list) return;
+  const since = CC.msgs.length ? CC.msgs[CC.msgs.length - 1].at : null;
+  let res; try { res = await sb.functions.invoke('client-portal', { body: { ptok: personTok, since } }); } catch { return; }
+  const add = (res?.data?.messages || []).filter(m => !CC.msgs.some(x => x.id === m.id));
+  if (add.length) { CC.msgs.push(...add); drawClientChat(false); }
+}

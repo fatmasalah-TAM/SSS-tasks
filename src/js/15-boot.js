@@ -10,7 +10,7 @@ async function switchWs(id) {
   await loadAll(); S.route = { v: startView() }; render(); setupRealtime(); checkDept();
 }
 async function boot() {
-  if (clientTok) return clientPage(); // a client's read-only status link: no sign-in
+  if (clientTok || personTok) return clientPage(); // a client's status link or a person's own link: no sign-in
   if (booting) return; booting = true;
   try {
     if (!S.session) { S.ws = null; authScreen('in'); return; }
