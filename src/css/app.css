@@ -1277,3 +1277,7 @@ input[type=date]::-webkit-date-and-time-value{text-align:start}
 .cd-term{display:flex;gap:8px;align-items:flex-start;font-size:13px;overflow-wrap:anywhere}.cd-term.off{opacity:.5}.cd-term input{margin-top:2px;flex:none}
 .cd-dates{display:flex;flex-wrap:wrap;gap:4px 14px}
 .cd-terms{display:block}.cd-terms summary{cursor:pointer;color:var(--accent)}.cd-terms p{margin:6px 0 0;overflow-wrap:anywhere}
+.cd-fx{display:flex;flex-direction:column;gap:4px}.cd-fx[hidden]{display:none}
+.cd-vat{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.cd-vr{display:flex;align-items:center;gap:4px;font-weight:500}
+.cd-calc{display:flex;flex-wrap:wrap;gap:4px 14px;margin:0;font-size:13.5px;background:var(--sunk);border-radius:8px;padding:8px 10px}
+.cd-fxline{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center}

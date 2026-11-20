@@ -46,7 +46,8 @@ function moneyMath(pid) {
   const costs = once + monthly * months;
   const pay = pDept(S.projects.find(p => p.id === pid)) === 'hardware' ? M.hwSalary : M.salary;
   const team = canSeeSalaries() && pay && m.share != null ? (Number(pay) * Number(m.share) / 100) * months : null;
-  return { value, received, outstanding: value - received, late, costs, monthly, months, before: value - costs, team, net: team == null ? null : value - costs - team, share: m.share };
+  const total = Number(c.total) || value; // what the client pays, VAT included; VAT is not the company's money, so profit uses value
+  return { value, total, received, outstanding: total - received, late, costs, monthly, months, before: value - costs, team, net: team == null ? null : value - costs - team, share: m.share };
 }
 /* how much of the team's finished work went to this project lately: a starting point for the share */
 function suggestedShare(pid) {
@@ -72,6 +73,7 @@ function projectMoney(p) {
       stat(fmtMoney(x.net != null ? x.net : x.before), x.net != null ? 'profit after the team' : 'profit before the team', (x.net != null ? x.net : x.before) < 0 ? 'bad' : 'good')),
     sec('Contract', act(['Edit', () => editContract(p)]), h('div', { class: 'pjlist' }, ...contractFiles(p), ...contractFacts(p), ed ? h('button', { class: 'pjrow lnk-row', onclick: () => readContract(p) }, icon('upload', 14), h('span', { class: 'grow', text: (c.files || []).length ? '✦ Read another contract or addendum with AI' : '✦ Upload the contract: AI reads the price and payments' })) : null, h('div', { class: 'pjrow' }, h('span', { class: 'grow' }, h('b', { text: fmtMoney(x.value) }),
       h('span', { class: 'sm mute', text: [c.start ? 'from ' + fmtDate(c.start) : null, c.end ? 'to ' + fmtDate(c.end) : null, c.note || null].filter(Boolean).join(' · ') || 'No dates yet' }),
+      ...contractMoneyLines(p, ed),
       x.value ? h('span', { class: 'sm ' + (c.signed_at ? 'mute' : 'pjalert'), 'data-sign-line': '1', text: signLine(p) }) : null),
       x.value && !c.signed_at && canSign() && (!(S.ws.money_viewers || []).length || (S.ws.money_viewers || []).includes(uid())) ? h('button', { class: 'btn sm pri', 'data-sign': '1', onclick: () => signContract(p) }, icon('check', 14), 'Signed') : null))),
     sec('Payments', act(['+ Payment', () => editPayment(p)]), (m.payments || []).length ? h('div', { class: 'pjlist' }, (m.payments || []).slice().sort((a, b) => (a.due || '').localeCompare(b.due || '')).map(y => {
@@ -230,9 +232,45 @@ function contractDraftSheet(p, d, files) {
       const row = h('label', { class: 'cd-term' }, cb, h('span', {}, h('b', { dir: 'auto', text: t.label + ': ' }), h('span', { dir: 'auto', text: [t.value, t.date ? fmtDate(t.date) : ''].filter(Boolean).join(' · ') })));
       cb.addEventListener('change', () => { t.on = cb.checked; row.classList.toggle('off', !t.on); }); return row; });
     const rows = (d.payments || []).map(x => Object.assign({ on: true }, x));
+    // currency and exchange rate: amounts stay as written; Ovrto keeps them in the workspace currency at the rate below
+    const ccy = h('input', { type: 'text', value: (d.currency || cur()).toUpperCase(), maxlength: '3', 'aria-label': 'Contract currency', style: { width: '100%', textTransform: 'uppercase' } });
+    const rate = h('input', { type: 'text', inputmode: 'decimal', value: '', 'aria-label': 'Exchange rate', style: { width: '100%' } });
+    const rateSrc = h('span', { class: 'sm mute' }); let fx = { rate: 1, at: nowIso(), source: '' };
+    const rateBox = h('div', { class: 'cd-fx' }, h('label', { class: 'field' }, h('span', { class: 'cd-ratel' }), rate), rateSrc,
+      d.pay_currency || d.fx_rule ? h('p', { class: 'note', text: `The contract says it is paid in ${d.pay_currency || cur()}${d.fx_rule ? ' at: ' + d.fx_rule : ''}. Use that rate if you have it.` }) : null);
+    const getRate = async () => {
+      const from = ccy.value.trim().toUpperCase(); rateBox.hidden = !/^[A-Z]{3}$/.test(from) || from === cur();
+      $('.cd-ratel', rateBox).textContent = `1 ${from} = ? ${cur()}`;
+      if (rateBox.hidden) { fx = { rate: 1, at: nowIso(), source: '' }; drawSum(); return; }
+      rateSrc.textContent = 'Getting today’s rate…';
+      const { data, error } = await sb.functions.invoke('fx-rate', { body: { base: from, quote: cur() } });
+      if (error || !data || data.error) { rateSrc.textContent = data?.error || 'Couldn’t get today’s rate. Type the rate yourself.'; return; }
+      fx = { rate: data.rate, at: data.at, source: data.source }; rate.value = String(data.rate);
+      rateSrc.textContent = `Today’s rate from ${data.source} (${fmtDateY(String(data.at).slice(0, 10))}). You can change it, e.g. to the bank rate.`; drawSum();
+    };
+    ccy.addEventListener('change', getRate);
+    rate.addEventListener('input', () => { const r = Number(rate.value.replace(/[,\s]/g, '')); if (r > 0) fx = { rate: r, at: nowIso(), source: 'typed in' }; rateSrc.textContent = ''; drawSum(); });
+    // VAT: Egypt's standard rate is 14%; if the contract doesn't include it, Ovrto adds it to what the client pays
+    let vatMode = d.vat === 'included' ? 'in' : d.vat === 'none' ? 'none' : 'add';
+    const vatRate = h('input', { type: 'text', inputmode: 'decimal', value: String(d.vat_rate || 14), 'aria-label': 'VAT %', style: { width: '5em' } });
+    const vatChips = h('div', { class: 'chips' });
+    const drawVat = () => { vatChips.replaceChildren(...[['add', d.vat === 'not_stated' ? 'Not in the contract: add VAT' : 'Not in the prices: add VAT'], ['in', 'Already in the prices'], ['none', 'No VAT']].map(([k, l]) =>
+      h('button', { type: 'button', class: 'chipbtn', 'aria-pressed': String(vatMode === k), onclick: () => { vatMode = k; drawVat(); drawSum(); } }, l))); vatRate.disabled = vatMode === 'none'; };
+    vatRate.addEventListener('input', () => drawSum());
+    const calc = h('p', { class: 'cd-calc' });
+    const money = (n, c) => (Math.round(n * 100) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 }) + ' ' + c;
     const sum = h('p', { class: 'sm mute cd-sum' });
-    const drawSum = () => { const tot = rows.filter(r => r.on).reduce((n, r) => n + (Number(r.amount) || 0), 0); const v = Number(String(val.value).replace(/[,\s]/g, '')) || 0;
-      sum.textContent = rows.length ? `Payments add up to ${fmtMoney(tot)}${v && Math.abs(tot - v) > 1 ? ` · the contract says ${fmtMoney(v)}` : ''}` : ''; sum.classList.toggle('pjalert', !!(rows.length && v && Math.abs(tot - v) > 1)); };
+    const vatPct = () => vatMode === 'none' ? 0 : Math.max(0, Number(vatRate.value.replace(/[,\s%]/g, '')) || 0);
+    const parts_ = () => { const v = Number(String(val.value).replace(/[,\s]/g, '')) || 0; const r = vatPct() / 100;
+      const ex = vatMode === 'in' ? v / (1 + r) : v; const tot = vatMode === 'add' ? v * (1 + r) : v; return { v, ex, vat: tot - ex, tot }; };
+    const drawSum = () => {
+      const c3 = ccy.value.trim().toUpperCase() || cur(); const tot = rows.filter(r => r.on).reduce((n, r) => n + (Number(r.amount) || 0), 0); const v = Number(String(val.value).replace(/[,\s]/g, '')) || 0;
+      sum.textContent = rows.length ? `Payments add up to ${money(tot, c3)}${v && Math.abs(tot - v) > 1 ? ` · the contract says ${money(v, c3)}` : ''}` : ''; sum.classList.toggle('pjalert', !!(rows.length && v && Math.abs(tot - v) > 1));
+      if (!calc.isConnected && !calc.parentNode) return;
+      const x = parts_(); const conv = c3 !== cur() && fx.rate > 0;
+      calc.replaceChildren(h('span', { text: `Before VAT ${money(x.ex, c3)}` }), h('span', { text: `VAT ${vatPct()}% ${money(x.vat, c3)}` }),
+        h('b', { text: `The client pays ${money(x.tot, c3)}` }), conv ? h('b', { text: `≈ ${money(x.tot * fx.rate, cur())} today` }) : null);
+    };
     val.addEventListener('input', drawSum);
     const payEls = rows.map((r, i) => {
       const amt = inp('text', String(r.amount), '', `Payment ${i + 1} amount`); const lab = inp('text', r.label + (r.when && !r.label.toLowerCase().includes(r.when.toLowerCase()) ? ` (${r.when})` : ''), 'e.g. Down payment', `Payment ${i + 1} what for`); const due = inp('date', r.due, '', `Payment ${i + 1} due`);
@@ -243,28 +281,35 @@ function contractDraftSheet(p, d, files) {
       r.read = () => ({ amount: Number(amt.value.replace(/[,\s]/g, '')), label: lab.value.trim(), due: due.value || null });
       return row;
     });
-    drawSum();
-    const curNote = d.currency && d.currency !== cur() ? h('p', { class: 'note pjalert', text: `The contract is in ${d.currency}, and Ovrto shows money in ${cur()}. Check the amounts before saving.` }) : null;
+    drawVat(); drawSum(); getRate();
+    const curNote = null;
     const go_ = h('button', { class: 'btn pri' }, 'Save');
     go_.addEventListener('click', async () => {
       const v = Number(String(val.value).replace(/[,\s]/g, ''));
       if (!(v > 0)) { val.focus(); return toast('Contract value: write the total price'); }
-      const pays = rows.filter(r => r.on).map(r => r.read());
+      const c3 = ccy.value.trim().toUpperCase() || cur(); if (!/^[A-Z]{3}$/.test(c3)) { ccy.focus(); return toast('Currency: 3 letters, like USD or EGP'); }
+      const fxr = c3 === cur() ? 1 : fx.rate; if (!(fxr > 0)) { rate.focus(); return toast('Type the exchange rate first'); }
+      const x = parts_(); const r2 = n => Math.round(n * 100) / 100; const payFactor = vatMode === 'add' ? 1 + vatPct() / 100 : 1;
+      const pays = rows.filter(r => r.on).map(r => r.read()).map(y => Object.assign(y, { amount_orig: r2(y.amount * payFactor), amount: r2(y.amount * payFactor * fxr) }));
       if (pays.some(x => !(x.amount > 0))) return toast('Each payment needs an amount above 0');
-      const changed = v !== (c.value ?? null) || (start.value || null) !== (c.start ?? null) || (end.value || null) !== (c.end ?? null);
-      const nc = Object.assign({}, c, { value: v, start: start.value || null, end: end.value || null, note: note.value.trim() || c.note || '', files: [...(c.files || []), ...files],
+      const nv = r2(x.ex * fxr);
+      const changed = nv !== (c.value ?? null) || (start.value || null) !== (c.start ?? null) || (end.value || null) !== (c.end ?? null);
+      const nc = Object.assign({}, c, { value: nv, total: r2(x.tot * fxr), currency: c3, value_orig: r2(x.ex), total_orig: r2(x.tot), vat_mode: vatMode, vat_rate: vatPct(),
+        fx: c3 === cur() ? null : { rate: fxr, at: fx.at, source: fx.source, rule: d.fx_rule || '', paid_in: d.pay_currency || cur() }, start: start.value || null, end: end.value || null, note: note.value.trim() || c.note || '', files: [...(c.files || []), ...files],
         signed_on: signedOn.value || c.signed_on || null, expires: expires.value || c.expires || null, warranty_until: warranty.value || c.warranty_until || null,
         terms: terms.some(t => t.on) ? terms.filter(t => t.on).map(({ label, value, date }) => ({ label, value, date: date || null })) : (c.terms || []) });
       if (changed && nc.signed_at) { delete nc.signed_at; delete nc.signed_by; }
       go_.disabled = true;
-      const ok = await saveMoney(p.id, { contract: nc, payments: [...(m.payments || []), ...pays.map(x => ({ id: uuid(), amount: x.amount, label: x.label, due: x.due, paid_at: null }))] },
+      const ok = await saveMoney(p.id, { contract: nc, payments: [...(m.payments || []), ...pays.map(y => Object.assign({ id: uuid(), amount: y.amount, label: y.label, due: y.due, paid_at: null }, c3 !== cur() ? { amount_orig: y.amount_orig, currency: c3 } : {}))] },
         pays.length ? `Contract saved with ${pays.length} payment${pays.length === 1 ? '' : 's'}` : 'Contract saved');
       if (ok) closeSheet(true); else go_.disabled = false;
     });
     sh.append(h('div', { class: 'sbody cd' },
       h('p', { class: 'ai-note', text: '✦ AI read the contract. Check every number before you save; nothing is saved until you press Save.' }),
       d.check ? h('p', { class: 'note pjalert', text: d.check }) : null, curNote,
-      h('label', { class: 'field' }, 'Contract value', val), h('div', { class: 'cd-two' }, h('label', { class: 'field' }, 'Starts', start), h('label', { class: 'field' }, 'Ends', end)),
+      h('div', { class: 'cd-two' }, h('label', { class: 'field' }, 'Contract value', val), h('label', { class: 'field' }, 'Currency', ccy)), rateBox,
+      h('div', { class: 'field' }, 'VAT', h('div', { class: 'cd-vat' }, vatChips, h('label', { class: 'cd-vr' }, vatRate, '%'))), calc,
+      h('div', { class: 'cd-two' }, h('label', { class: 'field' }, 'Starts', start), h('label', { class: 'field' }, 'Ends', end)),
       h('label', { class: 'field' }, 'Note', note),
       h('div', { class: 'cd-three' }, h('label', { class: 'field' }, 'Contract date', signedOn), h('label', { class: 'field' }, 'Expires', expires), h('label', { class: 'field' }, 'Warranty until', warranty)),
       terms.length ? h('h4', { text: 'Other important terms' }) : null, ...termEls,
@@ -289,4 +334,26 @@ function contractFacts(p) {
   if ((c.terms || []).length) out.push(h('details', { class: 'pjrow cd-terms' }, h('summary', { class: 'sm', text: `Key terms (${c.terms.length})` }),
     ...c.terms.map(t => h('p', { class: 'sm' }, h('b', { dir: 'auto', text: t.label + ': ' }), h('span', { dir: 'auto', text: [t.value, t.date ? fmtDate(t.date) : ''].filter(Boolean).join(' · ') })))));
   return out;
+}
+
+/* VAT and currency on the contract: what the client pays, and today's value in the workspace currency */
+function contractMoneyLines(p, ed) {
+  const c = moneyOf(p.id).contract || {}; const out = [];
+  if (c.vat_rate > 0 && c.total) out.push(h('span', { class: 'sm mute', text: `Before VAT · the client pays ${fmtMoney(c.total)} with ${c.vat_rate}% VAT` }));
+  if (c.currency && c.currency !== cur() && c.fx?.rate) {
+    out.push(h('span', { class: 'sm cd-fxline' }, h('span', { text: `${(c.total_orig || c.value_orig || 0).toLocaleString('en-US')} ${c.currency} · 1 ${c.currency} = ${c.fx.rate} ${cur()} (${fmtDateY(String(c.fx.at || '').slice(0, 10))})` }),
+      ed ? h('button', { class: 'lnk sm', onclick: () => refreshFx(p) }, 'Update rate') : null));
+    if (c.fx.rule) out.push(h('span', { class: 'sm mute', text: `Contract rate: ${c.fx.rule}` }));
+  }
+  return out;
+}
+async function refreshFx(p) {
+  const m = moneyOf(p.id); const c = m.contract || {}; if (!c.currency || c.currency === cur()) return;
+  const hold = toast('Getting today’s rate…');
+  const { data, error } = await sb.functions.invoke('fx-rate', { body: { base: c.currency, quote: cur() } }); hold.remove();
+  if (error || !data || data.error) return toast(data?.error || 'Couldn’t get today’s rate');
+  const r = data.rate; const r2 = n => Math.round(n * 100) / 100;
+  const nc = Object.assign({}, c, { value: r2((c.value_orig || 0) * r), total: r2((c.total_orig || c.value_orig || 0) * r), fx: Object.assign({}, c.fx, { rate: r, at: data.at, source: data.source }) });
+  const pays = (m.payments || []).map(y => !y.paid_at && y.amount_orig && y.currency === c.currency ? Object.assign({}, y, { amount: r2(y.amount_orig * r) }) : y); // paid ones keep what really arrived
+  await saveMoney(p.id, { contract: nc, payments: pays }, `Rate updated: 1 ${c.currency} = ${r} ${cur()}`);
 }
