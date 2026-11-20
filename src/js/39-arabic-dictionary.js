@@ -15,3 +15,4 @@ AR.patterns.push(...[["^Payments add up to (.+?) · the contract says (.+?)$", "
 Object.assign(AR.exact, {"Signed on": "اتمضى في", "Expires": "بينتهي", "Warranty until": "الضمان لحد", "Other important terms": "شروط مهمة تانية"});
 AR.patterns.push(...[["^Keep (.+?)$", "احتفظ بـ$1"], ["^Expired (.+?)$", "انتهى $1"], ["^Expires in (\\d+) days?$", "بينتهي بعد $1 يوم"], ["^Key terms \\((\\d+)\\)$", "الشروط المهمة ($1)"]]);
 Object.assign(AR.exact, {"Contract date": "تاريخ العقد"});
+Object.assign(AR.exact, {"This is an old Word file (.doc). Save it as .docx or PDF, then upload it": "ده ملف Word قديم (.doc). احفظه .docx أو PDF وارفعه تاني", "Use a PDF, a Word file (.docx) or photos (JPG, PNG) of the contract": "استخدم PDF أو ملف Word ‏(.docx) أو صور (JPG أو PNG) للعقد"});

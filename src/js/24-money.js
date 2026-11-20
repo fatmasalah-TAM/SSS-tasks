@@ -189,19 +189,22 @@ function contractFiles(p) {
 }
 function readContract(p) {
   if (!canEditProjMoney(p)) return toast('Only the people who write this project’s money can do this');
-  const pick = h('input', { type: 'file', accept: 'application/pdf,.pdf,image/jpeg,image/png,image/webp', multiple: true, hidden: true });
+  const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+  const typeOf = f => /\.docx$/i.test(f.name) ? DOCX : /\.pdf$/i.test(f.name) ? 'application/pdf' : f.type; // some phones send Word files with no type
+  const pick = h('input', { type: 'file', accept: `application/pdf,.pdf,${DOCX},.docx,image/jpeg,image/png,image/webp`, multiple: true, hidden: true });
   pick.addEventListener('change', async () => {
     const files = [...pick.files].slice(0, 6); pick.remove(); if (!files.length) return;
-    if (files.some(f => !/^(application\/pdf|image\/(jpeg|png|webp))$/.test(f.type))) return toast('Use a PDF or photos (JPG, PNG) of the contract');
+    if (files.some(f => /\.doc$/i.test(f.name))) return toast('This is an old Word file (.doc). Save it as .docx or PDF, then upload it');
+    if (files.some(f => !/^(application\/pdf|image\/(jpeg|png|webp))$/.test(typeOf(f)) && typeOf(f) !== DOCX)) return toast('Use a PDF, a Word file (.docx) or photos (JPG, PNG) of the contract');
     if (files.reduce((n, f) => n + f.size, 0) > 18 * 1024 * 1024) return toast('The contract is too big. Keep it under 18 MB');
     if (!(await aiReady())) return toast('Turn on AI in Settings → AI first, or type the contract in');
     const hold = toast(files.length === 1 ? 'Uploading the contract…' : `Uploading ${files.length} pages…`, null, 60000);
     const saved = [];
     for (const f of files) {
       const path = `${p.id}/${uuid()}-${f.name.replace(/[^\w.\-]+/g, '_').slice(-80)}`;
-      const { error } = await sb.storage.from('contracts').upload(path, f, { contentType: f.type });
+      const { error } = await sb.storage.from('contracts').upload(path, f, { contentType: typeOf(f) });
       if (error) { hold.remove(); return toast(`Couldn’t upload ${f.name}: ${errText(error)}`); }
-      saved.push({ path, name: f.name, type: f.type, size: f.size, at: nowIso() });
+      saved.push({ path, name: f.name, type: typeOf(f), size: f.size, at: nowIso() });
     }
     hold.querySelector('span') ? hold.querySelector('span').textContent = 'AI is reading the contract…' : null;
     const { data, error } = await sb.functions.invoke('contract-read', { body: { pid: p.id, paths: saved.map(x => x.path) } });
