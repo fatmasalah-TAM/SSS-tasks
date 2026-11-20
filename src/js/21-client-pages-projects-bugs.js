@@ -9,7 +9,7 @@ function clientInstallable() { // the home-screen app should open this person's 
 }
 async function portalData() {
   if (!personTok) { const { data, error } = await sb.rpc('client_status', { tok: clientTok }); return { data, error }; }
-  clientInstallable();
+  clientInstallable(); try { localStorage.setItem('baton.ptok', personTok); } catch {} // the home-screen app finds this link again even if it opens the start page
   const { data, error } = await sb.functions.invoke('client-portal', { body: { ptok: personTok } });
   if (error || !data || data.error) return { data: null, error: error || (data?.error === 'link' ? null : data) };
   const st = data.status || {};

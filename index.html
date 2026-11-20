@@ -2,14 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-oeXGHE9cCifFrbNCd2sdMXHHrRL0/iKc+PJaQha/olE=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-ry9R52+9Cd99kTijIHXMlX112w2A/7eln65zQ7IUuoM=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-KzMwe8jvp2JuIli/BEPmIUhLpDVrzvw0YlPAtu/SBYg=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-milpW4+8KYy9f+9+oIHxWNCJQvz50uVHKIz6Q+k9NI4=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<meta name="ovrto-build" content="838627a0f482">
+<meta name="ovrto-build" content="aee78ffe862f">
 <title>Ovrto</title>
 <meta name="description" content="Over to you. Every task shows whose turn it is.">
 <meta name="theme-color" content="#0D0D0F">
-<link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -19,7 +18,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&family=JetBrains+Mono:wght@400;500&display=swap">
-<script>if(window.top!==window.self){try{window.top.location=window.self.location}catch(e){document.documentElement.style.display='none'}}try{const g=k=>JSON.parse(localStorage.getItem('baton.'+k)||'null'),t=g('theme'),r=document.documentElement;if(t&&t!=='system')r.setAttribute('data-theme',t);r.setAttribute('data-accent',g('accent')||'cobalt')}catch(e){}</script>
+<script>if(window.top!==window.self){try{window.top.location=window.self.location}catch(e){document.documentElement.style.display='none'}}try{const g=k=>JSON.parse(localStorage.getItem('baton.'+k)||'null'),t=g('theme'),r=document.documentElement;if(t&&t!=='system')r.setAttribute('data-theme',t);r.setAttribute('data-accent',g('accent')||'cobalt')}catch(e){}
+/* the install file: a client's own link (?p=) installs as an app that opens that same link, never the sign-in page */
+try{const ml=document.createElement('link');ml.rel='manifest';ml.href=/[?&]p=[0-9a-f]{40}(&|$)/i.test(location.search)?'client-manifest.json':'manifest.json';document.head.appendChild(ml)}catch(e){}
+</script>
 <style>
 /* Ovrto — quiet, premium identity: Inter type, neutral greys, one accent. Sidebar + work area on desktop, bottom tabs on phone. */
 :root{
@@ -1323,7 +1325,7 @@ input[type=date]::-webkit-date-and-time-value{text-align:start}
 </script>
 <div id="app"><div class="boot" role="status"><div class="boot-mark loop"><svg class="mark-anim" viewBox="0 0 1000 1000" fill="none" aria-hidden="true"><g transform="translate(-779.1 725.4) scale(0.6829)"><g class="mk-t"><path fill="currentColor" transform="translate(1501.0 0) scale(1.00000 -1.00000)" d="M42 401H151L89 108C79 63 79 60 79 43C79 4 98 -17 133 -17C170 -17 210 1 266 42L343 99L330 125L274 85C252 69 239 64 220 64C202 64 196 71 196 92C196 113 199 135 205 164L256 401H303C343 401 363 400 395 396L409 452L403 457L269 452L282 508L313 624L303 636L237 612C218 605 202 601 180 598V582C180 556 178 538 164 460L49 428Z"/></g><rect class="mk-x" fill="var(--accent)" x="1539.0" y="-465.0" width="490.4" height="74.0"/><path class="mk-chev" fill="var(--accent)" stroke="var(--accent)" stroke-width="18.5" stroke-linejoin="round" d="M2014.6 -568.6L2207.0 -428.0L2014.6 -287.4Z"/></g></svg></div><div class="boot-cap">Loading…</div></div></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="react-app.js?v=838627a0f482"></script>
+<script src="react-app.js?v=aee78ffe862f"></script>
 <script>
 (() => {
 'use strict';
@@ -4234,7 +4236,7 @@ addEventListener('online', () => { if (S.ws) { flushOutbox(); setupRealtime(); c
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { checkUpdate(); if (S.ws) { flushOutbox(); setupRealtime(); catchUp(); } } });
 
 /* a new version was uploaded: phones (and apps saved to the home screen) pick it up by themselves */
-const BUILD = '838627a0f482';
+const BUILD = 'aee78ffe862f';
 let updLast = 0, updShown = false;
 async function checkUpdate(force) {
   if (!force && Date.now() - updLast < 60000) return; updLast = Date.now();
@@ -4394,7 +4396,11 @@ async function boot() {
   if (clientTok || personTok) return clientPage(); // a client's status link or a person's own link: no sign-in
   if (booting) return; booting = true;
   try {
-    if (!S.session) { S.ws = null; authScreen('in'); return; }
+    if (!S.session) {
+      // a client's home-screen app that opened the start page: go back to their own link instead of the sign-in page
+      try { const pt = localStorage.getItem('baton.ptok'); if (pt && /^[0-9a-f]{40}$/i.test(pt) && (matchMedia('(display-mode: standalone)').matches || navigator.standalone)) { location.replace(location.pathname + '?p=' + pt); return; } } catch {}
+      S.ws = null; authScreen('in'); return;
+    }
     if (recovering) return recoveryScreen();
     S.loaded = false; $('#app').innerHTML = bootLoader();
     try { await sb.rpc('accept_invites'); } catch {} // invited to another workspace with an account you already have
@@ -6131,7 +6137,7 @@ function clientInstallable() { // the home-screen app should open this person's 
 }
 async function portalData() {
   if (!personTok) { const { data, error } = await sb.rpc('client_status', { tok: clientTok }); return { data, error }; }
-  clientInstallable();
+  clientInstallable(); try { localStorage.setItem('baton.ptok', personTok); } catch {} // the home-screen app finds this link again even if it opens the start page
   const { data, error } = await sb.functions.invoke('client-portal', { body: { ptok: personTok } });
   if (error || !data || data.error) return { data: null, error: error || (data?.error === 'link' ? null : data) };
   const st = data.status || {};

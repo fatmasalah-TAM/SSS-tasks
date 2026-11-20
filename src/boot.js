@@ -1,1 +1,3 @@
 if(window.top!==window.self){try{window.top.location=window.self.location}catch(e){document.documentElement.style.display='none'}}try{const g=k=>JSON.parse(localStorage.getItem('baton.'+k)||'null'),t=g('theme'),r=document.documentElement;if(t&&t!=='system')r.setAttribute('data-theme',t);r.setAttribute('data-accent',g('accent')||'cobalt')}catch(e){}
+/* the install file: a client's own link (?p=) installs as an app that opens that same link, never the sign-in page */
+try{const ml=document.createElement('link');ml.rel='manifest';ml.href=/[?&]p=[0-9a-f]{40}(&|$)/i.test(location.search)?'client-manifest.json':'manifest.json';document.head.appendChild(ml)}catch(e){}

@@ -13,7 +13,11 @@ async function boot() {
   if (clientTok || personTok) return clientPage(); // a client's status link or a person's own link: no sign-in
   if (booting) return; booting = true;
   try {
-    if (!S.session) { S.ws = null; authScreen('in'); return; }
+    if (!S.session) {
+      // a client's home-screen app that opened the start page: go back to their own link instead of the sign-in page
+      try { const pt = localStorage.getItem('baton.ptok'); if (pt && /^[0-9a-f]{40}$/i.test(pt) && (matchMedia('(display-mode: standalone)').matches || navigator.standalone)) { location.replace(location.pathname + '?p=' + pt); return; } } catch {}
+      S.ws = null; authScreen('in'); return;
+    }
     if (recovering) return recoveryScreen();
     S.loaded = false; $('#app').innerHTML = bootLoader();
     try { await sb.rpc('accept_invites'); } catch {} // invited to another workspace with an account you already have
