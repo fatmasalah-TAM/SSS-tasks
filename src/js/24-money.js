@@ -65,12 +65,12 @@ function projectMoney(p) {
   const sec = (title, action, body) => h('section', {}, h('h2', {}, title, action ? h('button', { class: 'lnk sm', style: { marginInlineStart: 'auto' }, onclick: action[1] }, action[0]) : null), body);
   const ed = canEditProjMoney(p); const act = a => ed ? a : null;
   if (!x.value && !(m.payments || []).length && !(m.costs || []).length) return [
-    ed ? emptyState('NO NUMBERS YET', 'Add the contract to see what this project brings in, what it costs and what is left. Only you and the people you pick see this.', { label: 'Add the contract', fn: () => editContract(p) })
+    ed ? emptyState('NO NUMBERS YET', 'Add the contract to see what this project brings in, what it costs and what is left. Only you and the people you pick see this.', { label: '✦ Read the contract with AI', fn: () => readContract(p) }, { label: 'Type it in', fn: () => editContract(p) })
       : emptyState('NO NUMBERS YET', `${namesOf(contractWriters(pDept(p)))} adds the contract and payments. They show up here.`)];
   const out = [
     h('div', { class: 'pjnums' }, stat(fmtMoney(x.value), 'contract'), stat(fmtMoney(x.received), 'received'), stat(fmtMoney(x.outstanding), x.late.length ? `still to come · ${x.late.length} late` : 'still to come', x.late.length ? 'bad' : ''),
       stat(fmtMoney(x.net != null ? x.net : x.before), x.net != null ? 'profit after the team' : 'profit before the team', (x.net != null ? x.net : x.before) < 0 ? 'bad' : 'good')),
-    sec('Contract', act(['Edit', () => editContract(p)]), h('div', { class: 'pjlist' }, h('div', { class: 'pjrow' }, h('span', { class: 'grow' }, h('b', { text: fmtMoney(x.value) }),
+    sec('Contract', act(['Edit', () => editContract(p)]), h('div', { class: 'pjlist' }, ...contractFiles(p), ...contractFacts(p), ed ? h('button', { class: 'pjrow lnk-row', onclick: () => readContract(p) }, icon('upload', 14), h('span', { class: 'grow', text: (c.files || []).length ? '✦ Read another contract or addendum with AI' : '✦ Upload the contract: AI reads the price and payments' })) : null, h('div', { class: 'pjrow' }, h('span', { class: 'grow' }, h('b', { text: fmtMoney(x.value) }),
       h('span', { class: 'sm mute', text: [c.start ? 'from ' + fmtDate(c.start) : null, c.end ? 'to ' + fmtDate(c.end) : null, c.note || null].filter(Boolean).join(' · ') || 'No dates yet' }),
       x.value ? h('span', { class: 'sm ' + (c.signed_at ? 'mute' : 'pjalert'), 'data-sign-line': '1', text: signLine(p) }) : null),
       x.value && !c.signed_at && canSign() && (!(S.ws.money_viewers || []).length || (S.ws.money_viewers || []).includes(uid())) ? h('button', { class: 'btn sm pri', 'data-sign': '1', onclick: () => signContract(p) }, icon('check', 14), 'Signed') : null))),
@@ -139,7 +139,7 @@ function moneyForm(title, fields, onSave, onDelete) {
 }
 function editContract(p) {
   const c = moneyOf(p.id).contract || {};
-  moneyForm('Contract', [{ key: 'value', id: 'mValue', label: 'Contract value', type: 'number', value: c.value, ph: 'e.g. 500000', required: true, positive: true }, { key: 'start', id: 'mStart', label: 'Starts', type: 'date', value: c.start }, { key: 'end', id: 'mEnd', label: 'Ends', type: 'date', value: c.end }, { key: 'note', id: 'mNote', label: 'Note', value: c.note, ph: 'e.g. 3 apps + dashboard + hardware' }],
+  moneyForm('Contract', [{ key: 'value', id: 'mValue', label: 'Contract value', type: 'number', value: c.value, ph: 'e.g. 500000', required: true, positive: true }, { key: 'start', id: 'mStart', label: 'Starts', type: 'date', value: c.start }, { key: 'end', id: 'mEnd', label: 'Ends', type: 'date', value: c.end }, { key: 'expires', id: 'mExp', label: 'Expires', type: 'date', value: c.expires }, { key: 'note', id: 'mNote', label: 'Note', value: c.note, ph: 'e.g. 3 apps + dashboard + hardware' }],
     v => { const changed = ['value', 'start', 'end'].some(k => (v[k] ?? null) !== (c[k] ?? null)); const nc = Object.assign({}, c, v); if (changed && nc.signed_at) { delete nc.signed_at; delete nc.signed_by; }
       return saveMoney(p.id, { contract: nc }, changed && c.signed_at ? 'Contract saved. It needs signing again' : 'Contract saved'); });
 }
@@ -179,3 +179,111 @@ function moneyTotals() {
     h('div', { class: 'pjnum' }, h('b', { text: fmtMoney(value - received) }), h('span', { text: 'still to come' })), h('div', { class: 'pjnum' + (late ? ' bad' : '') }, h('b', { text: String(late) }), h('span', { text: late === 1 ? 'late payment' : 'late payments' })));
 }
 
+
+/* ── the contract file: kept privately (only money people open it); AI reads the price, dates and payments as a draft ── */
+function contractFiles(p) {
+  return ((moneyOf(p.id).contract || {}).files || []).map(fl => h('button', { class: 'pjrow', onclick: async () => {
+    const { data, error } = await sb.storage.from('contracts').createSignedUrl(fl.path, 600); if (error || !data?.signedUrl) return toast(errText(error || 'Couldn’t open the file'));
+    window.open(data.signedUrl, '_blank', 'noopener');
+  } }, icon('export', 14), h('span', { class: 'grow' }, h('b', { dir: 'auto', text: fl.name }), h('span', { class: 'sm mute', text: `Contract file · ${fmtDate((fl.at || '').slice(0, 10))}` }))));
+}
+function readContract(p) {
+  if (!canEditProjMoney(p)) return toast('Only the people who write this project’s money can do this');
+  const pick = h('input', { type: 'file', accept: 'application/pdf,.pdf,image/jpeg,image/png,image/webp', multiple: true, hidden: true });
+  pick.addEventListener('change', async () => {
+    const files = [...pick.files].slice(0, 6); pick.remove(); if (!files.length) return;
+    if (files.some(f => !/^(application\/pdf|image\/(jpeg|png|webp))$/.test(f.type))) return toast('Use a PDF or photos (JPG, PNG) of the contract');
+    if (files.reduce((n, f) => n + f.size, 0) > 18 * 1024 * 1024) return toast('The contract is too big. Keep it under 18 MB');
+    if (!(await aiReady())) return toast('Turn on AI in Settings → AI first, or type the contract in');
+    const hold = toast(files.length === 1 ? 'Uploading the contract…' : `Uploading ${files.length} pages…`, null, 60000);
+    const saved = [];
+    for (const f of files) {
+      const path = `${p.id}/${uuid()}-${f.name.replace(/[^\w.\-]+/g, '_').slice(-80)}`;
+      const { error } = await sb.storage.from('contracts').upload(path, f, { contentType: f.type });
+      if (error) { hold.remove(); return toast(`Couldn’t upload ${f.name}: ${errText(error)}`); }
+      saved.push({ path, name: f.name, type: f.type, size: f.size, at: nowIso() });
+    }
+    hold.querySelector('span') ? hold.querySelector('span').textContent = 'AI is reading the contract…' : null;
+    const { data, error } = await sb.functions.invoke('contract-read', { body: { pid: p.id, paths: saved.map(x => x.path) } });
+    hold.remove(); track('contract_read_ai');
+    if (error || !data || data.error || !data.draft) {
+      toast(data?.error || errText(error) || 'AI didn’t answer. Try again.');
+      return saveMoney(p.id, { contract: Object.assign({}, moneyOf(p.id).contract, { files: [...((moneyOf(p.id).contract || {}).files || []), ...saved] }) }, 'Contract file kept. Type the numbers in');
+    }
+    contractDraftSheet(p, data.draft, saved);
+  });
+  document.body.append(pick); pick.click();
+}
+function contractDraftSheet(p, d, files) {
+  const m = moneyOf(p.id); const c = m.contract || {};
+  openSheet({ title: 'Check what AI read', kind: 'center', key: 'contractdraft', build: sh => {
+    const inp = (type, value, ph, label) => h('input', { type, value: value ?? '', placeholder: ph || '', 'aria-label': label, inputmode: type === 'text' && /amount|value/i.test(label) ? 'decimal' : null, style: { width: '100%' } });
+    const val = inp('text', d.value != null ? String(d.value) : '', 'e.g. 500000', 'Contract value');
+    const start = inp('date', d.start, '', 'Starts'); const end = inp('date', d.end, '', 'Ends');
+    const note = inp('text', d.note, 'e.g. 3 apps + dashboard + hardware', 'Note');
+    const signedOn = inp('date', d.signed_on, '', 'Contract date'); const expires = inp('date', d.expires, '', 'Expires'); const warranty = inp('date', d.warranty_until, '', 'Warranty until');
+    const terms = (d.terms || []).map(x => Object.assign({ on: true }, x));
+    const termEls = terms.map((t, i) => { const cb = h('input', { type: 'checkbox', checked: true, 'aria-label': `Keep ${t.label}` });
+      const row = h('label', { class: 'cd-term' }, cb, h('span', {}, h('b', { dir: 'auto', text: t.label + ': ' }), h('span', { dir: 'auto', text: [t.value, t.date ? fmtDate(t.date) : ''].filter(Boolean).join(' · ') })));
+      cb.addEventListener('change', () => { t.on = cb.checked; row.classList.toggle('off', !t.on); }); return row; });
+    const rows = (d.payments || []).map(x => Object.assign({ on: true }, x));
+    const sum = h('p', { class: 'sm mute cd-sum' });
+    const drawSum = () => { const tot = rows.filter(r => r.on).reduce((n, r) => n + (Number(r.amount) || 0), 0); const v = Number(String(val.value).replace(/[,\s]/g, '')) || 0;
+      sum.textContent = rows.length ? `Payments add up to ${fmtMoney(tot)}${v && Math.abs(tot - v) > 1 ? ` · the contract says ${fmtMoney(v)}` : ''}` : ''; sum.classList.toggle('pjalert', !!(rows.length && v && Math.abs(tot - v) > 1)); };
+    val.addEventListener('input', drawSum);
+    const payEls = rows.map((r, i) => {
+      const amt = inp('text', String(r.amount), '', `Payment ${i + 1} amount`); const lab = inp('text', r.label + (r.when && !r.label.toLowerCase().includes(r.when.toLowerCase()) ? ` (${r.when})` : ''), 'e.g. Down payment', `Payment ${i + 1} what for`); const due = inp('date', r.due, '', `Payment ${i + 1} due`);
+      const cb = h('input', { type: 'checkbox', checked: true, 'aria-label': `Add payment ${i + 1}` });
+      const row = h('div', { class: 'cd-pay' }, h('label', { class: 'cd-on' }, cb), h('div', { class: 'cd-f' }, lab, h('div', { class: 'cd-two' }, amt, due)));
+      cb.addEventListener('change', () => { r.on = cb.checked; row.classList.toggle('off', !r.on); drawSum(); });
+      amt.addEventListener('input', () => { r.amount = Number(amt.value.replace(/[,\s]/g, '')) || 0; drawSum(); });
+      r.read = () => ({ amount: Number(amt.value.replace(/[,\s]/g, '')), label: lab.value.trim(), due: due.value || null });
+      return row;
+    });
+    drawSum();
+    const curNote = d.currency && d.currency !== cur() ? h('p', { class: 'note pjalert', text: `The contract is in ${d.currency}, and Ovrto shows money in ${cur()}. Check the amounts before saving.` }) : null;
+    const go_ = h('button', { class: 'btn pri' }, 'Save');
+    go_.addEventListener('click', async () => {
+      const v = Number(String(val.value).replace(/[,\s]/g, ''));
+      if (!(v > 0)) { val.focus(); return toast('Contract value: write the total price'); }
+      const pays = rows.filter(r => r.on).map(r => r.read());
+      if (pays.some(x => !(x.amount > 0))) return toast('Each payment needs an amount above 0');
+      const changed = v !== (c.value ?? null) || (start.value || null) !== (c.start ?? null) || (end.value || null) !== (c.end ?? null);
+      const nc = Object.assign({}, c, { value: v, start: start.value || null, end: end.value || null, note: note.value.trim() || c.note || '', files: [...(c.files || []), ...files],
+        signed_on: signedOn.value || c.signed_on || null, expires: expires.value || c.expires || null, warranty_until: warranty.value || c.warranty_until || null,
+        terms: terms.some(t => t.on) ? terms.filter(t => t.on).map(({ label, value, date }) => ({ label, value, date: date || null })) : (c.terms || []) });
+      if (changed && nc.signed_at) { delete nc.signed_at; delete nc.signed_by; }
+      go_.disabled = true;
+      const ok = await saveMoney(p.id, { contract: nc, payments: [...(m.payments || []), ...pays.map(x => ({ id: uuid(), amount: x.amount, label: x.label, due: x.due, paid_at: null }))] },
+        pays.length ? `Contract saved with ${pays.length} payment${pays.length === 1 ? '' : 's'}` : 'Contract saved');
+      if (ok) closeSheet(true); else go_.disabled = false;
+    });
+    sh.append(h('div', { class: 'sbody cd' },
+      h('p', { class: 'ai-note', text: '✦ AI read the contract. Check every number before you save; nothing is saved until you press Save.' }),
+      d.check ? h('p', { class: 'note pjalert', text: d.check }) : null, curNote,
+      h('label', { class: 'field' }, 'Contract value', val), h('div', { class: 'cd-two' }, h('label', { class: 'field' }, 'Starts', start), h('label', { class: 'field' }, 'Ends', end)),
+      h('label', { class: 'field' }, 'Note', note),
+      h('div', { class: 'cd-three' }, h('label', { class: 'field' }, 'Contract date', signedOn), h('label', { class: 'field' }, 'Expires', expires), h('label', { class: 'field' }, 'Warranty until', warranty)),
+      terms.length ? h('h4', { text: 'Other important terms' }) : null, ...termEls,
+      h('h4', { text: rows.length ? 'Payments in the contract' : 'No payments found in the contract' }),
+      (m.payments || []).length && rows.length ? h('p', { class: 'note', text: `This project already has ${m.payments.length} payment${m.payments.length === 1 ? '' : 's'}. The ticked ones are added to them.` }) : null,
+      ...payEls, sum),
+      h('div', { class: 'sfoot' }, h('span', { class: 'sp' }), h('button', { class: 'btn ghost', onclick: () => closeSheet() }, 'Cancel'), go_));
+  } });
+}
+
+/* the dates and terms a manager must not miss; an expiry within 60 days (or past) is called out */
+const fmtDateY = d => new Date(d + 'T00:00:00').toLocaleDateString(UI_LOC, { day: 'numeric', month: 'short', year: 'numeric' });
+function contractFacts(p) {
+  const c = moneyOf(p.id).contract || {}; const out = [];
+  const dates = [['Contract date', c.signed_on], ['Expires', c.expires], ['Warranty until', c.warranty_until]].filter(x => x[1]);
+  if (dates.length) {
+    const days = c.expires ? Math.round((new Date(c.expires) - new Date(todayIso())) / 864e5) : null;
+    const warn = days == null ? null : days < 0 ? `Expired ${fmtDateY(c.expires)}` : days <= 60 ? `Expires in ${days} day${days === 1 ? '' : 's'}` : null;
+    out.push(h('div', { class: 'pjrow' }, h('span', { class: 'grow' }, h('span', { class: 'sm cd-dates' }, ...dates.map(([l, d]) => h('span', {}, h('span', { class: 'mute', text: l + ' ' }), h('b', { text: fmtDateY(d) })))),
+      warn ? h('span', { class: 'sm pjalert', text: warn }) : null)));
+  }
+  if ((c.terms || []).length) out.push(h('details', { class: 'pjrow cd-terms' }, h('summary', { class: 'sm', text: `Key terms (${c.terms.length})` }),
+    ...c.terms.map(t => h('p', { class: 'sm' }, h('b', { dir: 'auto', text: t.label + ': ' }), h('span', { dir: 'auto', text: [t.value, t.date ? fmtDate(t.date) : ''].filter(Boolean).join(' · ') })))));
+  return out;
+}

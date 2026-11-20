@@ -1261,3 +1261,19 @@ body:has(.sheet) .toasts{bottom:calc(88px + var(--sab))}
 .cc-alerts{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--sunk);border-radius:10px;padding:8px 10px}
 .cc-alerts[hidden]{display:none}
 .ct-meta{display:flex;flex-wrap:wrap;gap:4px 10px}
+
+/* date fields never wider than their box (iPhone draws them wide) */
+input[type=date]{box-sizing:border-box;min-width:0;max-width:100%;-webkit-appearance:none;appearance:none;min-height:38px;display:block}
+input[type=date]::-webkit-date-and-time-value{text-align:start}
+/* reading a contract with AI */
+.cd{gap:12px}.cd h4{margin:6px 0 0}
+.cd-two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cd-pay{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.cd-pay.off{opacity:.5}
+.cd-on input{width:18px;height:18px;margin-top:8px}
+.cd-f{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.lnk-row{color:var(--accent)}
+.cd-three{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}@media (max-width:560px){.cd-three{grid-template-columns:1fr 1fr}}
+.cd-term{display:flex;gap:8px;align-items:flex-start;font-size:13px;overflow-wrap:anywhere}.cd-term.off{opacity:.5}.cd-term input{margin-top:2px;flex:none}
+.cd-dates{display:flex;flex-wrap:wrap;gap:4px 14px}
+.cd-terms{display:block}.cd-terms summary{cursor:pointer;color:var(--accent)}.cd-terms p{margin:6px 0 0;overflow-wrap:anywhere}

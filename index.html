@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-oeXGHE9cCifFrbNCd2sdMXHHrRL0/iKc+PJaQha/olE=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-Ru0HBxhj4q3j38P1IsHaL/tAz16I0/uCJEoiHCCeQ8A=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-oeXGHE9cCifFrbNCd2sdMXHHrRL0/iKc+PJaQha/olE=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-Oqd5iMF9T47I7nyDSUPI2GVBpRA6VLiiLeQTzuBC7m8=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<meta name="ovrto-build" content="926660475b6c">
+<meta name="ovrto-build" content="b92ebc31d854">
 <title>Ovrto</title>
 <meta name="description" content="Over to you. Every task shows whose turn it is.">
 <meta name="theme-color" content="#0D0D0F">
@@ -1283,6 +1283,22 @@ body:has(.sheet) .toasts{bottom:calc(88px + var(--sab))}
 .cc-alerts{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--sunk);border-radius:10px;padding:8px 10px}
 .cc-alerts[hidden]{display:none}
 .ct-meta{display:flex;flex-wrap:wrap;gap:4px 10px}
+
+/* date fields never wider than their box (iPhone draws them wide) */
+input[type=date]{box-sizing:border-box;min-width:0;max-width:100%;-webkit-appearance:none;appearance:none;min-height:38px;display:block}
+input[type=date]::-webkit-date-and-time-value{text-align:start}
+/* reading a contract with AI */
+.cd{gap:12px}.cd h4{margin:6px 0 0}
+.cd-two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cd-pay{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.cd-pay.off{opacity:.5}
+.cd-on input{width:18px;height:18px;margin-top:8px}
+.cd-f{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.lnk-row{color:var(--accent)}
+.cd-three{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}@media (max-width:560px){.cd-three{grid-template-columns:1fr 1fr}}
+.cd-term{display:flex;gap:8px;align-items:flex-start;font-size:13px;overflow-wrap:anywhere}.cd-term.off{opacity:.5}.cd-term input{margin-top:2px;flex:none}
+.cd-dates{display:flex;flex-wrap:wrap;gap:4px 14px}
+.cd-terms{display:block}.cd-terms summary{cursor:pointer;color:var(--accent)}.cd-terms p{margin:6px 0 0;overflow-wrap:anywhere}
 </style>
 </head>
 <body>
@@ -1301,7 +1317,7 @@ body:has(.sheet) .toasts{bottom:calc(88px + var(--sab))}
 </script>
 <div id="app"><div class="boot" role="status"><div class="boot-mark loop"><svg class="mark-anim" viewBox="0 0 1000 1000" fill="none" aria-hidden="true"><g transform="translate(-779.1 725.4) scale(0.6829)"><g class="mk-t"><path fill="currentColor" transform="translate(1501.0 0) scale(1.00000 -1.00000)" d="M42 401H151L89 108C79 63 79 60 79 43C79 4 98 -17 133 -17C170 -17 210 1 266 42L343 99L330 125L274 85C252 69 239 64 220 64C202 64 196 71 196 92C196 113 199 135 205 164L256 401H303C343 401 363 400 395 396L409 452L403 457L269 452L282 508L313 624L303 636L237 612C218 605 202 601 180 598V582C180 556 178 538 164 460L49 428Z"/></g><rect class="mk-x" fill="var(--accent)" x="1539.0" y="-465.0" width="490.4" height="74.0"/><path class="mk-chev" fill="var(--accent)" stroke="var(--accent)" stroke-width="18.5" stroke-linejoin="round" d="M2014.6 -568.6L2207.0 -428.0L2014.6 -287.4Z"/></g></svg></div><div class="boot-cap">Loading…</div></div></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="react-app.js?v=926660475b6c"></script>
+<script src="react-app.js?v=b92ebc31d854"></script>
 <script>
 (() => {
 'use strict';
@@ -4212,7 +4228,7 @@ addEventListener('online', () => { if (S.ws) { flushOutbox(); setupRealtime(); c
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { checkUpdate(); if (S.ws) { flushOutbox(); setupRealtime(); catchUp(); } } });
 
 /* a new version was uploaded: phones (and apps saved to the home screen) pick it up by themselves */
-const BUILD = '926660475b6c';
+const BUILD = 'b92ebc31d854';
 let updLast = 0, updShown = false;
 async function checkUpdate(force) {
   if (!force && Date.now() - updLast < 60000) return; updLast = Date.now();
@@ -6831,12 +6847,12 @@ function projectMoney(p) {
   const sec = (title, action, body) => h('section', {}, h('h2', {}, title, action ? h('button', { class: 'lnk sm', style: { marginInlineStart: 'auto' }, onclick: action[1] }, action[0]) : null), body);
   const ed = canEditProjMoney(p); const act = a => ed ? a : null;
   if (!x.value && !(m.payments || []).length && !(m.costs || []).length) return [
-    ed ? emptyState('NO NUMBERS YET', 'Add the contract to see what this project brings in, what it costs and what is left. Only you and the people you pick see this.', { label: 'Add the contract', fn: () => editContract(p) })
+    ed ? emptyState('NO NUMBERS YET', 'Add the contract to see what this project brings in, what it costs and what is left. Only you and the people you pick see this.', { label: '✦ Read the contract with AI', fn: () => readContract(p) }, { label: 'Type it in', fn: () => editContract(p) })
       : emptyState('NO NUMBERS YET', `${namesOf(contractWriters(pDept(p)))} adds the contract and payments. They show up here.`)];
   const out = [
     h('div', { class: 'pjnums' }, stat(fmtMoney(x.value), 'contract'), stat(fmtMoney(x.received), 'received'), stat(fmtMoney(x.outstanding), x.late.length ? `still to come · ${x.late.length} late` : 'still to come', x.late.length ? 'bad' : ''),
       stat(fmtMoney(x.net != null ? x.net : x.before), x.net != null ? 'profit after the team' : 'profit before the team', (x.net != null ? x.net : x.before) < 0 ? 'bad' : 'good')),
-    sec('Contract', act(['Edit', () => editContract(p)]), h('div', { class: 'pjlist' }, h('div', { class: 'pjrow' }, h('span', { class: 'grow' }, h('b', { text: fmtMoney(x.value) }),
+    sec('Contract', act(['Edit', () => editContract(p)]), h('div', { class: 'pjlist' }, ...contractFiles(p), ...contractFacts(p), ed ? h('button', { class: 'pjrow lnk-row', onclick: () => readContract(p) }, icon('upload', 14), h('span', { class: 'grow', text: (c.files || []).length ? '✦ Read another contract or addendum with AI' : '✦ Upload the contract: AI reads the price and payments' })) : null, h('div', { class: 'pjrow' }, h('span', { class: 'grow' }, h('b', { text: fmtMoney(x.value) }),
       h('span', { class: 'sm mute', text: [c.start ? 'from ' + fmtDate(c.start) : null, c.end ? 'to ' + fmtDate(c.end) : null, c.note || null].filter(Boolean).join(' · ') || 'No dates yet' }),
       x.value ? h('span', { class: 'sm ' + (c.signed_at ? 'mute' : 'pjalert'), 'data-sign-line': '1', text: signLine(p) }) : null),
       x.value && !c.signed_at && canSign() && (!(S.ws.money_viewers || []).length || (S.ws.money_viewers || []).includes(uid())) ? h('button', { class: 'btn sm pri', 'data-sign': '1', onclick: () => signContract(p) }, icon('check', 14), 'Signed') : null))),
@@ -6905,7 +6921,7 @@ function moneyForm(title, fields, onSave, onDelete) {
 }
 function editContract(p) {
   const c = moneyOf(p.id).contract || {};
-  moneyForm('Contract', [{ key: 'value', id: 'mValue', label: 'Contract value', type: 'number', value: c.value, ph: 'e.g. 500000', required: true, positive: true }, { key: 'start', id: 'mStart', label: 'Starts', type: 'date', value: c.start }, { key: 'end', id: 'mEnd', label: 'Ends', type: 'date', value: c.end }, { key: 'note', id: 'mNote', label: 'Note', value: c.note, ph: 'e.g. 3 apps + dashboard + hardware' }],
+  moneyForm('Contract', [{ key: 'value', id: 'mValue', label: 'Contract value', type: 'number', value: c.value, ph: 'e.g. 500000', required: true, positive: true }, { key: 'start', id: 'mStart', label: 'Starts', type: 'date', value: c.start }, { key: 'end', id: 'mEnd', label: 'Ends', type: 'date', value: c.end }, { key: 'expires', id: 'mExp', label: 'Expires', type: 'date', value: c.expires }, { key: 'note', id: 'mNote', label: 'Note', value: c.note, ph: 'e.g. 3 apps + dashboard + hardware' }],
     v => { const changed = ['value', 'start', 'end'].some(k => (v[k] ?? null) !== (c[k] ?? null)); const nc = Object.assign({}, c, v); if (changed && nc.signed_at) { delete nc.signed_at; delete nc.signed_by; }
       return saveMoney(p.id, { contract: nc }, changed && c.signed_at ? 'Contract saved. It needs signing again' : 'Contract saved'); });
 }
@@ -6945,6 +6961,114 @@ function moneyTotals() {
     h('div', { class: 'pjnum' }, h('b', { text: fmtMoney(value - received) }), h('span', { text: 'still to come' })), h('div', { class: 'pjnum' + (late ? ' bad' : '') }, h('b', { text: String(late) }), h('span', { text: late === 1 ? 'late payment' : 'late payments' })));
 }
 
+
+/* ── the contract file: kept privately (only money people open it); AI reads the price, dates and payments as a draft ── */
+function contractFiles(p) {
+  return ((moneyOf(p.id).contract || {}).files || []).map(fl => h('button', { class: 'pjrow', onclick: async () => {
+    const { data, error } = await sb.storage.from('contracts').createSignedUrl(fl.path, 600); if (error || !data?.signedUrl) return toast(errText(error || 'Couldn’t open the file'));
+    window.open(data.signedUrl, '_blank', 'noopener');
+  } }, icon('export', 14), h('span', { class: 'grow' }, h('b', { dir: 'auto', text: fl.name }), h('span', { class: 'sm mute', text: `Contract file · ${fmtDate((fl.at || '').slice(0, 10))}` }))));
+}
+function readContract(p) {
+  if (!canEditProjMoney(p)) return toast('Only the people who write this project’s money can do this');
+  const pick = h('input', { type: 'file', accept: 'application/pdf,.pdf,image/jpeg,image/png,image/webp', multiple: true, hidden: true });
+  pick.addEventListener('change', async () => {
+    const files = [...pick.files].slice(0, 6); pick.remove(); if (!files.length) return;
+    if (files.some(f => !/^(application\/pdf|image\/(jpeg|png|webp))$/.test(f.type))) return toast('Use a PDF or photos (JPG, PNG) of the contract');
+    if (files.reduce((n, f) => n + f.size, 0) > 18 * 1024 * 1024) return toast('The contract is too big. Keep it under 18 MB');
+    if (!(await aiReady())) return toast('Turn on AI in Settings → AI first, or type the contract in');
+    const hold = toast(files.length === 1 ? 'Uploading the contract…' : `Uploading ${files.length} pages…`, null, 60000);
+    const saved = [];
+    for (const f of files) {
+      const path = `${p.id}/${uuid()}-${f.name.replace(/[^\w.\-]+/g, '_').slice(-80)}`;
+      const { error } = await sb.storage.from('contracts').upload(path, f, { contentType: f.type });
+      if (error) { hold.remove(); return toast(`Couldn’t upload ${f.name}: ${errText(error)}`); }
+      saved.push({ path, name: f.name, type: f.type, size: f.size, at: nowIso() });
+    }
+    hold.querySelector('span') ? hold.querySelector('span').textContent = 'AI is reading the contract…' : null;
+    const { data, error } = await sb.functions.invoke('contract-read', { body: { pid: p.id, paths: saved.map(x => x.path) } });
+    hold.remove(); track('contract_read_ai');
+    if (error || !data || data.error || !data.draft) {
+      toast(data?.error || errText(error) || 'AI didn’t answer. Try again.');
+      return saveMoney(p.id, { contract: Object.assign({}, moneyOf(p.id).contract, { files: [...((moneyOf(p.id).contract || {}).files || []), ...saved] }) }, 'Contract file kept. Type the numbers in');
+    }
+    contractDraftSheet(p, data.draft, saved);
+  });
+  document.body.append(pick); pick.click();
+}
+function contractDraftSheet(p, d, files) {
+  const m = moneyOf(p.id); const c = m.contract || {};
+  openSheet({ title: 'Check what AI read', kind: 'center', key: 'contractdraft', build: sh => {
+    const inp = (type, value, ph, label) => h('input', { type, value: value ?? '', placeholder: ph || '', 'aria-label': label, inputmode: type === 'text' && /amount|value/i.test(label) ? 'decimal' : null, style: { width: '100%' } });
+    const val = inp('text', d.value != null ? String(d.value) : '', 'e.g. 500000', 'Contract value');
+    const start = inp('date', d.start, '', 'Starts'); const end = inp('date', d.end, '', 'Ends');
+    const note = inp('text', d.note, 'e.g. 3 apps + dashboard + hardware', 'Note');
+    const signedOn = inp('date', d.signed_on, '', 'Contract date'); const expires = inp('date', d.expires, '', 'Expires'); const warranty = inp('date', d.warranty_until, '', 'Warranty until');
+    const terms = (d.terms || []).map(x => Object.assign({ on: true }, x));
+    const termEls = terms.map((t, i) => { const cb = h('input', { type: 'checkbox', checked: true, 'aria-label': `Keep ${t.label}` });
+      const row = h('label', { class: 'cd-term' }, cb, h('span', {}, h('b', { dir: 'auto', text: t.label + ': ' }), h('span', { dir: 'auto', text: [t.value, t.date ? fmtDate(t.date) : ''].filter(Boolean).join(' · ') })));
+      cb.addEventListener('change', () => { t.on = cb.checked; row.classList.toggle('off', !t.on); }); return row; });
+    const rows = (d.payments || []).map(x => Object.assign({ on: true }, x));
+    const sum = h('p', { class: 'sm mute cd-sum' });
+    const drawSum = () => { const tot = rows.filter(r => r.on).reduce((n, r) => n + (Number(r.amount) || 0), 0); const v = Number(String(val.value).replace(/[,\s]/g, '')) || 0;
+      sum.textContent = rows.length ? `Payments add up to ${fmtMoney(tot)}${v && Math.abs(tot - v) > 1 ? ` · the contract says ${fmtMoney(v)}` : ''}` : ''; sum.classList.toggle('pjalert', !!(rows.length && v && Math.abs(tot - v) > 1)); };
+    val.addEventListener('input', drawSum);
+    const payEls = rows.map((r, i) => {
+      const amt = inp('text', String(r.amount), '', `Payment ${i + 1} amount`); const lab = inp('text', r.label + (r.when && !r.label.toLowerCase().includes(r.when.toLowerCase()) ? ` (${r.when})` : ''), 'e.g. Down payment', `Payment ${i + 1} what for`); const due = inp('date', r.due, '', `Payment ${i + 1} due`);
+      const cb = h('input', { type: 'checkbox', checked: true, 'aria-label': `Add payment ${i + 1}` });
+      const row = h('div', { class: 'cd-pay' }, h('label', { class: 'cd-on' }, cb), h('div', { class: 'cd-f' }, lab, h('div', { class: 'cd-two' }, amt, due)));
+      cb.addEventListener('change', () => { r.on = cb.checked; row.classList.toggle('off', !r.on); drawSum(); });
+      amt.addEventListener('input', () => { r.amount = Number(amt.value.replace(/[,\s]/g, '')) || 0; drawSum(); });
+      r.read = () => ({ amount: Number(amt.value.replace(/[,\s]/g, '')), label: lab.value.trim(), due: due.value || null });
+      return row;
+    });
+    drawSum();
+    const curNote = d.currency && d.currency !== cur() ? h('p', { class: 'note pjalert', text: `The contract is in ${d.currency}, and Ovrto shows money in ${cur()}. Check the amounts before saving.` }) : null;
+    const go_ = h('button', { class: 'btn pri' }, 'Save');
+    go_.addEventListener('click', async () => {
+      const v = Number(String(val.value).replace(/[,\s]/g, ''));
+      if (!(v > 0)) { val.focus(); return toast('Contract value: write the total price'); }
+      const pays = rows.filter(r => r.on).map(r => r.read());
+      if (pays.some(x => !(x.amount > 0))) return toast('Each payment needs an amount above 0');
+      const changed = v !== (c.value ?? null) || (start.value || null) !== (c.start ?? null) || (end.value || null) !== (c.end ?? null);
+      const nc = Object.assign({}, c, { value: v, start: start.value || null, end: end.value || null, note: note.value.trim() || c.note || '', files: [...(c.files || []), ...files],
+        signed_on: signedOn.value || c.signed_on || null, expires: expires.value || c.expires || null, warranty_until: warranty.value || c.warranty_until || null,
+        terms: terms.some(t => t.on) ? terms.filter(t => t.on).map(({ label, value, date }) => ({ label, value, date: date || null })) : (c.terms || []) });
+      if (changed && nc.signed_at) { delete nc.signed_at; delete nc.signed_by; }
+      go_.disabled = true;
+      const ok = await saveMoney(p.id, { contract: nc, payments: [...(m.payments || []), ...pays.map(x => ({ id: uuid(), amount: x.amount, label: x.label, due: x.due, paid_at: null }))] },
+        pays.length ? `Contract saved with ${pays.length} payment${pays.length === 1 ? '' : 's'}` : 'Contract saved');
+      if (ok) closeSheet(true); else go_.disabled = false;
+    });
+    sh.append(h('div', { class: 'sbody cd' },
+      h('p', { class: 'ai-note', text: '✦ AI read the contract. Check every number before you save; nothing is saved until you press Save.' }),
+      d.check ? h('p', { class: 'note pjalert', text: d.check }) : null, curNote,
+      h('label', { class: 'field' }, 'Contract value', val), h('div', { class: 'cd-two' }, h('label', { class: 'field' }, 'Starts', start), h('label', { class: 'field' }, 'Ends', end)),
+      h('label', { class: 'field' }, 'Note', note),
+      h('div', { class: 'cd-three' }, h('label', { class: 'field' }, 'Contract date', signedOn), h('label', { class: 'field' }, 'Expires', expires), h('label', { class: 'field' }, 'Warranty until', warranty)),
+      terms.length ? h('h4', { text: 'Other important terms' }) : null, ...termEls,
+      h('h4', { text: rows.length ? 'Payments in the contract' : 'No payments found in the contract' }),
+      (m.payments || []).length && rows.length ? h('p', { class: 'note', text: `This project already has ${m.payments.length} payment${m.payments.length === 1 ? '' : 's'}. The ticked ones are added to them.` }) : null,
+      ...payEls, sum),
+      h('div', { class: 'sfoot' }, h('span', { class: 'sp' }), h('button', { class: 'btn ghost', onclick: () => closeSheet() }, 'Cancel'), go_));
+  } });
+}
+
+/* the dates and terms a manager must not miss; an expiry within 60 days (or past) is called out */
+const fmtDateY = d => new Date(d + 'T00:00:00').toLocaleDateString(UI_LOC, { day: 'numeric', month: 'short', year: 'numeric' });
+function contractFacts(p) {
+  const c = moneyOf(p.id).contract || {}; const out = [];
+  const dates = [['Contract date', c.signed_on], ['Expires', c.expires], ['Warranty until', c.warranty_until]].filter(x => x[1]);
+  if (dates.length) {
+    const days = c.expires ? Math.round((new Date(c.expires) - new Date(todayIso())) / 864e5) : null;
+    const warn = days == null ? null : days < 0 ? `Expired ${fmtDateY(c.expires)}` : days <= 60 ? `Expires in ${days} day${days === 1 ? '' : 's'}` : null;
+    out.push(h('div', { class: 'pjrow' }, h('span', { class: 'grow' }, h('span', { class: 'sm cd-dates' }, ...dates.map(([l, d]) => h('span', {}, h('span', { class: 'mute', text: l + ' ' }), h('b', { text: fmtDateY(d) })))),
+      warn ? h('span', { class: 'sm pjalert', text: warn }) : null)));
+  }
+  if ((c.terms || []).length) out.push(h('details', { class: 'pjrow cd-terms' }, h('summary', { class: 'sm', text: `Key terms (${c.terms.length})` }),
+    ...c.terms.map(t => h('p', { class: 'sm' }, h('b', { dir: 'auto', text: t.label + ': ' }), h('span', { dir: 'auto', text: [t.value, t.date ? fmtDate(t.date) : ''].filter(Boolean).join(' · ') })))));
+  return out;
+}
 /* ═════════════ Company: the CEO's page ═════════════
    One look at the business: money in and still to come, payments that are late, every project's money and progress,
    and who in the team has room. Only the workspace owner and the people they pick for money see it.
@@ -8494,6 +8618,12 @@ AR.patterns.push(...[["^Messages go to the (.+?) team\\. They answer here\\.$", 
 /* chat → tasks, client alerts */
 Object.assign(AR.exact, {"Select messages to make tasks": "اختار رسايل وحوّلها لمهام", "Tap the messages to turn into tasks": "دوس على الرسايل اللي عايز تحوّلها لمهام", "Tap messages to choose them": "دوس على الرسايل علشان تختارها", "Make tasks": "اعمل مهام", "Is this one task or several?": "دي مهمة واحدة ولا كذا مهمة؟", "One task": "مهمة واحدة", "Everything here is one piece of work": "كل ده شغلانة واحدة", "A task for each request": "مهمة لكل طلب", "Separate problems or asks become separate tasks": "كل مشكلة أو طلب لوحده يبقى مهمة لوحده", "Let AI decide": "خلّي الذكاء الاصطناعي يقرر", "AI reads it and tells you why": "بيقرا الكلام ويقولك قرر كده ليه", "AI is writing one task…": "الذكاء الاصطناعي بيكتب المهمة…", "AI is reading the messages…": "الذكاء الاصطناعي بيقرا الرسايل…", "AI found no work to do in these messages.": "الذكاء الاصطناعي ما لقاش شغل مطلوب في الرسايل دي.", "Create 1 task": "اعمل مهمة واحدة", "Couldn’t create the tasks": "معرفناش نعمل المهام", "Back": "رجوع", "To get alerts when the team answers: tap Share, then Add to Home Screen. Open it from your Home Screen and turn on alerts.": "لتصلك تنبيهات عند ردّ الفريق: اضغط مشاركة، ثم «إضافة إلى الشاشة الرئيسية». افتحه من الشاشة الرئيسية وفعّل التنبيهات.", "Alerts are on. You’ll get a message here when the team answers.": "التنبيهات مفعّلة. سيصلك تنبيه هنا عندما يردّ الفريق.", "Alerts are blocked in this browser’s settings. Allow notifications for this page to get them.": "التنبيهات محظورة في إعدادات المتصفح. اسمح بالإشعارات لهذه الصفحة لتصلك.", "Turning on…": "جارٍ التفعيل…", "Couldn’t turn on alerts. Try again.": "تعذّر تفعيل التنبيهات. حاول مرة أخرى.", "Get an alert on this phone when the team answers.": "استلم تنبيهًا على هذا الهاتف عندما يردّ الفريق."});
 AR.patterns.push(...[["^(\\d+) selected$", "$1 متختارين"], ["^Make tasks from (\\d+) messages?$", "اعمل مهام من $1 رسالة"], ["^Create (\\d+) tasks$", "اعمل $1 مهام"], ["^Made (\\d+) tasks$", "اتعمل $1 مهام"], ["^Made ([A-Z]+-\\d+)$", "اتعملت $1"], ["^and (\\d+) more$", "و$1 كمان"], ["^Task (\\d+) title$", "عنوان المهمة $1"], ["^Create task (\\d+)$", "اعمل المهمة $1"]]);
+/* contracts read by AI */
+Object.assign(AR.exact, {"✦ Read the contract with AI": "✦ خلّي الذكاء الاصطناعي يقرا العقد", "Type it in": "اكتبه بنفسك", "✦ Upload the contract: AI reads the price and payments": "✦ ارفع العقد: الذكاء الاصطناعي يقرا السعر والدفعات", "✦ Read another contract or addendum with AI": "✦ اقرا عقد أو ملحق تاني بالذكاء الاصطناعي", "Use a PDF or photos (JPG, PNG) of the contract": "استخدم PDF أو صور (JPG أو PNG) للعقد", "The contract is too big. Keep it under 18 MB": "العقد كبير. خليه أقل من 18 ميجا", "Turn on AI in Settings → AI first, or type the contract in": "شغّل الذكاء الاصطناعي من الإعدادات ← الذكاء الاصطناعي الأول، أو اكتب العقد بنفسك", "Uploading the contract…": "جارٍ رفع العقد…", "AI is reading the contract…": "الذكاء الاصطناعي بيقرا العقد…", "Contract file kept. Type the numbers in": "اتحفظ ملف العقد. اكتب الأرقام بنفسك", "Check what AI read": "راجع اللي الذكاء الاصطناعي قراه", "✦ AI read the contract. Check every number before you save; nothing is saved until you press Save.": "✦ الذكاء الاصطناعي قرا العقد. راجع كل رقم قبل الحفظ؛ مفيش حاجة بتتحفظ غير لما تدوس حفظ.", "Payments in the contract": "الدفعات اللي في العقد", "No payments found in the contract": "مفيش دفعات في العقد", "Contract value: write the total price": "قيمة العقد: اكتب السعر الإجمالي", "Each payment needs an amount above 0": "كل دفعة لازم مبلغها يكون أكبر من صفر", "Only the people who write this project’s money can do this": "بس اللي بيكتبوا فلوس المشروع ده يقدروا يعملوا كده", "Couldn’t open the file": "معرفناش نفتح الملف"});
+AR.patterns.push(...[["^Payments add up to (.+?) · the contract says (.+?)$", "الدفعات مجموعها $1 · والعقد بيقول $2"], ["^Payments add up to (.+?)$", "الدفعات مجموعها $1"], ["^The contract is in (.+?), and Ovrto shows money in (.+?)\\. Check the amounts before saving\\.$", "العقد بعملة $1، وOvrto بيعرض الفلوس بـ$2. راجع المبالغ قبل الحفظ."], ["^This project already has (\\d+) payments?\\. The ticked ones are added to them\\.$", "المشروع ده فيه $1 دفعات بالفعل. اللي متعلّم عليها هتتضاف ليهم."], ["^Contract saved with (\\d+) payments?$", "اتحفظ العقد ومعاه $1 دفعات"], ["^Contract file · (.+?)$", "ملف العقد · $1"], ["^Uploading (\\d+) pages…$", "جارٍ رفع $1 صفحات…"], ["^Payment (\\d+) amount$", "مبلغ الدفعة $1"], ["^Payment (\\d+) what for$", "الدفعة $1 لإيه"], ["^Payment (\\d+) due$", "ميعاد الدفعة $1"], ["^Add payment (\\d+)$", "أضف الدفعة $1"]]);
+Object.assign(AR.exact, {"Signed on": "اتمضى في", "Expires": "بينتهي", "Warranty until": "الضمان لحد", "Other important terms": "شروط مهمة تانية"});
+AR.patterns.push(...[["^Keep (.+?)$", "احتفظ بـ$1"], ["^Expired (.+?)$", "انتهى $1"], ["^Expires in (\\d+) days?$", "بينتهي بعد $1 يوم"], ["^Key terms \\((\\d+)\\)$", "الشروط المهمة ($1)"]]);
+Object.assign(AR.exact, {"Contract date": "تاريخ العقد"});
 var LANG = (() => { try { return JSON.parse(localStorage.getItem('baton.lang') || '"en"') === 'ar' ? 'ar' : 'en'; } catch { return 'en'; } })();
 const isAr = () => LANG === 'ar';
 var I18N_SKIP = '.row .t,.tc:not(.waitrow) .tt>b,.card>.t,.inrow .t,.stuck-row .t,.rv-item .t,.md,.mdbox,.mbody,.ev .txt,.ttl,textarea,input,select,[contenteditable],code,pre,kbd,.notr,.wordmark,.wm-anim,.mark-anim,.plate,.cp-t b,.cp-in>h1,.mhead b,.cv-name b,.chip-task,.mention,.toast .notr,.cl-row .nm>div:first-child,.prow .nm>div:first-child';
