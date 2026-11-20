@@ -79,14 +79,18 @@ function projectMoney(p) {
     sec('Payments', act(['+ Payment', () => editPayment(p)]), (m.payments || []).length ? h('div', { class: 'pjlist' }, (m.payments || []).slice().sort((a, b) => (a.due || '').localeCompare(b.due || '')).map(y => {
       const late = !y.paid_at && y.due && y.due < todayIso();
       return h('div', { class: 'pjrow' }, h('span', { class: 'grow' }, h('b', { text: `${fmtMoney(Number(y.amount))} · ${y.label || 'Payment'}` }),
-        h('span', { class: 'sm ' + (late ? 'pjalert' : 'mute'), text: y.paid_at ? `Paid ${fmtDate(y.paid_at.slice(0, 10))}` : y.due ? (late ? `Late · was due ${fmtDate(y.due)}` : `Due ${fmtDate(y.due)}`) : 'No due date' })),
-        !ed ? null : y.paid_at ? h('button', { class: 'btn sm ghost', onclick: () => editPayment(p, y) }, 'Edit') : h('button', { class: 'btn sm', 'data-mark-paid': '1', onclick: () => saveMoney(p.id, { payments: m.payments.map(z => z.id === y.id ? Object.assign({}, z, { paid_at: nowIso() }) : z) }, 'Marked as paid') }, icon('check', 14), 'Paid'));
+        h('span', { class: 'sm ' + (late ? 'pjalert' : 'mute'), text: y.paid_at ? `Paid ${fmtDate(y.paid_at.slice(0, 10))}` : y.due ? (late ? `Not paid · late, was due ${fmtDate(y.due)}` : `Not paid yet · due ${fmtDate(y.due)}`) : 'Not paid yet · no due date' })),
+        !ed ? null : y.paid_at ? h('button', { class: 'btn sm ghost', onclick: () => editPayment(p, y) }, 'Edit') : h('button', { class: 'btn sm', 'data-mark-paid': '1', 'aria-label': `Mark ${y.label || 'this payment'} as paid`, onclick: async () => {
+          const before = m.payments; if (!(await saveMoney(p.id, { payments: m.payments.map(z => z.id === y.id ? Object.assign({}, z, { paid_at: nowIso() }) : z) }))) return;
+          toast(`Marked as paid: ${fmtMoney(Number(y.amount))}`, { label: 'Undo', fn: () => saveMoney(p.id, { payments: before }, 'Back to not paid') }, 8000);
+        } }, icon('check', 14), 'Mark as paid'));
     })) : h('p', { class: 'note', text: 'Add the payments in the contract and mark each one when it arrives.' })),
     sec('Costs', act(['+ Cost', () => editCost(p)]), (m.costs || []).length ? h('div', { class: 'pjlist' }, m.costs.map(y => h(ed ? 'button' : 'div', { class: 'pjrow', onclick: ed ? () => editCost(p, y) : null }, h('span', { class: 'grow' }, h('b', { text: `${fmtMoney(Number(y.amount))}${y.every === 'month' ? ' a month' : ''} · ${y.label}` }),
       h('span', { class: 'sm mute', text: y.every === 'month' ? `${fmtMoney(Number(y.amount) * x.months)} so far (${x.months.toFixed(1)} months)` : 'One time' })))))
       : h('p', { class: 'note', text: 'Servers, licences, hardware: anything this project costs besides the team.' })),
     canSeeSalaries() ? sec('The team', canEditSalaries() ? ['Edit', () => editShare(p)] : null, h('div', { class: 'pjlist' }, h('div', { class: 'pjrow' }, h('span', { class: 'grow' },
       h('b', { text: x.team != null ? `${fmtMoney(x.team)} so far` : 'Not set yet' }),
+      ...teamWhyZero(p, x, m),
       h('span', { class: 'sm mute', text: salOf(p) ? (m.share != null ? `${m.share}% of the team’s time × ${fmtMoney(Number(salOf(p)))} a month × ${x.months.toFixed(1)} months` : `Set what share of the team’s time this project takes${suggestedShare(p.id) != null ? ` (about ${suggestedShare(p.id)}% of tasks done lately)` : ''}`) : 'Set the team’s total monthly salaries first' }))))) : null,
     h('section', { class: 'moneysum' }, h('div', { class: 'mrow' }, h('span', { text: 'Contract' }), h('b', { text: fmtMoney(x.value) })), h('div', { class: 'mrow' }, h('span', { text: 'Costs' }), h('b', { text: '− ' + fmtMoney(x.costs) })),
       h('div', { class: 'mrow tot' }, h('span', { text: 'Profit before the team' }), h('b', { text: fmtMoney(x.before) })),
@@ -165,9 +169,10 @@ function editShare(p) {
   const m = moneyOf(p.id); const sug = suggestedShare(p.id);
   const hw = pDept(p) === 'hardware';
   moneyForm('The team on this project', [{ key: 'team', id: 'mTeam', label: hw ? 'All hardware salaries together, per month (the hardware team)' : 'All software salaries together, per month (the software team)', type: 'number', value: salOf(p), ph: 'e.g. 250000', positive: true },
-    { key: 'share', id: 'mShare', label: `Share of the team’s time on ${p.name}, in %${sug != null ? ` (about ${sug}% of tasks done lately)` : ''}`, type: 'number', value: m.share ?? sug, ph: 'e.g. 20' }],
+    { key: 'share', id: 'mShare', label: `Share of the team’s time on ${p.name}, in %${sug ? ` (about ${sug}% of tasks done lately)` : ''}`, type: 'number', value: m.share || (sug || null), ph: 'e.g. 20' }],
     async v => {
       if (v.share != null && (v.share < 0 || v.share > 100)) { toast('Share is between 0 and 100'); return false; }
+      if (!v.share) { $('#mShare')?.focus(); toast('Write how much of the team’s time this project takes, e.g. 20'); return false; }
       if (v.team !== (salOf(p) ?? null)) { const row = { workspace_id: S.ws.id, team_monthly: hw ? M.salary : v.team, hw_monthly: hw ? v.team : M.hwSalary, updated_by: uid(), updated_at: nowIso() };
         const { error } = await sb.from('team_salaries').upsert(row); if (error) { toast(errText(error)); return false; } if (hw) M.hwSalary = v.team; else M.salary = v.team; }
       return saveMoney(p.id, { share: v.share }, 'Saved');
@@ -381,4 +386,14 @@ function deleteContract(p) {
         h('button', { class: 'btn sm ghost', onclick: () => { box.remove(); res(false); } }, 'Cancel')));
     body.prepend(box); box.scrollIntoView({ block: 'nearest' });
   });
+}
+
+/* the team cost is share × monthly salaries × months since the contract started: say which one is missing */
+function teamWhyZero(p, x, m) {
+  if (!salOf(p) || x.team == null || x.team > 0) return [];
+  const c = m.contract || {}; const why = [];
+  if (!m.share) why.push(h('span', { class: 'sm pjalert', text: 'The share of the team’s time is 0%. Edit it: how much of the team works on this project?' }));
+  if (!c.start) why.push(h('span', { class: 'sm pjalert' }, 'No start date on the contract, so no months are counted yet. ', canEditProjMoney(p) ? h('button', { class: 'lnk sm', onclick: () => editContract(p) }, 'Add the start date') : null));
+  else if (c.start > todayIso()) why.push(h('span', { class: 'sm mute', text: `The work starts ${fmtDate(c.start)}; the team cost counts from then.` }));
+  return why;
 }
