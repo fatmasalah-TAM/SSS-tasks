@@ -3,6 +3,9 @@ var clientTok = (() => { try { const c = new URLSearchParams(location.search).ge
 const clientUrl = tok => location.origin + location.pathname + '?c=' + tok;
 
 async function clientPage() {
+  // a client whose phone or browser is in Arabic sees the page in Arabic the first time
+  try { if (localStorage.getItem('baton.lang') == null && /^ar\b/i.test(navigator.language || '')) return setLang('ar'); } catch {}
+  if (clientPage.form) return; // never redraw over a report the client is typing
   document.getElementById('splash')?.remove();
   $('#app').innerHTML = bootLoader().replace('Loading your tasks…', 'Loading…');
   const { data, error } = await sb.rpc('client_status', { tok: clientTok });
@@ -24,9 +27,14 @@ async function clientPage() {
       h('span', { class: 'sm mute' }, `${i.key}${i.bug ? ' · fix' : ''} · ${i.category === 'done' ? 'done ' + fmtDate((i.done_at || '').slice(0, 10)) : i.status}${i.due && i.category !== 'done' ? ' · due ' + fmtDate(i.due) : ''}`)));
   const total = items.length, done = groups[3][3].length;
   $('#app').replaceChildren(h('div', { class: 'cp' }, h('div', { class: 'cp-in' },
-    h('header', { class: 'cp-head' }, h('div', { class: 'cp-brand', html: ICONS.wordmark }), h('span', { class: 'sm mute', text: 'Read-only status page' })),
+    h('header', { class: 'cp-head' }, h('div', { class: 'cp-brand', html: ICONS.wordmark }),
+      h('div', { class: 'seg notr cp-lang', role: 'group', 'aria-label': 'Language' },
+        h('button', { 'aria-pressed': String(!isAr()), lang: 'en', onclick: () => !isAr() || setLang('en') }, 'English'),
+        h('button', { 'aria-pressed': String(isAr()), lang: 'ar', dir: 'rtl', onclick: () => isAr() || setLang('ar') }, 'العربية'))),
     h('h1', { dir: 'auto', text: data.client }),
-    h('p', { class: 'mute', text: `From the ${data.workspace} team · updated ${new Date(data.at).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}` }),
+    h('p', { class: 'mute', text: `From the ${data.workspace} team · updated ${new Date(data.at).toLocaleString(UI_LOC, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}` }),
+    h('div', { class: 'cp-report' }, h('div', {}, h('b', { text: 'Found a problem?' }), h('span', { class: 'sm mute', text: 'Send it straight to the team. Add a screenshot if you can.' })),
+      h('button', { class: 'btn pri', onclick: () => clientReportForm(data) }, icon('plus', 14), 'Report a problem')),
     total ? h('div', { class: 'cp-sum' }, ...groups.map(([k, l, , list]) => h('div', { class: 'cp-n ' + k }, h('b', { text: String(list.length) }), h('span', { text: l })))) : null,
     total ? h('div', { class: 'cp-prog', role: 'img', 'aria-label': `${done} of ${total} done` }, h('i', { style: { width: Math.round(done / total * 100) + '%' } })) : null,
     ...(total ? groups.filter(g => g[3].length).map(([k, l, sub, list]) => h('section', { class: 'cp-g ' + k }, h('h2', { text: l }), h('p', { class: 'sm mute', text: sub }), h('ul', {}, ...list.map(row))))
@@ -49,7 +57,8 @@ function clientLinksPanel() {
     const r = await loadClientLinks();
     if (r.error) { box.replaceChildren(h('p', { class: 'note', text: 'Client pages need a quick database update (run the latest upgrade SQL). ' + errText(r.error) })); return; }
     const opts = (cf.options || []).filter(o => o.id !== 'all');
-    box.replaceChildren(h('p', { class: 'note', text: 'Give each client a private link to a simple page with the status of their items (titles and progress only — no comments, descriptions or names). Turn a link off any time.' }),
+    box.replaceChildren(h('p', { class: 'note', text: 'Give each client a private link to a simple page with the status of their items (titles and progress only — no comments, descriptions or names). Clients can also report a problem there: it becomes a bug for that client and goes to whoever Who gets what picks. Turn a link off any time.' }),
+      S.ws.bug_owner ? null : h('p', { class: 'note warn', text: 'No bug owner yet: a client’s report that matches no rule reaches every admin and waits with nobody’s turn. Pick a bug owner in Who gets what.' }),
       ...opts.map(o => {
         const l = r.links.find(x => x.field_id === cf.id && x.option_id === o.id);
         const n = S.tasks.filter(t => !isClosed(t) && (Array.isArray(t.fields?.[cf.id]) ? t.fields[cf.id].includes(o.id) : t.fields?.[cf.id] === o.id)).length;
@@ -69,6 +78,107 @@ function clientLinksPanel() {
   };
   draw();
   return box;
+}
+/* ── the client's "Report a problem" form: becomes a bug for this client, routed by Who gets what ── */
+var CR_ERR = { title: 'Write what’s wrong in a few words (at least 3 letters).', details: 'The details are too long. Keep them under 4,000 letters.', name: 'Write your name.',
+  phone: 'Write your WhatsApp number with the country code, e.g. +20 100 123 4567.', email: 'That email doesn’t look right. Fix it or leave it empty.',
+  busy: 'This link has sent a lot of reports in a short time. Try again in an hour, or contact the team directly.', link: 'This link isn’t active any more. Ask your contact for a new link.',
+  files: 'Screenshots must be pictures (JPG, PNG or WebP), up to 3.' };
+async function shrinkShot(file) { // phone screenshots are large: send at most 1600 px, as JPEG
+  const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(file); });
+  const k = Math.min(1, 1600 / Math.max(img.width, img.height)); const c = document.createElement('canvas');
+  c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+  const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.82)); URL.revokeObjectURL(img.src);
+  const data = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(String(fr.result).split(',')[1]); fr.readAsDataURL(blob); });
+  return { name: file.name, type: 'image/jpeg', data, url: URL.createObjectURL(blob) };
+}
+function clientReportForm(data) {
+  const saved = (() => { try { return JSON.parse(localStorage.getItem('baton.clientme') || '{}') || {}; } catch { return {}; } })();
+  let sev = 'normal'; const shots = [];
+  const err = h('p', { class: 'cp-err', role: 'alert', hidden: true });
+  const fld = (label, hint, input) => h('label', { class: 'field' }, label, hint ? h('span', { class: 'h', text: hint }) : null, input);
+  const title = h('input', { type: 'text', maxlength: '200', dir: 'auto', autocomplete: 'off', placeholder: 'e.g. The payment page shows an error' });
+  const details = h('textarea', { rows: '4', maxlength: '4000', dir: 'auto', placeholder: 'What did you do, what did you expect, and what happened instead?' });
+  const name = h('input', { type: 'text', maxlength: '80', dir: 'auto', autocomplete: 'name', value: saved.name || '', placeholder: 'e.g. Mona Adel' });
+  const phone = h('input', { type: 'tel', maxlength: '24', dir: 'ltr', autocomplete: 'tel', inputmode: 'tel', value: saved.phone || '', placeholder: '+20 100 123 4567' });
+  const email = h('input', { type: 'email', maxlength: '120', dir: 'ltr', autocomplete: 'email', value: saved.email || '', placeholder: 'name@company.com' });
+  const SEV = [['stops', 'Stops our work'], ['big', 'Big problem'], ['normal', 'Normal'], ['small', 'Small']];
+  const sevRow = h('div', { class: 'cp-sev', role: 'radiogroup', 'aria-label': 'How bad is it?' }, ...SEV.map(([k, l]) => h('button', { type: 'button', role: 'radio', 'aria-checked': String(k === sev), 'data-k': k,
+    onclick: e => { sev = k; $$('button', sevRow).forEach(b => b.setAttribute('aria-checked', String(b === e.currentTarget))); } }, l)));
+  const shotBox = h('div', { class: 'cp-shots' });
+  const pick = h('input', { type: 'file', accept: 'image/*', multiple: true, hidden: true, onchange: async e => {
+    const list = [...e.target.files]; e.target.value = '';
+    for (const f of list) { if (shots.length >= 3) break; if (!/^image\//.test(f.type)) continue; try { shots.push(await shrinkShot(f)); } catch { /* not a readable picture */ } }
+    drawShots();
+  } });
+  const addShot = h('button', { type: 'button', class: 'fchip', onclick: () => pick.click() }, icon('clip', 13), 'Add screenshot');
+  function drawShots() {
+    shotBox.replaceChildren(...shots.map((x, i) => h('div', { class: 'cp-shot' }, h('img', { src: x.url, alt: `Screenshot ${i + 1}` }),
+      h('button', { type: 'button', class: 'x', 'aria-label': `Remove screenshot ${i + 1}`, onclick: () => { shots.splice(i, 1); drawShots(); } }, icon('x', 14)))));
+    addShot.hidden = shots.length >= 3;
+  }
+  const send = h('button', { type: 'submit', class: 'btn pri' }, 'Send to the team');
+  const close = () => { clientPage.form = null; sh.remove(); clientPage(); };
+  const form = h('form', { class: 'cp-form', novalidate: true, onsubmit: async e => {
+    e.preventDefault(); err.hidden = true;
+    const bad = (m, el) => { err.textContent = m; err.hidden = false; el?.focus(); };
+    if (title.value.trim().length < 3) return bad(CR_ERR.title, title);
+    if (name.value.trim().length < 2) return bad(CR_ERR.name, name);
+    if (!/^\+?[0-9]{8,15}$/.test(phone.value.replace(/[^0-9+]/g, ''))) return bad(CR_ERR.phone, phone);
+    if (email.value.trim() && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.value.trim())) return bad(CR_ERR.email, email);
+    const done = busy(send, 'Sending…');
+    let res; try { res = await sb.functions.invoke('client-report', { body: { tok: clientTok, title: title.value, details: details.value, severity: sev, name: name.value, phone: phone.value, email: email.value, files: shots.map(x => ({ name: x.name, type: x.type, data: x.data })) } }); }
+    catch (x) { res = { error: x }; }
+    done();
+    const out = res?.data;
+    if (res?.error || !out) return bad('Couldn’t send it. Check your connection and try again.');
+    if (out.error) return bad(CR_ERR[out.error] || 'Couldn’t send it. Try again.', { title, name, phone, email }[out.error]);
+    try { localStorage.setItem('baton.clientme', JSON.stringify({ name: name.value.trim(), phone: phone.value.trim(), email: email.value.trim() })); } catch {}
+    shots.forEach(x => URL.revokeObjectURL(x.url));
+    body.replaceChildren(h('div', { class: 'cp-sent', role: 'status' }, h('span', { class: 'cp-ok', html: ICONS.check || '' }),
+      h('h2', { text: 'Got it. The team has your report.' }),
+      h('p', {}, 'Your reference is ', h('b', { class: 'notr', text: out.key }), '.'),
+      h('p', { class: 'mute', text: 'We’ll tell you on WhatsApp when it’s fixed. You’ll also see it on this page, and it moves to Done when it’s fixed.' }),
+      h('div', { class: 'cp-acts' }, h('button', { class: 'btn pri', onclick: close }, 'Back to the status page'),
+        h('button', { class: 'btn', onclick: () => { clientPage.form = null; sh.remove(); clientReportForm(data); } }, 'Report another problem'))));
+  } },
+    fld('What’s wrong?', null, title), fld('Details', 'Optional. Steps, the page, the device, anything that helps.', details),
+    h('div', { class: 'field' }, 'How bad is it?', sevRow),
+    h('div', { class: 'field' }, 'Screenshots', h('span', { class: 'h', text: 'Optional. Up to 3 pictures.' }), shotBox, h('div', {}, addShot, pick)),
+    h('div', { class: 'cp-two' }, fld('Your name', null, name), fld('WhatsApp number', 'We tell you here when it’s fixed.', phone)),
+    fld('Email', 'Optional.', email), err,
+    h('div', { class: 'cp-acts' }, send, h('button', { type: 'button', class: 'btn ghost', onclick: close }, 'Cancel')));
+  form.addEventListener('input', () => { err.hidden = true; });
+  const body = h('div', { class: 'cp-body' }, h('div', { class: 'cp-title' }, h('h1', { text: 'Report a problem' })), h('p', { class: 'mute', text: `It goes straight to the ${data.workspace} team.` }), form);
+  const box = h('div', { class: 'cp-in' }, h('header', { class: 'cp-head' }, h('div', { class: 'cp-brand', html: ICONS.wordmark }), h('span', { class: 'sm mute', dir: 'auto', text: data.client })), body);
+  const sh = h('div', { class: 'cp cp-formpage' }, box);
+  clientPage.form = sh; $('#app').replaceChildren(sh); window.scrollTo(0, 0); title.focus();
+  document.title = 'Report a problem';
+}
+
+/* ── inside Ovrto: who reported it, and telling them on WhatsApp ── */
+function waNumber(p) { // the client typed it: keep digits; an Egyptian 01xxxxxxxxx becomes 201xxxxxxxxx
+  let d = String(p || '').replace(/[^0-9+]/g, ''); if (d.startsWith('+')) return d.slice(1); if (d.startsWith('00')) return d.slice(2);
+  if (/^01[0-9]{9}$/.test(d)) return '2' + d; return d;
+}
+async function clientFixedWhatsApp(t) {
+  const c = t.client_report; if (!c?.phone) return;
+  let link = '';
+  if (c.link) { const { data } = await sb.from('client_links').select('token,revoked').like('token', c.link + '%').limit(1); const l = data?.[0]; if (l && !l.revoked) link = clientUrl(l.token); }
+  const fixed = catOf(t) === 'done'; const key = taskKey(t); const nm = String(c.name || '').split(' ')[0];
+  const txt = isAr()
+    ? (fixed ? `أهلًا ${nm}، المشكلة اللي بعتها (${key}: ${t.title}) اتحلت.` : `أهلًا ${nm}، وصلتنا المشكلة اللي بعتها (${key}: ${t.title}) وبنشتغل عليها.`) + (link ? `\nتقدر تتابع من هنا: ${link}` : '')
+    : (fixed ? `Hi ${nm}, the problem you reported (${key}: ${t.title}) is fixed.` : `Hi ${nm}, we got the problem you reported (${key}: ${t.title}) and we’re working on it.`) + (link ? `\nYou can check it here: ${link}` : '');
+  track('client_report_whatsapp');
+  window.open(`https://wa.me/${waNumber(c.phone)}?text=` + encodeURIComponent(txt), '_blank', 'noopener');
+}
+function clientReportBlock(t) {
+  const c = t.client_report; if (!c) return null;
+  const fixed = catOf(t) === 'done';
+  return h('div', { class: 'block cr-block' }, h('h4', {}, 'Reported by the client'),
+    h('div', { class: 'cr-who' }, h('b', { dir: 'auto', text: c.name || 'Client' }), h('span', { class: 'sm mute', dir: 'auto', text: [c.client, c.at ? fmtDate(String(c.at).slice(0, 10)) : ''].filter(Boolean).join(' · ') })),
+    h('div', { class: 'cr-contact sm' }, h('span', { dir: 'ltr', class: 'notr', text: c.phone || '' }), c.email ? h('a', { href: 'mailto:' + c.email, dir: 'ltr', class: 'notr', text: c.email }) : null),
+    h('button', { class: 'btn sm' + (fixed ? ' pri' : ''), onclick: () => clientFixedWhatsApp(taskOf(t.id) || t) }, icon('whatsapp', 14), fixed ? `Tell ${String(c.name || 'the client').split(' ')[0]} it’s fixed` : `Message ${String(c.name || 'the client').split(' ')[0]} on WhatsApp`));
 }
 function clientWhatsApp(cf, o, l) {
   const tasks = S.tasks.filter(t => Array.isArray(t.fields?.[cf.id]) ? t.fields[cf.id].includes(o.id) : t.fields?.[cf.id] === o.id);

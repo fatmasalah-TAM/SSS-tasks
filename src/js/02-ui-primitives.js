@@ -126,9 +126,9 @@ function busy(btn, label) {
   btn.disabled = true; btn.setAttribute('aria-busy', 'true'); btn.replaceChildren(loader(label || btn.textContent.trim()));
   return () => { btn.replaceChildren(...kids); btn.disabled = was; btn.removeAttribute('aria-busy'); };
 }
-function toast(msg, action, ms = 5000) {
+function toast(msg, action, ms = 5000, keep = false) { // keep: stay next to the toast before it (e.g. its Undo), even on a phone
   let box = $('.toasts'); if (!box) { box = h('div', { class: 'toasts', role: 'status', 'aria-live': 'polite' }); document.body.append(box); }
-  while (box.children.length > (isPhone() ? 0 : 1)) box.firstChild.remove();
+  while (box.children.length > (isPhone() && !keep ? 0 : 1)) box.firstChild.remove();
   const t = h('div', { class: 'toast' }, !action && /…$/.test(msg) ? loader(msg) : h('span', { text: msg }), action ? h('button', { onclick: () => { t.remove(); action.fn(); } }, action.label) : null);
   t.dataset.at = Date.now(); box.append(t); setTimeout(() => t.remove(), action ? ms : 3200);
   return t;

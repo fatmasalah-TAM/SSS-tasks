@@ -587,6 +587,7 @@ function notifLine(n) {
   const who = first(prof(n.actor_id)) || 'Someone'; const t = taskOf(n.task_id); const key = t ? taskKey(t) : '';
   switch (n.kind) {
     case 'assigned': return `${who} handed you ${key}`;
+    case 'client': return `${n.detail || t?.client_report?.name || 'A client'} reported ${key}`;
     case 'review': return `${who} sent ${key} to you for review`;
     case 'decision': return `${key} needs a decision`;
     case 'mention': return `${who} mentioned you`;
@@ -611,7 +612,7 @@ function inboxRow({ t, list }) {
     avatar(prof(top.actor_id), { size: 'lg' }),
     h('div', { class: 'b' },
       h('div', { class: 'ln1' }, h('span', { class: 'reason ' + top.reason, text: REASON[top.reason] || 'FYI' }), plate(t), h('span', { class: 't', text: t.title })),
-      h('div', { class: 'ln2', text: notifLine(top) + (top.detail && top.kind !== 'status' ? ': ' + top.detail : '') }),
+      h('div', { class: 'ln2', text: notifLine(top) + (top.detail && top.kind !== 'status' && top.kind !== 'client' ? ': ' + top.detail : '') }),
       list.length > 1 ? h('div', { class: 'sm mute', text: `+${list.length - 1} more update${list.length > 2 ? 's' : ''}` }) : null),
     h('span', { class: 'meta', text: ago(latest.created_at) }));
   const wrap = h('div', { class: 'swipewrap' }, h('div', { class: 'swipebg', 'aria-hidden': 'true' }, h('span', { text: 'Done' }), h('span', { text: 'Snooze' })), row);

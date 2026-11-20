@@ -326,6 +326,9 @@ async function patchTask(id, patch, opts = {}) {
   if (r.error) { Object.assign(t, prev); applyLocal(t); refresh(); toast(errText(r.error)); return false; }
   if (r.data && r.data[0]) Object.assign(t, r.data[0]);
   refresh(); snapshot();
+  const fixedForClient = 'status_id' in patch && t.client_report?.phone && catOf(t) === 'done' && stOf(prev.status_id)?.category !== 'done';
+  // a client reported it: once it is done, offer to tell them on WhatsApp (after the caller's own toast, so its Undo stays)
+  if (fixedForClient) setTimeout(() => toast(`${taskKey(t)} is done. Tell ${String(t.client_report.name || 'the client').split(' ')[0]} on WhatsApp?`, { label: 'WhatsApp', fn: () => clientFixedWhatsApp(taskOf(id) || t) }, 12000, true), 60);
   if (opts.toast) toast(opts.toast, opts.noUndo ? null : { label: 'Undo', fn: () => patchTask(id, prev) });
   return true;
 }

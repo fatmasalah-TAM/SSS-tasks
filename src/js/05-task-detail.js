@@ -64,6 +64,7 @@ function drawDetail(full) {
   }
   replaceIn(mainc, 'd-sentence', () => sentence(t));
   replaceIn(mainc, 'd-turn', () => turnStrip(t));
+  replaceIn(mainc, 'd-client', () => clientReportBlock(t));
   if (!keep('.d-desc')) replaceIn(mainc, 'd-desc', () => descBlock(t));
   replaceIn(mainc, 'd-waits', () => waitsBlock(t));
   replaceIn(mainc, 'd-cause', () => causeBlock(t));
@@ -258,7 +259,7 @@ function fieldsPanel(t) {
   const box = h('div', {}, h('h4', { style: { margin: '0 0 8px', font: '600 12px/16px var(--display)', letterSpacing: '0', color: 'var(--fg2)' }, text: 'Fields' }), kv);
   if (empty.length && !detail?.showEmpty) box.append(h('button', { class: 'link', style: { marginTop: '8px' }, onclick: () => { detail.showEmpty = true; $('.rail', detail.sh).replaceChildren(fieldsPanel(taskOf(t.id))); } }, `+${empty.length} empty field${empty.length > 1 ? 's' : ''}`));
   box.append(h('div', { class: 'sm mute', style: { marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '4px' } },
-    h('span', { text: `Reported by ${dname(prof(t.created_by))} · ${t.created_at ? fmtDT(t.created_at) : ''}` }), h('span', { text: `Updated ${ago(t.updated_at)} ago` })));
+    h('span', { text: `Reported by ${!t.created_by && t.client_report ? `${t.client_report.name || 'the client'} (client)` : dname(prof(t.created_by))} · ${t.created_at ? fmtDT(t.created_at) : ''}` }), h('span', { text: `Updated ${ago(t.updated_at)} ago` })));
   return box;
 }
 function setField(t, f, v) { const fields = Object.assign({}, t.fields || {}); fields[f.id] = v; return patchTask(t.id, { fields }); }
@@ -330,8 +331,9 @@ function timeline() {
     while (i < items.length && items[i].k === 'a' && items[i].a.actor_id === actor && new Date(items[i].at).getTime() - start < 600e3) {
       const a = items[i].a; if (a.field === 'created') created = true; else fields.add(FIELD_LABEL[a.field] || a.field); i++;
     }
-    const who = dname(prof(actor));
-    out.append(h('div', { class: 'ev small' }, h('span', {}, h('b', { text: who }), created ? ' created this task' : '', created && fields.size ? ' and' : '', fields.size ? ` changed ${[...fields].join(', ')}` : '', ` · ${ago(it.at)}`)));
+    const cr = !actor && created ? taskOf(detail.id)?.client_report : null;
+    const who = cr ? `${cr.name || 'The client'} (client)` : dname(prof(actor));
+    out.append(h('div', { class: 'ev small' }, h('span', {}, h('b', { text: who }), created ? (cr ? ' reported this from the client page' : ' created this task') : '', created && fields.size ? ' and' : '', fields.size ? ` changed ${[...fields].join(', ')}` : '', ` · ${ago(it.at)}`)));
   }
   return out;
 }

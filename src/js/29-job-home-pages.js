@@ -59,7 +59,7 @@ function codeParts(d) {
     sections: [
       ['Sent back to you', 'h-back', back, t => withBtn(turnCard(t, { sub: `Sent back ${t.sendbacks}× · open it for the reason` }), 'Fix', () => openTask(t.id)), 'Nothing came back from testing.'],
       ['In progress', 'h-doing', doing, t => turnCard(t, { sub: t.stopped?.text ? `Stopped: ${String(t.stopped.text).slice(0, 90)}` : undefined }), 'Nothing in progress. Start something from Your tasks.'],
-      [`New bugs in ${label}`, 'h-fresh', fresh, t => withBtn(turnCard(t, { sub: `Reported by ${first(prof(t.created_by)) || 'someone'} · not assigned` }), 'Take it', () => patchTask(t.id, { assignee_id: uid() }, { toast: 'It’s yours now' })), `No new bugs in ${label}.`]] };
+      [`New bugs in ${label}`, 'h-fresh', fresh, t => withBtn(turnCard(t, { sub: `Reported by ${first(prof(t.created_by)) || (t.client_report ? `${t.client_report.name || 'the client'} (client)` : 'someone')} · not assigned` }), 'Take it', () => patchTask(t.id, { assignee_id: uid() }, { toast: 'It’s yours now' })), `No new bugs in ${label}.`]] };
 }
 /* Product / PM: decisions only you can make, client requests not planned yet, projects at risk */
 function productParts() {
