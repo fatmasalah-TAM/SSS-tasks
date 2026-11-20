@@ -2,7 +2,7 @@
 var QUICK = ['👍', '❤️', '😂', '🎉', '👀', '✅', '🙏', '🔥'];
 var CHAT_DAYS = 90, FILE_MAX = 50 * 1024 * 1024; // recent chat loads at start; older messages load on request (nothing is ever cut off)
 function isChatN(n) { return n.kind === 'chat' || n.kind === 'dm'; }
-var chatUi = { thread: null, pending: {}, editing: null, scrollTo: null };
+var chatUi = { thread: null, pending: {}, editing: null, scrollTo: null, selCh: null, sel: new Set() };
 var huddleCfg = null;
 
 async function loadOlder(chId, btn) {
@@ -196,6 +196,7 @@ function conversation(chId) {
     h('div', { class: 'cv-name' }, h('b', { text: c.kind === 'dm' ? dname(other) : c.name }),
       h('span', { class: 'sm mute', text: c.kind === 'dm' ? 'Direct message' : c.kind === 'client' ? clientChatSub(c) : (c.topic || `${S.members.length} people`) })),
     h('span', { class: 'sp' }),
+    h('button', { class: 'x', 'aria-label': 'Select messages to make tasks', title: 'Select messages to make tasks', 'aria-pressed': String(chatUi.selCh === chId), onclick: () => startSelect(chId) }, icon('check', 18)),
     c.kind === 'client' ? h('button', { class: 'btn sm', onclick: () => clientPeopleSheet(c) }, icon('person', 14), 'People') : null,
     hu || c.kind === 'client' ? null : h('button', { class: 'btn sm', 'data-tour': 'huddle-btn', onclick: () => joinHuddle(chId) }, icon('headset', 16), 'Huddle'),
     canManage ? h('button', { class: 'x', 'aria-label': 'Channel options', onclick: e => menu(e.currentTarget, [
@@ -209,7 +210,7 @@ function conversation(chId) {
     h('button', { class: 'btn sm pri', 'data-tour': 'huddle-btn', onclick: () => joinHuddle(chId) }, icon('headset', 14), hu.people.includes(uid()) ? 'Back to the call' : 'Join'),
     hu.started_by === uid() || isAdmin() ? h('button', { class: 'btn sm ghost', onclick: () => endHuddle(chId) }, 'End') : null) : null;
   const list = h('div', { class: 'scroll cv-scroll', 'data-chat-scroll': chId }, messageList(chId, null));
-  const out = [h('header', { class: 'head cv-head' }, title), banner, list, composer2(c, null)].filter(Boolean);
+  const out = [h('header', { class: 'head cv-head' }, title), banner, list, chatUi.selCh === chId ? selectBar(c) : composer2(c, null)].filter(Boolean);
   requestAnimationFrame(() => { const sc = $('.cv-scroll'); if (sc) { const tgt = chatUi.scrollTo && $(`[data-msg="${chatUi.scrollTo}"]`, sc); if (tgt) { tgt.scrollIntoView({ block: 'center' }); tgt.classList.add('flash'); chatUi.scrollTo = null; } else sc.scrollTop = sc.scrollHeight; } });
   markChatRead(chId);
   if (!huddleCfg || huddleCfg.ws !== S.ws.id) huddleSettings().catch(() => {});
@@ -290,6 +291,12 @@ function messageEl(m, { head, inThread }) {
       head ? h('div', { class: 'mhead' }, h('b', { text: dname(p) || 'Former member' }), m.client_contact_id ? h('span', { class: 'cl-tag', text: 'Client' }) : null, h('span', { class: 'mute sm', text: clock(m.created_at) })) : null,
       body, m.edited_at && !editing ? h('span', { class: 'sm mute', text: '(edited)' }) : null, files, reactRow, thread),
     editing ? null : acts);
+  if (chatUi.selCh === m.channel_id && !inThread) { // choosing messages to turn into tasks: a tap picks it
+    el.classList.add('selecting'); el.classList.toggle('sel', chatUi.sel.has(m.id)); el.setAttribute('role', 'checkbox'); el.setAttribute('aria-checked', String(chatUi.sel.has(m.id))); el.tabIndex = 0;
+    const flip = e => { e.preventDefault(); e.stopPropagation(); chatUi.sel.has(m.id) ? chatUi.sel.delete(m.id) : chatUi.sel.add(m.id); el.classList.toggle('sel', chatUi.sel.has(m.id)); el.setAttribute('aria-checked', String(chatUi.sel.has(m.id))); drawSelectCount(); };
+    el.addEventListener('click', flip, true); el.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') flip(e); });
+    return el;
+  }
   // touch screens: press and hold a message to react, reply or edit
   if (!editing && matchMedia('(hover: none)').matches) longPress(el, () => { $$('.msg.acts-open').forEach(x => x !== el && x.classList.remove('acts-open')); el.classList.add('acts-open'); });
   return el;
@@ -302,6 +309,7 @@ function msgMenu(anchor, m, inThread) {
     { header: 'React' }, ...QUICK.map(e => ({ label: e, fn: () => toggleReact(m, e) })), '-',
     !inThread ? { label: 'Reply in thread', icon: 'reply', fn: () => openThread(m.id) } : null,
     { label: 'Make a task from this', sub: '✦ AI', icon: 'plus', fn: () => taskFromMessage(m) },
+    !inThread ? { label: 'Select messages to make tasks', icon: 'check', fn: () => startSelect(m.channel_id, m.id) } : null,
     { label: 'Copy text', icon: 'share', fn: () => copyText(m.body, 'Copied') },
     mine ? { label: 'Edit', icon: 'gear', fn: () => { chatUi.editing = m.id; refreshChat(); } } : null,
     mine || isAdmin() ? { label: 'Delete message', danger: true, fn: () => deleteMessage(m) } : null,
@@ -609,4 +617,86 @@ async function shareContactLink(p, how, tok) {
   const nm = String(p.name || '').split(' ')[0];
   const txt = isAr() ? `أهلًا ${nm}، ده لينكك الخاص مع فريق ${S.ws.name}: تقدر تكلمنا، وتتابع الشغل، وتبعت أي مشكلة.\n${url}` : `Hi ${nm}, this is your own link to the ${S.ws.name} team: chat with us, follow the work and report any problem.\n${url}`;
   window.open(`https://wa.me/${waNumber(p.phone)}?text=` + encodeURIComponent(txt), '_blank', 'noopener');
+}
+
+/* ── choose messages, then AI turns them into one task or several (drafts first; a person presses Create) ── */
+function startSelect(chId, first) {
+  if (chatUi.selCh === chId && !first) return endSelect();
+  chatUi.selCh = chId; chatUi.sel = new Set(first ? [first] : []); track('chat_select'); render();
+}
+function endSelect() { chatUi.selCh = null; chatUi.sel = new Set(); render(); }
+function drawSelectCount() {
+  const n = chatUi.sel.size; const b = $('.selbar');
+  if (!b) return; $('.sb-n', b).textContent = n ? `${n} selected` : 'Tap messages to choose them'; $('.sb-go', b).disabled = !n;
+}
+function selectBar(c) {
+  const n = chatUi.sel.size;
+  return h('div', { class: 'selbar', role: 'toolbar', 'aria-label': 'Selected messages' },
+    h('span', { class: 'sb-n', text: n ? `${n} selected` : 'Tap messages to choose them' }), h('span', { class: 'sp' }),
+    h('button', { class: 'btn ghost', onclick: endSelect }, 'Cancel'),
+    h('button', { class: 'btn pri sb-go', disabled: !n, onclick: () => chatTasksSheet(c, [...chatUi.sel]) }, icon('plus', 14), 'Make tasks'));
+}
+function chatTasksSheet(c, ids) {
+  const msgs = ids.map(msgOf).filter(Boolean).sort((a, b) => a.created_at.localeCompare(b.created_at));
+  openSheet({ title: `Make tasks from ${msgs.length} message${msgs.length === 1 ? '' : 's'}`, kind: 'center', key: 'chattasks', build: sh => {
+    const body = h('div', { class: 'sbody ct' }); sh.append(body);
+    const who = m => m.client_contact_id ? `${contactOf(m.client_contact_id)?.name || 'Client'} (client)` : dname(prof(m.author_id));
+    const quote = h('div', { class: 'ct-quote' }, ...msgs.slice(0, 6).map(m => h('p', {}, h('b', { text: who(m) + ': ' }), h('span', { dir: 'auto', text: (m.body || ((m.files || []).length ? '[file]' : '')).slice(0, 160) }))),
+      msgs.length > 6 ? h('p', { class: 'sm mute', text: `and ${msgs.length - 6} more` }) : null);
+    const ask = async mode => {
+      if (!(await aiReady())) { // no AI: one task with the messages, filled in by hand
+        closeSheet(true); endSelect();
+        return openCreate({ prefill: { title: (msgs[0]?.body || '').split('\n')[0].slice(0, 120) || 'From chat', description: msgs.map(m => `${who(m)}: ${m.body}`).join('\n') + `\n\nFrom ${chName(c)}` }, onCreated: () => {} });
+      }
+      body.replaceChildren(quote, loadingRow(mode === 'one' ? 'AI is writing one task…' : 'AI is reading the messages…'));
+      const ctx = { types: S.types.map(t => ({ name: t.name, bug: !!t.is_bug, sections: t.template || [] })), people: S.members.map(m => dname(prof(m.user_id))) };
+      const { data, error } = await sb.functions.invoke('chat-tasks', { body: { ws: S.ws.id, ids: msgs.map(m => m.id), mode, ctx, lang: isAr() ? 'ar' : 'en' } });
+      if (error || !data || data.error) { body.replaceChildren(quote, h('p', { class: 'cp-err', text: data?.error || errText(error) || 'AI didn’t answer. Try again.' }), choices()); return; }
+      showDrafts(data);
+    };
+    const choices = () => h('div', { class: 'ct-choices' },
+      h('p', { class: 'ct-q', text: 'Is this one task or several?' }),
+      h('button', { class: 'btn', onclick: () => ask('one') }, h('b', { text: 'One task' }), h('span', { class: 'sm mute', text: 'Everything here is one piece of work' })),
+      h('button', { class: 'btn', onclick: () => ask('many') }, h('b', { text: 'A task for each request' }), h('span', { class: 'sm mute', text: 'Separate problems or asks become separate tasks' })),
+      h('button', { class: 'btn pri', onclick: () => ask('auto') }, h('b', { text: 'Let AI decide' }), h('span', { class: 'sm', text: 'AI reads it and tells you why' })));
+    const showDrafts = d => {
+      const drafts = (d.tasks || []).map(t => Object.assign({ on: true }, t));
+      if (!drafts.length) { body.replaceChildren(quote, h('p', { class: 'note', text: d.why || 'AI found no work to do in these messages.' }), choices()); return; }
+      const go = h('button', { class: 'btn pri' }, '');
+      const count = () => { const n = drafts.filter(x => x.on).length; go.textContent = n === 1 ? 'Create 1 task' : `Create ${n} tasks`; go.disabled = !n; };
+      const cards = drafts.map((t, i) => {
+        const ttl = h('input', { type: 'text', class: 'ct-title', dir: 'auto', value: t.title, 'aria-label': `Task ${i + 1} title`, oninput: e => { t.title = e.target.value; } });
+        const cb = h('input', { type: 'checkbox', checked: true, 'aria-label': `Create task ${i + 1}`, onchange: e => { t.on = e.target.checked; card.classList.toggle('off', !t.on); count(); } });
+        const meta = [(t.type && matchType(t.type)?.name) || '', PRIO_WORD[t.priority] ? prioName(PRIO_WORD[t.priority]) : '', t.developer && matchPerson(t.developer) ? dname(prof(matchPerson(t.developer))) : ''].filter(Boolean);
+        const card = h('div', { class: 'ct-card' }, h('label', { class: 'ct-head' }, cb, ttl),
+          meta.length ? h('div', { class: 'sm mute ct-meta' }, ...meta.map(x => h('span', { text: x }))) : null,
+          t.description ? h('div', { class: 'sm ct-desc', dir: 'auto', text: t.description.slice(0, 280) }) : null,
+          t.note ? h('div', { class: 'sm ai-note', text: '✦ ' + t.note }) : null);
+        return card;
+      });
+      count();
+      go.addEventListener('click', async () => {
+        const pick = drafts.filter(x => x.on && x.title.trim()); if (!pick.length) return;
+        const done = busy(go, 'Creating…'); const made = [];
+        const cf = c.kind === 'client' && c.client_field_id ? S.fields.find(f => f.id === c.client_field_id) : null;
+        for (const t of pick) {
+          const ty = t.type ? matchType(t.type) : null; const tmpl = tyOf(ty?.id)?.template || [];
+          const secs = Object.entries(t.sections || {}).map(([k, v]) => ({ h: tmpl.find(x => norm(x) === norm(k)) || k, body: String(v || '').trim() })).filter(s => s.body);
+          const description = [t.description, secs.length ? joinSections(secs) : '', `From ${chName(c)}: ${msgs.map(m => who(m)).filter((x, i, a) => a.indexOf(x) === i).join(', ')}`].filter(Boolean).join('\n\n');
+          const row = { title: t.title.trim().slice(0, 200), description, priority: PRIO_WORD[t.priority] || 0 };
+          if (ty) row.type_id = ty.id;
+          const pid = t.developer && matchPerson(t.developer); if (pid) row.assignee_id = pid;
+          if (cf) row.fields = { [cf.id]: cf.kind === 'multi' ? [c.client_option_id] : c.client_option_id };
+          const nt = await createTask(row); if (nt) made.push(nt);
+        }
+        done(); closeSheet(true); endSelect(); track('chat_tasks_made');
+        if (!made.length) return toast('Couldn’t create the tasks');
+        if (c.kind !== 'client') sendMessage(c, null, `Made ${made.length === 1 ? 'a task' : made.length + ' tasks'}: ${made.map(x => taskKey(taskOf(x.id) || x)).join(', ')}`, []);
+        toast(made.length === 1 ? `Made ${taskKey(taskOf(made[0].id) || made[0])}` : `Made ${made.length} tasks`, { label: 'Open', fn: () => openTask(made[0].id) }, 8000);
+      });
+      body.replaceChildren(quote, d.why ? h('p', { class: 'ai-note', text: '✦ ' + d.why }) : null, ...cards,
+        h('div', { class: 'ct-acts' }, h('button', { class: 'btn ghost', onclick: () => body.replaceChildren(quote, choices()) }, 'Back'), go));
+    };
+    body.replaceChildren(quote, choices());
+  } });
 }

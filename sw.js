@@ -11,7 +11,7 @@ self.addEventListener('push', e => {
       try { d.badge ? await self.navigator.setAppBadge(d.badge) : await self.navigator.clearAppBadge(); } catch {}
     }
     await self.registration.showNotification(d.title || 'Ovrto', {
-      body: d.body || '', tag: d.tag, icon: 'icon-192.png', badge: 'icon-192.png', data: { task: d.task, chat: d.chat },
+      body: d.body || '', tag: d.tag, icon: 'icon-192.png', badge: 'icon-192.png', data: { task: d.task, chat: d.chat, url: d.url },
     });
   })());
 });
@@ -19,8 +19,14 @@ self.addEventListener('push', e => {
 self.addEventListener('notificationclick', e => {
   e.notification.close();
   const task = e.notification.data && e.notification.data.task, chat = e.notification.data && e.notification.data.chat;
-  const url = new URL('./' + (task ? '#task-' + task : chat ? '#chat-' + chat : ''), self.registration.scope).href;
+  const own = e.notification.data && e.notification.data.url; // a client's alert opens their own link
+  const url = own ? new URL(own, self.registration.scope).href : new URL('./' + (task ? '#task-' + task : chat ? '#chat-' + chat : ''), self.registration.scope).href;
   e.waitUntil((async () => {
+    if (own && url.startsWith(self.registration.scope)) {
+      const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      const w = wins.find(x => x.url === url); if (w) return w.focus();
+      return self.clients.openWindow(url);
+    }
     const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     for (const w of wins) {
       if (w.url.startsWith(self.registration.scope)) { await w.focus(); if (task) w.postMessage({ task }); else if (chat) w.postMessage({ chat }); return; }

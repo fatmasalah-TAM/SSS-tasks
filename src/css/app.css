@@ -1235,3 +1235,29 @@ body:has(.sheet) .toasts{bottom:calc(88px + var(--sab))}
 .cpp-list .prow{flex-wrap:wrap}
 .cpp-add{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:12px;margin-top:6px}
 .cpp-two{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media (max-width:560px){.cpp-two{grid-template-columns:1fr}}
+
+/* choosing chat messages to turn into tasks */
+.msg.selecting{cursor:pointer;border-radius:10px;position:relative;padding-inline-start:40px}
+.msg.selecting::before{content:'';position:absolute;inset-inline-start:10px;top:14px;width:18px;height:18px;border-radius:50%;border:2px solid var(--line-strong,var(--mute))}
+.msg.selecting.sel{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.msg.selecting.sel::before{background:var(--accent);border-color:var(--accent);box-shadow:inset 0 0 0 3px var(--surface)}
+.msg.selecting .mact{display:none}
+.selbar{display:flex;align-items:center;gap:8px;padding:10px 14px calc(10px + var(--sab,0px));border-top:1px solid var(--line);background:var(--surface)}
+.selbar .sb-n{font-weight:600}
+.ct{gap:12px}
+.ct-quote{border-inline-start:3px solid var(--line);padding-inline-start:10px;display:flex;flex-direction:column;gap:4px;max-height:160px;overflow:auto}
+.ct-quote p{margin:0;font-size:13px;overflow-wrap:anywhere}
+.ct-choices{display:flex;flex-direction:column;gap:8px}
+.ct-choices .btn{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 14px;height:auto;text-align:start}
+.ct-q{margin:4px 0 0;font-weight:650}
+.ct-card{border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;background:var(--surface)}
+.ct-card.off{opacity:.5}
+.ct-head{display:flex;align-items:center;gap:8px}.ct-head input[type=checkbox]{width:18px;height:18px;flex:none}
+.ct-title{flex:1;min-width:0;font-weight:600}
+.ct-desc{color:var(--fg2);white-space:pre-wrap;overflow-wrap:anywhere}
+.ai-note{color:var(--accent);font-size:13px;margin:0}
+.ct-acts{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+/* client alerts */
+.cc-alerts{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--sunk);border-radius:10px;padding:8px 10px}
+.cc-alerts[hidden]{display:none}
+.ct-meta{display:flex;flex-wrap:wrap;gap:4px 10px}

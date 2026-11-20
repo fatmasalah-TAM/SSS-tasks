@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-oeXGHE9cCifFrbNCd2sdMXHHrRL0/iKc+PJaQha/olE=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-ildt8TpzbTfmAwVBGUz/NtaQHw9BhPDKKXDEWMChwsM=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-oeXGHE9cCifFrbNCd2sdMXHHrRL0/iKc+PJaQha/olE=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-Ru0HBxhj4q3j38P1IsHaL/tAz16I0/uCJEoiHCCeQ8A=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<meta name="ovrto-build" content="667a707e34f8">
+<meta name="ovrto-build" content="926660475b6c">
 <title>Ovrto</title>
 <meta name="description" content="Over to you. Every task shows whose turn it is.">
 <meta name="theme-color" content="#0D0D0F">
@@ -1257,6 +1257,32 @@ body:has(.sheet) .toasts{bottom:calc(88px + var(--sab))}
 .cpp-list .prow{flex-wrap:wrap}
 .cpp-add{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:12px;margin-top:6px}
 .cpp-two{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media (max-width:560px){.cpp-two{grid-template-columns:1fr}}
+
+/* choosing chat messages to turn into tasks */
+.msg.selecting{cursor:pointer;border-radius:10px;position:relative;padding-inline-start:40px}
+.msg.selecting::before{content:'';position:absolute;inset-inline-start:10px;top:14px;width:18px;height:18px;border-radius:50%;border:2px solid var(--line-strong,var(--mute))}
+.msg.selecting.sel{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.msg.selecting.sel::before{background:var(--accent);border-color:var(--accent);box-shadow:inset 0 0 0 3px var(--surface)}
+.msg.selecting .mact{display:none}
+.selbar{display:flex;align-items:center;gap:8px;padding:10px 14px calc(10px + var(--sab,0px));border-top:1px solid var(--line);background:var(--surface)}
+.selbar .sb-n{font-weight:600}
+.ct{gap:12px}
+.ct-quote{border-inline-start:3px solid var(--line);padding-inline-start:10px;display:flex;flex-direction:column;gap:4px;max-height:160px;overflow:auto}
+.ct-quote p{margin:0;font-size:13px;overflow-wrap:anywhere}
+.ct-choices{display:flex;flex-direction:column;gap:8px}
+.ct-choices .btn{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 14px;height:auto;text-align:start}
+.ct-q{margin:4px 0 0;font-weight:650}
+.ct-card{border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;background:var(--surface)}
+.ct-card.off{opacity:.5}
+.ct-head{display:flex;align-items:center;gap:8px}.ct-head input[type=checkbox]{width:18px;height:18px;flex:none}
+.ct-title{flex:1;min-width:0;font-weight:600}
+.ct-desc{color:var(--fg2);white-space:pre-wrap;overflow-wrap:anywhere}
+.ai-note{color:var(--accent);font-size:13px;margin:0}
+.ct-acts{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+/* client alerts */
+.cc-alerts{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--sunk);border-radius:10px;padding:8px 10px}
+.cc-alerts[hidden]{display:none}
+.ct-meta{display:flex;flex-wrap:wrap;gap:4px 10px}
 </style>
 </head>
 <body>
@@ -1275,7 +1301,7 @@ body:has(.sheet) .toasts{bottom:calc(88px + var(--sab))}
 </script>
 <div id="app"><div class="boot" role="status"><div class="boot-mark loop"><svg class="mark-anim" viewBox="0 0 1000 1000" fill="none" aria-hidden="true"><g transform="translate(-779.1 725.4) scale(0.6829)"><g class="mk-t"><path fill="currentColor" transform="translate(1501.0 0) scale(1.00000 -1.00000)" d="M42 401H151L89 108C79 63 79 60 79 43C79 4 98 -17 133 -17C170 -17 210 1 266 42L343 99L330 125L274 85C252 69 239 64 220 64C202 64 196 71 196 92C196 113 199 135 205 164L256 401H303C343 401 363 400 395 396L409 452L403 457L269 452L282 508L313 624L303 636L237 612C218 605 202 601 180 598V582C180 556 178 538 164 460L49 428Z"/></g><rect class="mk-x" fill="var(--accent)" x="1539.0" y="-465.0" width="490.4" height="74.0"/><path class="mk-chev" fill="var(--accent)" stroke="var(--accent)" stroke-width="18.5" stroke-linejoin="round" d="M2014.6 -568.6L2207.0 -428.0L2014.6 -287.4Z"/></g></svg></div><div class="boot-cap">Loading…</div></div></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="react-app.js?v=667a707e34f8"></script>
+<script src="react-app.js?v=926660475b6c"></script>
 <script>
 (() => {
 'use strict';
@@ -4186,7 +4212,7 @@ addEventListener('online', () => { if (S.ws) { flushOutbox(); setupRealtime(); c
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { checkUpdate(); if (S.ws) { flushOutbox(); setupRealtime(); catchUp(); } } });
 
 /* a new version was uploaded: phones (and apps saved to the home screen) pick it up by themselves */
-const BUILD = '667a707e34f8';
+const BUILD = '926660475b6c';
 let updLast = 0, updShown = false;
 async function checkUpdate(force) {
   if (!force && Date.now() - updLast < 60000) return; updLast = Date.now();
@@ -5079,7 +5105,7 @@ function openImport() {
 var QUICK = ['👍', '❤️', '😂', '🎉', '👀', '✅', '🙏', '🔥'];
 var CHAT_DAYS = 90, FILE_MAX = 50 * 1024 * 1024; // recent chat loads at start; older messages load on request (nothing is ever cut off)
 function isChatN(n) { return n.kind === 'chat' || n.kind === 'dm'; }
-var chatUi = { thread: null, pending: {}, editing: null, scrollTo: null };
+var chatUi = { thread: null, pending: {}, editing: null, scrollTo: null, selCh: null, sel: new Set() };
 var huddleCfg = null;
 
 async function loadOlder(chId, btn) {
@@ -5273,6 +5299,7 @@ function conversation(chId) {
     h('div', { class: 'cv-name' }, h('b', { text: c.kind === 'dm' ? dname(other) : c.name }),
       h('span', { class: 'sm mute', text: c.kind === 'dm' ? 'Direct message' : c.kind === 'client' ? clientChatSub(c) : (c.topic || `${S.members.length} people`) })),
     h('span', { class: 'sp' }),
+    h('button', { class: 'x', 'aria-label': 'Select messages to make tasks', title: 'Select messages to make tasks', 'aria-pressed': String(chatUi.selCh === chId), onclick: () => startSelect(chId) }, icon('check', 18)),
     c.kind === 'client' ? h('button', { class: 'btn sm', onclick: () => clientPeopleSheet(c) }, icon('person', 14), 'People') : null,
     hu || c.kind === 'client' ? null : h('button', { class: 'btn sm', 'data-tour': 'huddle-btn', onclick: () => joinHuddle(chId) }, icon('headset', 16), 'Huddle'),
     canManage ? h('button', { class: 'x', 'aria-label': 'Channel options', onclick: e => menu(e.currentTarget, [
@@ -5286,7 +5313,7 @@ function conversation(chId) {
     h('button', { class: 'btn sm pri', 'data-tour': 'huddle-btn', onclick: () => joinHuddle(chId) }, icon('headset', 14), hu.people.includes(uid()) ? 'Back to the call' : 'Join'),
     hu.started_by === uid() || isAdmin() ? h('button', { class: 'btn sm ghost', onclick: () => endHuddle(chId) }, 'End') : null) : null;
   const list = h('div', { class: 'scroll cv-scroll', 'data-chat-scroll': chId }, messageList(chId, null));
-  const out = [h('header', { class: 'head cv-head' }, title), banner, list, composer2(c, null)].filter(Boolean);
+  const out = [h('header', { class: 'head cv-head' }, title), banner, list, chatUi.selCh === chId ? selectBar(c) : composer2(c, null)].filter(Boolean);
   requestAnimationFrame(() => { const sc = $('.cv-scroll'); if (sc) { const tgt = chatUi.scrollTo && $(`[data-msg="${chatUi.scrollTo}"]`, sc); if (tgt) { tgt.scrollIntoView({ block: 'center' }); tgt.classList.add('flash'); chatUi.scrollTo = null; } else sc.scrollTop = sc.scrollHeight; } });
   markChatRead(chId);
   if (!huddleCfg || huddleCfg.ws !== S.ws.id) huddleSettings().catch(() => {});
@@ -5367,6 +5394,12 @@ function messageEl(m, { head, inThread }) {
       head ? h('div', { class: 'mhead' }, h('b', { text: dname(p) || 'Former member' }), m.client_contact_id ? h('span', { class: 'cl-tag', text: 'Client' }) : null, h('span', { class: 'mute sm', text: clock(m.created_at) })) : null,
       body, m.edited_at && !editing ? h('span', { class: 'sm mute', text: '(edited)' }) : null, files, reactRow, thread),
     editing ? null : acts);
+  if (chatUi.selCh === m.channel_id && !inThread) { // choosing messages to turn into tasks: a tap picks it
+    el.classList.add('selecting'); el.classList.toggle('sel', chatUi.sel.has(m.id)); el.setAttribute('role', 'checkbox'); el.setAttribute('aria-checked', String(chatUi.sel.has(m.id))); el.tabIndex = 0;
+    const flip = e => { e.preventDefault(); e.stopPropagation(); chatUi.sel.has(m.id) ? chatUi.sel.delete(m.id) : chatUi.sel.add(m.id); el.classList.toggle('sel', chatUi.sel.has(m.id)); el.setAttribute('aria-checked', String(chatUi.sel.has(m.id))); drawSelectCount(); };
+    el.addEventListener('click', flip, true); el.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') flip(e); });
+    return el;
+  }
   // touch screens: press and hold a message to react, reply or edit
   if (!editing && matchMedia('(hover: none)').matches) longPress(el, () => { $$('.msg.acts-open').forEach(x => x !== el && x.classList.remove('acts-open')); el.classList.add('acts-open'); });
   return el;
@@ -5379,6 +5412,7 @@ function msgMenu(anchor, m, inThread) {
     { header: 'React' }, ...QUICK.map(e => ({ label: e, fn: () => toggleReact(m, e) })), '-',
     !inThread ? { label: 'Reply in thread', icon: 'reply', fn: () => openThread(m.id) } : null,
     { label: 'Make a task from this', sub: '✦ AI', icon: 'plus', fn: () => taskFromMessage(m) },
+    !inThread ? { label: 'Select messages to make tasks', icon: 'check', fn: () => startSelect(m.channel_id, m.id) } : null,
     { label: 'Copy text', icon: 'share', fn: () => copyText(m.body, 'Copied') },
     mine ? { label: 'Edit', icon: 'gear', fn: () => { chatUi.editing = m.id; refreshChat(); } } : null,
     mine || isAdmin() ? { label: 'Delete message', danger: true, fn: () => deleteMessage(m) } : null,
@@ -5687,6 +5721,88 @@ async function shareContactLink(p, how, tok) {
   const txt = isAr() ? `أهلًا ${nm}، ده لينكك الخاص مع فريق ${S.ws.name}: تقدر تكلمنا، وتتابع الشغل، وتبعت أي مشكلة.\n${url}` : `Hi ${nm}, this is your own link to the ${S.ws.name} team: chat with us, follow the work and report any problem.\n${url}`;
   window.open(`https://wa.me/${waNumber(p.phone)}?text=` + encodeURIComponent(txt), '_blank', 'noopener');
 }
+
+/* ── choose messages, then AI turns them into one task or several (drafts first; a person presses Create) ── */
+function startSelect(chId, first) {
+  if (chatUi.selCh === chId && !first) return endSelect();
+  chatUi.selCh = chId; chatUi.sel = new Set(first ? [first] : []); track('chat_select'); render();
+}
+function endSelect() { chatUi.selCh = null; chatUi.sel = new Set(); render(); }
+function drawSelectCount() {
+  const n = chatUi.sel.size; const b = $('.selbar');
+  if (!b) return; $('.sb-n', b).textContent = n ? `${n} selected` : 'Tap messages to choose them'; $('.sb-go', b).disabled = !n;
+}
+function selectBar(c) {
+  const n = chatUi.sel.size;
+  return h('div', { class: 'selbar', role: 'toolbar', 'aria-label': 'Selected messages' },
+    h('span', { class: 'sb-n', text: n ? `${n} selected` : 'Tap messages to choose them' }), h('span', { class: 'sp' }),
+    h('button', { class: 'btn ghost', onclick: endSelect }, 'Cancel'),
+    h('button', { class: 'btn pri sb-go', disabled: !n, onclick: () => chatTasksSheet(c, [...chatUi.sel]) }, icon('plus', 14), 'Make tasks'));
+}
+function chatTasksSheet(c, ids) {
+  const msgs = ids.map(msgOf).filter(Boolean).sort((a, b) => a.created_at.localeCompare(b.created_at));
+  openSheet({ title: `Make tasks from ${msgs.length} message${msgs.length === 1 ? '' : 's'}`, kind: 'center', key: 'chattasks', build: sh => {
+    const body = h('div', { class: 'sbody ct' }); sh.append(body);
+    const who = m => m.client_contact_id ? `${contactOf(m.client_contact_id)?.name || 'Client'} (client)` : dname(prof(m.author_id));
+    const quote = h('div', { class: 'ct-quote' }, ...msgs.slice(0, 6).map(m => h('p', {}, h('b', { text: who(m) + ': ' }), h('span', { dir: 'auto', text: (m.body || ((m.files || []).length ? '[file]' : '')).slice(0, 160) }))),
+      msgs.length > 6 ? h('p', { class: 'sm mute', text: `and ${msgs.length - 6} more` }) : null);
+    const ask = async mode => {
+      if (!(await aiReady())) { // no AI: one task with the messages, filled in by hand
+        closeSheet(true); endSelect();
+        return openCreate({ prefill: { title: (msgs[0]?.body || '').split('\n')[0].slice(0, 120) || 'From chat', description: msgs.map(m => `${who(m)}: ${m.body}`).join('\n') + `\n\nFrom ${chName(c)}` }, onCreated: () => {} });
+      }
+      body.replaceChildren(quote, loadingRow(mode === 'one' ? 'AI is writing one task…' : 'AI is reading the messages…'));
+      const ctx = { types: S.types.map(t => ({ name: t.name, bug: !!t.is_bug, sections: t.template || [] })), people: S.members.map(m => dname(prof(m.user_id))) };
+      const { data, error } = await sb.functions.invoke('chat-tasks', { body: { ws: S.ws.id, ids: msgs.map(m => m.id), mode, ctx, lang: isAr() ? 'ar' : 'en' } });
+      if (error || !data || data.error) { body.replaceChildren(quote, h('p', { class: 'cp-err', text: data?.error || errText(error) || 'AI didn’t answer. Try again.' }), choices()); return; }
+      showDrafts(data);
+    };
+    const choices = () => h('div', { class: 'ct-choices' },
+      h('p', { class: 'ct-q', text: 'Is this one task or several?' }),
+      h('button', { class: 'btn', onclick: () => ask('one') }, h('b', { text: 'One task' }), h('span', { class: 'sm mute', text: 'Everything here is one piece of work' })),
+      h('button', { class: 'btn', onclick: () => ask('many') }, h('b', { text: 'A task for each request' }), h('span', { class: 'sm mute', text: 'Separate problems or asks become separate tasks' })),
+      h('button', { class: 'btn pri', onclick: () => ask('auto') }, h('b', { text: 'Let AI decide' }), h('span', { class: 'sm', text: 'AI reads it and tells you why' })));
+    const showDrafts = d => {
+      const drafts = (d.tasks || []).map(t => Object.assign({ on: true }, t));
+      if (!drafts.length) { body.replaceChildren(quote, h('p', { class: 'note', text: d.why || 'AI found no work to do in these messages.' }), choices()); return; }
+      const go = h('button', { class: 'btn pri' }, '');
+      const count = () => { const n = drafts.filter(x => x.on).length; go.textContent = n === 1 ? 'Create 1 task' : `Create ${n} tasks`; go.disabled = !n; };
+      const cards = drafts.map((t, i) => {
+        const ttl = h('input', { type: 'text', class: 'ct-title', dir: 'auto', value: t.title, 'aria-label': `Task ${i + 1} title`, oninput: e => { t.title = e.target.value; } });
+        const cb = h('input', { type: 'checkbox', checked: true, 'aria-label': `Create task ${i + 1}`, onchange: e => { t.on = e.target.checked; card.classList.toggle('off', !t.on); count(); } });
+        const meta = [(t.type && matchType(t.type)?.name) || '', PRIO_WORD[t.priority] ? prioName(PRIO_WORD[t.priority]) : '', t.developer && matchPerson(t.developer) ? dname(prof(matchPerson(t.developer))) : ''].filter(Boolean);
+        const card = h('div', { class: 'ct-card' }, h('label', { class: 'ct-head' }, cb, ttl),
+          meta.length ? h('div', { class: 'sm mute ct-meta' }, ...meta.map(x => h('span', { text: x }))) : null,
+          t.description ? h('div', { class: 'sm ct-desc', dir: 'auto', text: t.description.slice(0, 280) }) : null,
+          t.note ? h('div', { class: 'sm ai-note', text: '✦ ' + t.note }) : null);
+        return card;
+      });
+      count();
+      go.addEventListener('click', async () => {
+        const pick = drafts.filter(x => x.on && x.title.trim()); if (!pick.length) return;
+        const done = busy(go, 'Creating…'); const made = [];
+        const cf = c.kind === 'client' && c.client_field_id ? S.fields.find(f => f.id === c.client_field_id) : null;
+        for (const t of pick) {
+          const ty = t.type ? matchType(t.type) : null; const tmpl = tyOf(ty?.id)?.template || [];
+          const secs = Object.entries(t.sections || {}).map(([k, v]) => ({ h: tmpl.find(x => norm(x) === norm(k)) || k, body: String(v || '').trim() })).filter(s => s.body);
+          const description = [t.description, secs.length ? joinSections(secs) : '', `From ${chName(c)}: ${msgs.map(m => who(m)).filter((x, i, a) => a.indexOf(x) === i).join(', ')}`].filter(Boolean).join('\n\n');
+          const row = { title: t.title.trim().slice(0, 200), description, priority: PRIO_WORD[t.priority] || 0 };
+          if (ty) row.type_id = ty.id;
+          const pid = t.developer && matchPerson(t.developer); if (pid) row.assignee_id = pid;
+          if (cf) row.fields = { [cf.id]: cf.kind === 'multi' ? [c.client_option_id] : c.client_option_id };
+          const nt = await createTask(row); if (nt) made.push(nt);
+        }
+        done(); closeSheet(true); endSelect(); track('chat_tasks_made');
+        if (!made.length) return toast('Couldn’t create the tasks');
+        if (c.kind !== 'client') sendMessage(c, null, `Made ${made.length === 1 ? 'a task' : made.length + ' tasks'}: ${made.map(x => taskKey(taskOf(x.id) || x)).join(', ')}`, []);
+        toast(made.length === 1 ? `Made ${taskKey(taskOf(made[0].id) || made[0])}` : `Made ${made.length} tasks`, { label: 'Open', fn: () => openTask(made[0].id) }, 8000);
+      });
+      body.replaceChildren(quote, d.why ? h('p', { class: 'ai-note', text: '✦ ' + d.why }) : null, ...cards,
+        h('div', { class: 'ct-acts' }, h('button', { class: 'btn ghost', onclick: () => body.replaceChildren(quote, choices()) }, 'Back'), go));
+    };
+    body.replaceChildren(quote, choices());
+  } });
+}
 /* ═════════════ sounds: huddle ringtones, message sounds, the incoming-huddle screen ═════════════ */
 // Every tone is synthesised with Web Audio, so there are no sound files to upload.
 var soundLog = [];
@@ -5988,8 +6104,12 @@ const clientUrl = tok => location.origin + location.pathname + '?c=' + tok;
 // a person at a client: their own private link (?p=), with the status page, problem reports and a chat with the team
 var personTok = (() => { try { const c = new URLSearchParams(location.search).get('p'); return c && /^[0-9a-f]{40}$/i.test(c) ? c : null; } catch { return null; } })();
 const personUrl = tok => location.origin + location.pathname + '?p=' + tok;
+function clientInstallable() { // the home-screen app should open this person's own link, so use a manifest without a start page
+  const l = document.querySelector('link[rel="manifest"]'); if (l && !/client-manifest/.test(l.getAttribute('href') || '')) l.setAttribute('href', 'client-manifest.json');
+}
 async function portalData() {
   if (!personTok) { const { data, error } = await sb.rpc('client_status', { tok: clientTok }); return { data, error }; }
+  clientInstallable();
   const { data, error } = await sb.functions.invoke('client-portal', { body: { ptok: personTok } });
   if (error || !data || data.error) return { data: null, error: error || (data?.error === 'link' ? null : data) };
   const st = data.status || {};
@@ -6495,7 +6615,7 @@ function clientChatBox(data) {
     const clip = h('button', { type: 'button', class: 'x', 'aria-label': 'Add a photo', title: 'Add a photo', onclick: () => pick.click() }, icon('clip', 18));
     CC.el = h('section', { class: 'cp-g cc' }, h('h2', { text: 'Chat with the team' }),
       h('p', { class: 'sm mute', text: `Messages go to the ${data.workspace} team. They answer here.` }),
-      CC.list, err, chips, h('div', { class: 'cc-row' }, clip, mic, pick, ta, send));
+      clientAlertsRow(), CC.list, err, chips, h('div', { class: 'cc-row' }, clip, mic, pick, ta, send));
     drawClientChat(true);
     clearInterval(CC.timer); CC.timer = setInterval(() => { if (document.visibilityState === 'visible') clientChatPoll(); }, 6000);
   }
@@ -6522,6 +6642,39 @@ async function clientChatPoll() {
   let res; try { res = await sb.functions.invoke('client-portal', { body: { ptok: personTok, since } }); } catch { return; }
   const add = (res?.data?.messages || []).filter(m => !CC.msgs.some(x => x.id === m.id));
   if (add.length) { CC.msgs.push(...add); drawClientChat(false); }
+}
+
+/* ── alerts on the client's phone when the team answers ── */
+const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isStandalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+function clientAlertsRow() {
+  const box = h('div', { class: 'cc-alerts' });
+  const draw = async () => {
+    const can = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && CFG.vapid && !String(CFG.vapid).startsWith('{{');
+    if (isIOS() && !isStandalone()) {
+      box.replaceChildren(icon('bell', 16), h('span', { class: 'sm', text: 'To get alerts when the team answers: tap Share, then Add to Home Screen. Open it from your Home Screen and turn on alerts.' })); return;
+    }
+    if (!can) { box.replaceChildren(); box.hidden = true; return; }
+    let on = false; try { const reg = await navigator.serviceWorker.ready; on = Notification.permission === 'granted' && !!(await reg.pushManager.getSubscription()); } catch {}
+    if (on) { box.replaceChildren(icon('bell', 16), h('span', { class: 'sm', text: 'Alerts are on. You’ll get a message here when the team answers.' })); return; }
+    if (Notification.permission === 'denied') { box.replaceChildren(icon('bell', 16), h('span', { class: 'sm', text: 'Alerts are blocked in this browser’s settings. Allow notifications for this page to get them.' })); return; }
+    const btn = h('button', { class: 'btn sm pri', onclick: async () => {
+      const done = busy(btn, 'Turning on…');
+      try {
+        if ((await Notification.requestPermission()) !== 'granted') { done(); return draw(); }
+        const reg = await navigator.serviceWorker.ready;
+        const key = Uint8Array.from(atob(CFG.vapid.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - CFG.vapid.length % 4) % 4)), c => c.charCodeAt(0));
+        const sub = (await reg.pushManager.getSubscription()) || (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key }));
+        const j = sub.toJSON();
+        const { data, error } = await sb.functions.invoke('client-portal', { body: { ptok: personTok, op: 'push', sub: { endpoint: j.endpoint, p256dh: j.keys?.p256dh, auth: j.keys?.auth } } });
+        done(); if (error || data?.error) throw new Error('save');
+        draw();
+      } catch (e) { done(); box.append(h('span', { class: 'sm cp-err', text: ' Couldn’t turn on alerts. Try again.' })); }
+    } }, icon('bell', 14), 'Turn on alerts');
+    box.replaceChildren(h('span', { class: 'sm', text: 'Get an alert on this phone when the team answers.' }), btn);
+  };
+  draw();
+  return box;
 }
 /* ═════════════ Waiting on someone: a task can't move until a person gives something ═════════════
    The person waited on sees it at the top of My turn and gets told. Done clears it. */
@@ -8338,6 +8491,9 @@ AR.patterns.unshift(["^Reported by (.+?) \\(client\\) · not assigned$", "بلّ
 /* client chat */
 Object.assign(AR.exact, {"Chat with the team": "تحدّث مع الفريق", "Write a message…": "اكتب رسالة…", "No messages yet. Say hello, ask a question, or send a photo.": "لا توجد رسائل بعد. ابدأ بالتحية أو اسأل سؤالًا أو أرسل صورة.", "You sent a lot of messages in a short time. Wait a few minutes, then try again.": "أرسلت رسائل كثيرة في وقت قصير. انتظر بضع دقائق ثم حاول مرة أخرى.", "Send pictures (JPG, PNG or WebP) or voice notes, up to 3 at a time.": "أرسل صورًا (JPG أو PNG أو WebP) أو رسائل صوتية، بحد أقصى 3 في المرة.", "Write a message first.": "اكتب رسالة أولًا.", "Add a photo": "أضف صورة", "Who answers this client": "مين بيرد على العميل ده", "They see this conversation and get its alerts. Admins can always see it.": "بيشوفوا المحادثة دي وبيجيلهم تنبيهاتها. الأدمنز يقدروا يشوفوها دايمًا.", "Choose": "اختار", "People at the client": "الأشخاص عند العميل", "Each person gets their own private link: they chat with you, see the status and report problems. Turn one off and only that link stops.": "كل شخص بياخد لينك خاص بيه: يكلمكم، ويتابع الشغل، ويبعت المشاكل. لو قفلت لينك واحد، هو بس اللي بيقف.", "Nobody yet.": "مفيش حد لسه.", "Ask an admin to add people.": "اطلب من أدمن يضيف أشخاص.", "Add a person": "أضف شخص", "Add and make their link": "أضفه واعمل اللينك بتاعه", "Adding…": "جارٍ الإضافة…", "Write the person’s name": "اكتب اسم الشخص", "Only admins can see the links": "الأدمنز بس اللي يشوفوا اللينكات", "Couldn’t open the conversation": "معرفناش نفتح المحادثة", "not opened yet": "لسه ما فتحش"});
 AR.patterns.push(...[["^Messages go to the (.+?) team\\. They answer here\\.$", "رسائلك تصل إلى فريق $1، ويردّون عليك هنا."], ["^Client · (\\d+) (?:person|people) with a link · (\\d+) on our side$", "عميل · $1 معاهم لينك · $2 من عندنا"], ["^(.+?)’s link copied$", "اتنسخ لينك $1"], ["^(.+?)’s link is off$", "لينك $1 اتقفل"], ["^Link for (.+?) made and copied$", "اتعمل لينك $1 واتنسخ"], ["^Send (.+?) the link on WhatsApp\\?$", "تبعت لـ$1 اللينك على واتساب؟"], ["^Send (.+?) their link on WhatsApp$", "ابعت لـ$1 اللينك بتاعه على واتساب"], ["^last opened (.+?) ago$", "آخر فتح من $1"], ["^Remove attachment (\\d+)$", "احذف المرفق $1"], ["^Photo (\\d+)$", "صورة $1"]]);
+/* chat → tasks, client alerts */
+Object.assign(AR.exact, {"Select messages to make tasks": "اختار رسايل وحوّلها لمهام", "Tap the messages to turn into tasks": "دوس على الرسايل اللي عايز تحوّلها لمهام", "Tap messages to choose them": "دوس على الرسايل علشان تختارها", "Make tasks": "اعمل مهام", "Is this one task or several?": "دي مهمة واحدة ولا كذا مهمة؟", "One task": "مهمة واحدة", "Everything here is one piece of work": "كل ده شغلانة واحدة", "A task for each request": "مهمة لكل طلب", "Separate problems or asks become separate tasks": "كل مشكلة أو طلب لوحده يبقى مهمة لوحده", "Let AI decide": "خلّي الذكاء الاصطناعي يقرر", "AI reads it and tells you why": "بيقرا الكلام ويقولك قرر كده ليه", "AI is writing one task…": "الذكاء الاصطناعي بيكتب المهمة…", "AI is reading the messages…": "الذكاء الاصطناعي بيقرا الرسايل…", "AI found no work to do in these messages.": "الذكاء الاصطناعي ما لقاش شغل مطلوب في الرسايل دي.", "Create 1 task": "اعمل مهمة واحدة", "Couldn’t create the tasks": "معرفناش نعمل المهام", "Back": "رجوع", "To get alerts when the team answers: tap Share, then Add to Home Screen. Open it from your Home Screen and turn on alerts.": "لتصلك تنبيهات عند ردّ الفريق: اضغط مشاركة، ثم «إضافة إلى الشاشة الرئيسية». افتحه من الشاشة الرئيسية وفعّل التنبيهات.", "Alerts are on. You’ll get a message here when the team answers.": "التنبيهات مفعّلة. سيصلك تنبيه هنا عندما يردّ الفريق.", "Alerts are blocked in this browser’s settings. Allow notifications for this page to get them.": "التنبيهات محظورة في إعدادات المتصفح. اسمح بالإشعارات لهذه الصفحة لتصلك.", "Turning on…": "جارٍ التفعيل…", "Couldn’t turn on alerts. Try again.": "تعذّر تفعيل التنبيهات. حاول مرة أخرى.", "Get an alert on this phone when the team answers.": "استلم تنبيهًا على هذا الهاتف عندما يردّ الفريق."});
+AR.patterns.push(...[["^(\\d+) selected$", "$1 متختارين"], ["^Make tasks from (\\d+) messages?$", "اعمل مهام من $1 رسالة"], ["^Create (\\d+) tasks$", "اعمل $1 مهام"], ["^Made (\\d+) tasks$", "اتعمل $1 مهام"], ["^Made ([A-Z]+-\\d+)$", "اتعملت $1"], ["^and (\\d+) more$", "و$1 كمان"], ["^Task (\\d+) title$", "عنوان المهمة $1"], ["^Create task (\\d+)$", "اعمل المهمة $1"]]);
 var LANG = (() => { try { return JSON.parse(localStorage.getItem('baton.lang') || '"en"') === 'ar' ? 'ar' : 'en'; } catch { return 'en'; } })();
 const isAr = () => LANG === 'ar';
 var I18N_SKIP = '.row .t,.tc:not(.waitrow) .tt>b,.card>.t,.inrow .t,.stuck-row .t,.rv-item .t,.md,.mdbox,.mbody,.ev .txt,.ttl,textarea,input,select,[contenteditable],code,pre,kbd,.notr,.wordmark,.wm-anim,.mark-anim,.plate,.cp-t b,.cp-in>h1,.mhead b,.cv-name b,.chip-task,.mention,.toast .notr,.cl-row .nm>div:first-child,.prow .nm>div:first-child';

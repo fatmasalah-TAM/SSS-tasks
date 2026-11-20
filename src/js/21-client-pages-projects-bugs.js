@@ -4,8 +4,12 @@ const clientUrl = tok => location.origin + location.pathname + '?c=' + tok;
 // a person at a client: their own private link (?p=), with the status page, problem reports and a chat with the team
 var personTok = (() => { try { const c = new URLSearchParams(location.search).get('p'); return c && /^[0-9a-f]{40}$/i.test(c) ? c : null; } catch { return null; } })();
 const personUrl = tok => location.origin + location.pathname + '?p=' + tok;
+function clientInstallable() { // the home-screen app should open this person's own link, so use a manifest without a start page
+  const l = document.querySelector('link[rel="manifest"]'); if (l && !/client-manifest/.test(l.getAttribute('href') || '')) l.setAttribute('href', 'client-manifest.json');
+}
 async function portalData() {
   if (!personTok) { const { data, error } = await sb.rpc('client_status', { tok: clientTok }); return { data, error }; }
+  clientInstallable();
   const { data, error } = await sb.functions.invoke('client-portal', { body: { ptok: personTok } });
   if (error || !data || data.error) return { data: null, error: error || (data?.error === 'link' ? null : data) };
   const st = data.status || {};
@@ -511,7 +515,7 @@ function clientChatBox(data) {
     const clip = h('button', { type: 'button', class: 'x', 'aria-label': 'Add a photo', title: 'Add a photo', onclick: () => pick.click() }, icon('clip', 18));
     CC.el = h('section', { class: 'cp-g cc' }, h('h2', { text: 'Chat with the team' }),
       h('p', { class: 'sm mute', text: `Messages go to the ${data.workspace} team. They answer here.` }),
-      CC.list, err, chips, h('div', { class: 'cc-row' }, clip, mic, pick, ta, send));
+      clientAlertsRow(), CC.list, err, chips, h('div', { class: 'cc-row' }, clip, mic, pick, ta, send));
     drawClientChat(true);
     clearInterval(CC.timer); CC.timer = setInterval(() => { if (document.visibilityState === 'visible') clientChatPoll(); }, 6000);
   }
@@ -538,4 +542,37 @@ async function clientChatPoll() {
   let res; try { res = await sb.functions.invoke('client-portal', { body: { ptok: personTok, since } }); } catch { return; }
   const add = (res?.data?.messages || []).filter(m => !CC.msgs.some(x => x.id === m.id));
   if (add.length) { CC.msgs.push(...add); drawClientChat(false); }
+}
+
+/* ── alerts on the client's phone when the team answers ── */
+const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isStandalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+function clientAlertsRow() {
+  const box = h('div', { class: 'cc-alerts' });
+  const draw = async () => {
+    const can = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && CFG.vapid && !String(CFG.vapid).startsWith('{{');
+    if (isIOS() && !isStandalone()) {
+      box.replaceChildren(icon('bell', 16), h('span', { class: 'sm', text: 'To get alerts when the team answers: tap Share, then Add to Home Screen. Open it from your Home Screen and turn on alerts.' })); return;
+    }
+    if (!can) { box.replaceChildren(); box.hidden = true; return; }
+    let on = false; try { const reg = await navigator.serviceWorker.ready; on = Notification.permission === 'granted' && !!(await reg.pushManager.getSubscription()); } catch {}
+    if (on) { box.replaceChildren(icon('bell', 16), h('span', { class: 'sm', text: 'Alerts are on. You’ll get a message here when the team answers.' })); return; }
+    if (Notification.permission === 'denied') { box.replaceChildren(icon('bell', 16), h('span', { class: 'sm', text: 'Alerts are blocked in this browser’s settings. Allow notifications for this page to get them.' })); return; }
+    const btn = h('button', { class: 'btn sm pri', onclick: async () => {
+      const done = busy(btn, 'Turning on…');
+      try {
+        if ((await Notification.requestPermission()) !== 'granted') { done(); return draw(); }
+        const reg = await navigator.serviceWorker.ready;
+        const key = Uint8Array.from(atob(CFG.vapid.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - CFG.vapid.length % 4) % 4)), c => c.charCodeAt(0));
+        const sub = (await reg.pushManager.getSubscription()) || (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key }));
+        const j = sub.toJSON();
+        const { data, error } = await sb.functions.invoke('client-portal', { body: { ptok: personTok, op: 'push', sub: { endpoint: j.endpoint, p256dh: j.keys?.p256dh, auth: j.keys?.auth } } });
+        done(); if (error || data?.error) throw new Error('save');
+        draw();
+      } catch (e) { done(); box.append(h('span', { class: 'sm cp-err', text: ' Couldn’t turn on alerts. Try again.' })); }
+    } }, icon('bell', 14), 'Turn on alerts');
+    box.replaceChildren(h('span', { class: 'sm', text: 'Get an alert on this phone when the team answers.' }), btn);
+  };
+  draw();
+  return box;
 }
