@@ -1281,3 +1281,5 @@ input[type=date]::-webkit-date-and-time-value{text-align:start}
 .cd-vat{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.cd-vr{display:flex;align-items:center;gap:4px;font-weight:500}
 .cd-calc{display:flex;flex-wrap:wrap;gap:4px 14px;margin:0;font-size:13.5px;background:var(--sunk);border-radius:8px;padding:8px 10px}
 .cd-fxline{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center}
+.cd-del{display:flex;flex-direction:column;gap:6px;align-items:flex-start}.cd-del-b{display:flex;flex-wrap:wrap;gap:8px}
+.cd-file{display:flex;gap:8px;align-items:flex-start;background:none;border:0;padding:0;text-align:start;color:inherit;font:inherit;cursor:pointer;min-width:0}

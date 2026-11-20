@@ -143,7 +143,8 @@ function editContract(p) {
   const c = moneyOf(p.id).contract || {};
   moneyForm('Contract', [{ key: 'value', id: 'mValue', label: 'Contract value', type: 'number', value: c.value, ph: 'e.g. 500000', required: true, positive: true }, { key: 'start', id: 'mStart', label: 'Starts', type: 'date', value: c.start }, { key: 'end', id: 'mEnd', label: 'Ends', type: 'date', value: c.end }, { key: 'expires', id: 'mExp', label: 'Expires', type: 'date', value: c.expires }, { key: 'note', id: 'mNote', label: 'Note', value: c.note, ph: 'e.g. 3 apps + dashboard + hardware' }],
     v => { const changed = ['value', 'start', 'end'].some(k => (v[k] ?? null) !== (c[k] ?? null)); const nc = Object.assign({}, c, v); if (changed && nc.signed_at) { delete nc.signed_at; delete nc.signed_by; }
-      return saveMoney(p.id, { contract: nc }, changed && c.signed_at ? 'Contract saved. It needs signing again' : 'Contract saved'); });
+      return saveMoney(p.id, { contract: nc }, changed && c.signed_at ? 'Contract saved. It needs signing again' : 'Contract saved'); },
+    c.value || (c.files || []).length ? () => deleteContract(p) : null);
 }
 function editPayment(p, y) {
   const m = moneyOf(p.id);
@@ -184,10 +185,12 @@ function moneyTotals() {
 
 /* ── the contract file: kept privately (only money people open it); AI reads the price, dates and payments as a draft ── */
 function contractFiles(p) {
-  return ((moneyOf(p.id).contract || {}).files || []).map(fl => h('button', { class: 'pjrow', onclick: async () => {
+  return ((moneyOf(p.id).contract || {}).files || []).map(fl => h('div', { class: 'pjrow' }, h('button', { class: 'grow cd-file', onclick: async () => {
     const { data, error } = await sb.storage.from('contracts').createSignedUrl(fl.path, 600); if (error || !data?.signedUrl) return toast(errText(error || 'Couldn’t open the file'));
     window.open(data.signedUrl, '_blank', 'noopener');
-  } }, icon('export', 14), h('span', { class: 'grow' }, h('b', { dir: 'auto', text: fl.name }), h('span', { class: 'sm mute', text: `Contract file · ${fmtDate((fl.at || '').slice(0, 10))}` }))));
+  } }, icon('export', 14), h('span', { class: 'grow' }, h('b', { dir: 'auto', text: fl.name }), h('span', { class: 'sm mute', text: `Contract file · ${fmtDate((fl.at || '').slice(0, 10))}` }))),
+    canEditProjMoney(p) ? h('button', { class: 'x', 'aria-label': `Remove ${fl.name}`, title: 'Remove the file', onclick: e => confirmIn(e.currentTarget.closest('.pjlist'), { text: `Remove the file ${fl.name}? The contract numbers stay.`, yes: 'Remove', danger: true,
+      onYes: async () => { const c = moneyOf(p.id).contract || {}; if (await saveMoney(p.id, { contract: Object.assign({}, c, { files: (c.files || []).filter(x => x.path !== fl.path) }) }, 'File removed')) sb.storage.from('contracts').remove([fl.path]).catch(() => {}); } }) }, icon('x', 14)) : null));
 }
 function readContract(p) {
   if (!canEditProjMoney(p)) return toast('Only the people who write this project’s money can do this');
@@ -356,4 +359,26 @@ async function refreshFx(p) {
   const nc = Object.assign({}, c, { value: r2((c.value_orig || 0) * r), total: r2((c.total_orig || c.value_orig || 0) * r), fx: Object.assign({}, c.fx, { rate: r, at: data.at, source: data.source }) });
   const pays = (m.payments || []).map(y => !y.paid_at && y.amount_orig && y.currency === c.currency ? Object.assign({}, y, { amount: r2(y.amount_orig * r) }) : y); // paid ones keep what really arrived
   await saveMoney(p.id, { contract: nc, payments: pays }, `Rate updated: 1 ${c.currency} = ${r} ${cur()}`);
+}
+
+/* delete the contract: its numbers, dates, terms and files; the payments too only if asked */
+function deleteContract(p) {
+  return new Promise(res => {
+    const m = moneyOf(p.id); const c = m.contract || {}; const n = (m.payments || []).length;
+    const body = $('.sbody', currentSheet()) || document.body;
+    const done = async withPays => {
+      box.remove();
+      const ok = await saveMoney(p.id, { contract: {}, payments: withPays ? [] : (m.payments || []) }, withPays ? 'Contract and its payments deleted' : 'Contract deleted');
+      if (ok && (c.files || []).length) sb.storage.from('contracts').remove(c.files.map(x => x.path)).catch(() => {});
+      res(ok);
+    };
+    const box = h('div', { class: 'info cd-del', role: 'alertdialog', 'aria-label': 'Delete the contract?' },
+      h('b', { text: 'Delete the contract?' }),
+      h('span', { class: 'sm', text: n ? `Its price, dates, terms and file go. This project also has ${n} payment${n === 1 ? '' : 's'}.` : 'Its price, dates, terms and file go.' }),
+      h('div', { class: 'cd-del-b' },
+        n ? h('button', { class: 'btn sm danger', onclick: () => done(true) }, `Delete it and the ${n} payment${n === 1 ? '' : 's'}`) : null,
+        h('button', { class: 'btn sm' + (n ? '' : ' danger'), onclick: () => done(false) }, n ? 'Delete the contract only' : 'Delete'),
+        h('button', { class: 'btn sm ghost', onclick: () => { box.remove(); res(false); } }, 'Cancel')));
+    body.prepend(box); box.scrollIntoView({ block: 'nearest' });
+  });
 }

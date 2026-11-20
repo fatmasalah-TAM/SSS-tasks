@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-oeXGHE9cCifFrbNCd2sdMXHHrRL0/iKc+PJaQha/olE=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-xobsxlA+u+wAzxYByEK2Fs4museMYNZKeYLBRLKssBU=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-oeXGHE9cCifFrbNCd2sdMXHHrRL0/iKc+PJaQha/olE=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-rh3bXL+vhe7JBA+PDjW7CkxpnOVP6+Fv6ZwrZjX9AF8=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<meta name="ovrto-build" content="cbb1c09b7d65">
+<meta name="ovrto-build" content="006a4b3f1124">
 <title>Ovrto</title>
 <meta name="description" content="Over to you. Every task shows whose turn it is.">
 <meta name="theme-color" content="#0D0D0F">
@@ -1303,6 +1303,8 @@ input[type=date]::-webkit-date-and-time-value{text-align:start}
 .cd-vat{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.cd-vr{display:flex;align-items:center;gap:4px;font-weight:500}
 .cd-calc{display:flex;flex-wrap:wrap;gap:4px 14px;margin:0;font-size:13.5px;background:var(--sunk);border-radius:8px;padding:8px 10px}
 .cd-fxline{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center}
+.cd-del{display:flex;flex-direction:column;gap:6px;align-items:flex-start}.cd-del-b{display:flex;flex-wrap:wrap;gap:8px}
+.cd-file{display:flex;gap:8px;align-items:flex-start;background:none;border:0;padding:0;text-align:start;color:inherit;font:inherit;cursor:pointer;min-width:0}
 </style>
 </head>
 <body>
@@ -1321,7 +1323,7 @@ input[type=date]::-webkit-date-and-time-value{text-align:start}
 </script>
 <div id="app"><div class="boot" role="status"><div class="boot-mark loop"><svg class="mark-anim" viewBox="0 0 1000 1000" fill="none" aria-hidden="true"><g transform="translate(-779.1 725.4) scale(0.6829)"><g class="mk-t"><path fill="currentColor" transform="translate(1501.0 0) scale(1.00000 -1.00000)" d="M42 401H151L89 108C79 63 79 60 79 43C79 4 98 -17 133 -17C170 -17 210 1 266 42L343 99L330 125L274 85C252 69 239 64 220 64C202 64 196 71 196 92C196 113 199 135 205 164L256 401H303C343 401 363 400 395 396L409 452L403 457L269 452L282 508L313 624L303 636L237 612C218 605 202 601 180 598V582C180 556 178 538 164 460L49 428Z"/></g><rect class="mk-x" fill="var(--accent)" x="1539.0" y="-465.0" width="490.4" height="74.0"/><path class="mk-chev" fill="var(--accent)" stroke="var(--accent)" stroke-width="18.5" stroke-linejoin="round" d="M2014.6 -568.6L2207.0 -428.0L2014.6 -287.4Z"/></g></svg></div><div class="boot-cap">Loading…</div></div></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="react-app.js?v=cbb1c09b7d65"></script>
+<script src="react-app.js?v=006a4b3f1124"></script>
 <script>
 (() => {
 'use strict';
@@ -4232,7 +4234,7 @@ addEventListener('online', () => { if (S.ws) { flushOutbox(); setupRealtime(); c
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { checkUpdate(); if (S.ws) { flushOutbox(); setupRealtime(); catchUp(); } } });
 
 /* a new version was uploaded: phones (and apps saved to the home screen) pick it up by themselves */
-const BUILD = 'cbb1c09b7d65';
+const BUILD = '006a4b3f1124';
 let updLast = 0, updShown = false;
 async function checkUpdate(force) {
   if (!force && Date.now() - updLast < 60000) return; updLast = Date.now();
@@ -6929,7 +6931,8 @@ function editContract(p) {
   const c = moneyOf(p.id).contract || {};
   moneyForm('Contract', [{ key: 'value', id: 'mValue', label: 'Contract value', type: 'number', value: c.value, ph: 'e.g. 500000', required: true, positive: true }, { key: 'start', id: 'mStart', label: 'Starts', type: 'date', value: c.start }, { key: 'end', id: 'mEnd', label: 'Ends', type: 'date', value: c.end }, { key: 'expires', id: 'mExp', label: 'Expires', type: 'date', value: c.expires }, { key: 'note', id: 'mNote', label: 'Note', value: c.note, ph: 'e.g. 3 apps + dashboard + hardware' }],
     v => { const changed = ['value', 'start', 'end'].some(k => (v[k] ?? null) !== (c[k] ?? null)); const nc = Object.assign({}, c, v); if (changed && nc.signed_at) { delete nc.signed_at; delete nc.signed_by; }
-      return saveMoney(p.id, { contract: nc }, changed && c.signed_at ? 'Contract saved. It needs signing again' : 'Contract saved'); });
+      return saveMoney(p.id, { contract: nc }, changed && c.signed_at ? 'Contract saved. It needs signing again' : 'Contract saved'); },
+    c.value || (c.files || []).length ? () => deleteContract(p) : null);
 }
 function editPayment(p, y) {
   const m = moneyOf(p.id);
@@ -6970,10 +6973,12 @@ function moneyTotals() {
 
 /* ── the contract file: kept privately (only money people open it); AI reads the price, dates and payments as a draft ── */
 function contractFiles(p) {
-  return ((moneyOf(p.id).contract || {}).files || []).map(fl => h('button', { class: 'pjrow', onclick: async () => {
+  return ((moneyOf(p.id).contract || {}).files || []).map(fl => h('div', { class: 'pjrow' }, h('button', { class: 'grow cd-file', onclick: async () => {
     const { data, error } = await sb.storage.from('contracts').createSignedUrl(fl.path, 600); if (error || !data?.signedUrl) return toast(errText(error || 'Couldn’t open the file'));
     window.open(data.signedUrl, '_blank', 'noopener');
-  } }, icon('export', 14), h('span', { class: 'grow' }, h('b', { dir: 'auto', text: fl.name }), h('span', { class: 'sm mute', text: `Contract file · ${fmtDate((fl.at || '').slice(0, 10))}` }))));
+  } }, icon('export', 14), h('span', { class: 'grow' }, h('b', { dir: 'auto', text: fl.name }), h('span', { class: 'sm mute', text: `Contract file · ${fmtDate((fl.at || '').slice(0, 10))}` }))),
+    canEditProjMoney(p) ? h('button', { class: 'x', 'aria-label': `Remove ${fl.name}`, title: 'Remove the file', onclick: e => confirmIn(e.currentTarget.closest('.pjlist'), { text: `Remove the file ${fl.name}? The contract numbers stay.`, yes: 'Remove', danger: true,
+      onYes: async () => { const c = moneyOf(p.id).contract || {}; if (await saveMoney(p.id, { contract: Object.assign({}, c, { files: (c.files || []).filter(x => x.path !== fl.path) }) }, 'File removed')) sb.storage.from('contracts').remove([fl.path]).catch(() => {}); } }) }, icon('x', 14)) : null));
 }
 function readContract(p) {
   if (!canEditProjMoney(p)) return toast('Only the people who write this project’s money can do this');
@@ -7142,6 +7147,28 @@ async function refreshFx(p) {
   const nc = Object.assign({}, c, { value: r2((c.value_orig || 0) * r), total: r2((c.total_orig || c.value_orig || 0) * r), fx: Object.assign({}, c.fx, { rate: r, at: data.at, source: data.source }) });
   const pays = (m.payments || []).map(y => !y.paid_at && y.amount_orig && y.currency === c.currency ? Object.assign({}, y, { amount: r2(y.amount_orig * r) }) : y); // paid ones keep what really arrived
   await saveMoney(p.id, { contract: nc, payments: pays }, `Rate updated: 1 ${c.currency} = ${r} ${cur()}`);
+}
+
+/* delete the contract: its numbers, dates, terms and files; the payments too only if asked */
+function deleteContract(p) {
+  return new Promise(res => {
+    const m = moneyOf(p.id); const c = m.contract || {}; const n = (m.payments || []).length;
+    const body = $('.sbody', currentSheet()) || document.body;
+    const done = async withPays => {
+      box.remove();
+      const ok = await saveMoney(p.id, { contract: {}, payments: withPays ? [] : (m.payments || []) }, withPays ? 'Contract and its payments deleted' : 'Contract deleted');
+      if (ok && (c.files || []).length) sb.storage.from('contracts').remove(c.files.map(x => x.path)).catch(() => {});
+      res(ok);
+    };
+    const box = h('div', { class: 'info cd-del', role: 'alertdialog', 'aria-label': 'Delete the contract?' },
+      h('b', { text: 'Delete the contract?' }),
+      h('span', { class: 'sm', text: n ? `Its price, dates, terms and file go. This project also has ${n} payment${n === 1 ? '' : 's'}.` : 'Its price, dates, terms and file go.' }),
+      h('div', { class: 'cd-del-b' },
+        n ? h('button', { class: 'btn sm danger', onclick: () => done(true) }, `Delete it and the ${n} payment${n === 1 ? '' : 's'}`) : null,
+        h('button', { class: 'btn sm' + (n ? '' : ' danger'), onclick: () => done(false) }, n ? 'Delete the contract only' : 'Delete'),
+        h('button', { class: 'btn sm ghost', onclick: () => { box.remove(); res(false); } }, 'Cancel')));
+    body.prepend(box); box.scrollIntoView({ block: 'nearest' });
+  });
 }
 /* ═════════════ Company: the CEO's page ═════════════
    One look at the business: money in and still to come, payments that are late, every project's money and progress,
@@ -8702,6 +8729,9 @@ Object.assign(AR.exact, {"This is an old Word file (.doc). Save it as .docx or P
 /* currency and VAT */
 Object.assign(AR.exact, {"Currency": "العملة", "VAT": "ضريبة القيمة المضافة", "Already in the prices": "موجودة في الأسعار", "No VAT": "مفيش ضريبة", "Not in the contract: add VAT": "مش مكتوبة في العقد: ضيف الضريبة", "Not in the prices: add VAT": "مش في الأسعار: ضيف الضريبة", "Getting today’s rate…": "بنجيب سعر النهارده…", "Couldn’t get today’s rate. Type the rate yourself.": "معرفناش نجيب سعر النهارده. اكتب السعر بنفسك.", "Couldn’t get today’s rate": "معرفناش نجيب سعر النهارده", "Update rate": "حدّث السعر", "Type the exchange rate first": "اكتب سعر الصرف الأول", "Currency: 3 letters, like USD or EGP": "العملة: 3 حروف، زي USD أو EGP", "Contract currency": "عملة العقد", "Exchange rate": "سعر الصرف"});
 AR.patterns.unshift(...[["^Before VAT (.+?)$", "قبل الضريبة $1"], ["^VAT (\\d+(?:\\.\\d+)?)% (.+?)$", "الضريبة $1% ‏$2"], ["^The client pays (.+?)$", "العميل هيدفع $1"], ["^≈ (.+?) today$", "≈ $1 بسعر النهارده"], ["^Today’s rate from (.+?) \\((.+?)\\)\\. You can change it, e\\.g\\. to the bank rate\\.$", "سعر النهارده من $1 ($2). تقدر تغيّره، مثلًا لسعر البنك."], ["^The contract says it is paid in (.+?) at: (.+?)\\. Use that rate if you have it\\.$", "العقد بيقول الدفع بـ$1 بسعر: $2. استخدم السعر ده لو معاك."], ["^The contract says it is paid in (.+?)\\. Use that rate if you have it\\.$", "العقد بيقول الدفع بـ$1. استخدم السعر ده لو معاك."], ["^Before VAT · the client pays (.+?) with (\\d+(?:\\.\\d+)?)% VAT$", "قبل الضريبة · العميل هيدفع $1 بالضريبة $2%"], ["^Contract rate: (.+?)$", "سعر العقد: $1"], ["^Rate updated: (.+?)$", "اتحدّث السعر: $1"]]);
+Object.assign(AR.exact, {"Delete the contract?": "تمسح العقد؟", "Its price, dates, terms and file go.": "سعره وتواريخه وشروطه وملفه هيتمسحوا.", "Delete the contract only": "امسح العقد بس", "Contract and its payments deleted": "اتمسح العقد ودفعاته", "Contract deleted": "اتمسح العقد", "File removed": "اتشال الملف", "Remove the file": "شيل الملف"});
+AR.patterns.unshift(...[["^Its price, dates, terms and file go\\. This project also has (\\d+) payments?\\.$", "سعره وتواريخه وشروطه وملفه هيتمسحوا. والمشروع فيه كمان $1 دفعات."], ["^Delete it and the (\\d+) payments?$", "امسحه هو و$1 دفعات"], ["^Remove the file (.+?)\\? The contract numbers stay\\.$", "تشيل الملف $1؟ أرقام العقد هتفضل."]]);
+Object.assign(AR.exact, {"Delete it and the 1 payment": "امسحه هو والدفعة", "Its price, dates, terms and file go. This project also has 1 payment.": "سعره وتواريخه وشروطه وملفه هيتمسحوا. والمشروع فيه كمان دفعة واحدة."});
 var LANG = (() => { try { return JSON.parse(localStorage.getItem('baton.lang') || '"en"') === 'ar' ? 'ar' : 'en'; } catch { return 'en'; } })();
 const isAr = () => LANG === 'ar';
 var I18N_SKIP = '.row .t,.tc:not(.waitrow) .tt>b,.card>.t,.inrow .t,.stuck-row .t,.rv-item .t,.md,.mdbox,.mbody,.ev .txt,.ttl,textarea,input,select,[contenteditable],code,pre,kbd,.notr,.wordmark,.wm-anim,.mark-anim,.plate,.cp-t b,.cp-in>h1,.mhead b,.cv-name b,.chip-task,.mention,.toast .notr,.cl-row .nm>div:first-child,.prow .nm>div:first-child';
