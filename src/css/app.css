@@ -1360,3 +1360,4 @@ input[type=date]::-webkit-date-and-time-value{text-align:start}
 .cd-fxline{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center}
 .cd-del{display:flex;flex-direction:column;gap:6px;align-items:flex-start}.cd-del-b{display:flex;flex-wrap:wrap;gap:8px}
 .cd-file{display:flex;gap:8px;align-items:flex-start;background:none;border:0;padding:0;text-align:start;color:inherit;font:inherit;cursor:pointer;min-width:0}
+.tcproj{max-width:420px;margin:4px 0 16px}

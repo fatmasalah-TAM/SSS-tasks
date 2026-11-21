@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-KzMwe8jvp2JuIli/BEPmIUhLpDVrzvw0YlPAtu/SBYg=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-a9MOtukMCFchpFP13NzK84HC18SkAOGwr7shieV0h48=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-KzMwe8jvp2JuIli/BEPmIUhLpDVrzvw0YlPAtu/SBYg=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-s89NShpshYkSlrm3jvhX8fVRlnr7ZvAlqcc0th7O3wo=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<meta name="ovrto-build" content="8659a0cc4670">
+<meta name="ovrto-build" content="ac281151bb09">
 <title>Ovrto</title>
 <meta name="description" content="Over to you. Every task shows whose turn it is.">
 <meta name="theme-color" content="#0D0D0F">
@@ -1384,6 +1384,7 @@ input[type=date]::-webkit-date-and-time-value{text-align:start}
 .cd-fxline{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center}
 .cd-del{display:flex;flex-direction:column;gap:6px;align-items:flex-start}.cd-del-b{display:flex;flex-wrap:wrap;gap:8px}
 .cd-file{display:flex;gap:8px;align-items:flex-start;background:none;border:0;padding:0;text-align:start;color:inherit;font:inherit;cursor:pointer;min-width:0}
+.tcproj{max-width:420px;margin:4px 0 16px}
 </style>
 </head>
 <body>
@@ -4431,7 +4432,7 @@ addEventListener('online', () => { if (S.ws) { flushOutbox(); setupRealtime(); c
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { checkUpdate(); if (S.ws) { flushOutbox(); setupRealtime(); catchUp(); } } });
 
 /* a new version was uploaded: phones (and apps saved to the home screen) pick it up by themselves */
-const BUILD = '8659a0cc4670';
+const BUILD = 'ac281151bb09';
 let updLast = 0, updShown = false;
 async function checkUpdate(force) {
   if (!force && Date.now() - updLast < 60000) return; updLast = Date.now();
@@ -9468,14 +9469,23 @@ const lastResult = caseId => (S.testResults || []).filter(r => r.case_id === cas
 const isRun = t => tyOf(t.type_id)?.key === 'testrun' || resultsOf(t.id).length > 0;
 
 function viewTests() {
-  const pid = S.route.pid ?? (S.projects[0]?.id || '');
+  /* the project: the one picked here before, else the one with the most cases, else the first */
+  const known = id => id === '' || S.projects.some(p => p.id === id);
+  const saved = store.get('tests.pid.' + S.ws.id, null);
+  const busiest = S.projects.slice().sort((a, b) => casesOf(b.id).length - casesOf(a.id).length)[0];
+  const pid = S.route.pid ?? (saved != null && known(saved) ? saved : (busiest && casesOf(busiest.id).length ? busiest.id : (S.projects[0]?.id || '')));
   const cs = casesOf(pid);
   const runs = S.tasks.filter(t => (t.project_id || '') === (pid || '') && tyOf(t.type_id)?.key === 'testrun').sort((a, b) => (b.created_at || '').localeCompare(a.created_at || '')).slice(0, 5);
   const lastFails = cs.filter(c => lastResult(c.id)?.result === 'fail').length;
   const tools = h('div', { class: 'tools' }, h('button', { class: 'btn', 'data-add-cases': '1', onclick: () => openCases(pid) }, icon('plus', 16), isPhone() ? 'Cases' : 'Add cases'),
-    h('button', { class: 'btn pri', 'data-start-run': '1', disabled: !cs.length, onclick: () => startRun(pid) }, icon('play', 14), 'Start a test run'));
-  const pick = h('div', { class: 'chips' }, [...S.projects.map(p => [p.id, p.name]), ['', 'No project']].map(([id, n]) => h('button', { class: 'chipbtn', 'aria-pressed': String((pid || '') === id), onclick: () => go({ v: 'tests', pid: id }) }, n,
-    h('span', { class: 'ct', text: String(casesOf(id).length || '') }))));
+    cs.length ? h('button', { class: 'btn pri', 'data-start-run': '1', onclick: () => startRun(pid) }, icon('play', 14), isPhone() ? 'Run' : 'Start a test run') : null);
+  /* one project picker, not a wall of buttons: projects with cases first */
+  const opts = [...S.projects.map(p => [p.id, p.name]), ['', 'No project']].map(([id, n]) => ({ id, n, k: casesOf(id).length }));
+  const withCases = opts.filter(o => o.k), without = opts.filter(o => !o.k);
+  const opt = o => h('option', { value: o.id, selected: (pid || '') === o.id }, o.k ? `${o.n} (${o.k})` : o.n);
+  const sel = h('select', { id: 'tcProject', 'aria-label': 'Project', onchange: e => { store.set('tests.pid.' + S.ws.id, e.target.value); go({ v: 'tests', pid: e.target.value }); } },
+    withCases.length && without.length ? [h('optgroup', { label: 'With test cases' }, withCases.map(opt)), h('optgroup', { label: 'No cases yet' }, without.map(opt))] : opts.map(opt));
+  const pick = h('label', { class: 'field tcproj' }, 'Project', sel);
   const row = c => { const lr = lastResult(c.id); return h('button', { class: 'tcrow', 'data-case': c.id, onclick: () => openCases(pid, c) },
     h('span', { class: 'tres ' + (lr?.result || 'none'), text: lr ? RESULTS.find(x => x[0] === lr.result)[1] : 'Not run' }),
     h('span', { class: 'grow' }, h('b', { text: c.title }), c.area || c.expected ? h('span', { class: 'sm mute', text: [c.area, c.expected ? 'Expect: ' + c.expected : null].filter(Boolean).join(' · ') }) : null)); };
@@ -9849,6 +9859,7 @@ AR.patterns.unshift(...[["^Its price, dates, terms and file go\\. This project a
 Object.assign(AR.exact, {"Delete it and the 1 payment": "امسحه هو والدفعة", "Its price, dates, terms and file go. This project also has 1 payment.": "سعره وتواريخه وشروطه وملفه هيتمسحوا. والمشروع فيه كمان دفعة واحدة."});
 Object.assign(AR.exact, {"Mark as paid": "علّمها اتدفعت", "Not paid yet · no due date": "لسه ما اتدفعتش · من غير ميعاد", "Back to not paid": "رجعت لسه ما اتدفعتش", "The share of the team’s time is 0%. Edit it: how much of the team works on this project?": "نسبة وقت الفريق 0%. عدّلها: قد إيه من الفريق شغال على المشروع ده؟", "No start date on the contract, so no months are counted yet. ": "مفيش تاريخ بداية للعقد، فمفيش شهور اتحسبت لسه. ", "Add the start date": "ضيف تاريخ البداية", "Write how much of the team’s time this project takes, e.g. 20": "اكتب المشروع ده واخد قد إيه من وقت الفريق، مثلًا 20"});
 AR.patterns.unshift(...[["^Not paid yet · due (.+?)$", "لسه ما اتدفعتش · ميعادها $1"], ["^Not paid · late, was due (.+?)$", "ما اتدفعتش · متأخرة، كان ميعادها $1"], ["^Marked as paid: (.+?)$", "اتعلّمت إنها اتدفعت: $1"], ["^Mark (.+?) as paid$", "علّم $1 إنها اتدفعت"], ["^The work starts (.+?); the team cost counts from then\\.$", "الشغل بيبدأ $1؛ تكلفة الفريق بتتحسب من ساعتها."]]);
+Object.assign(AR.exact, {"Run": "ابدأ", "With test cases": "فيها حالات اختبار", "No cases yet": "لسه مفيهاش حالات"});
 var LANG = (() => { try { return JSON.parse(localStorage.getItem('baton.lang') || '"en"') === 'ar' ? 'ar' : 'en'; } catch { return 'en'; } })();
 const isAr = () => LANG === 'ar';
 var I18N_SKIP = '.row .t,.tc:not(.waitrow) .tt>b,.card>.t,.inrow .t,.stuck-row .t,.rv-item .t,.md,.mdbox,.mbody,.ev .txt,.ttl,textarea,input,select,[contenteditable],code,pre,kbd,.notr,.wordmark,.wm-anim,.mark-anim,.plate,.cp-t b,.cp-in>h1,.mhead b,.cv-name b,.chip-task,.mention,.toast .notr,.cl-row .nm>div:first-child,.prow .nm>div:first-child';

@@ -374,14 +374,23 @@ const lastResult = caseId => (S.testResults || []).filter(r => r.case_id === cas
 const isRun = t => tyOf(t.type_id)?.key === 'testrun' || resultsOf(t.id).length > 0;
 
 function viewTests() {
-  const pid = S.route.pid ?? (S.projects[0]?.id || '');
+  /* the project: the one picked here before, else the one with the most cases, else the first */
+  const known = id => id === '' || S.projects.some(p => p.id === id);
+  const saved = store.get('tests.pid.' + S.ws.id, null);
+  const busiest = S.projects.slice().sort((a, b) => casesOf(b.id).length - casesOf(a.id).length)[0];
+  const pid = S.route.pid ?? (saved != null && known(saved) ? saved : (busiest && casesOf(busiest.id).length ? busiest.id : (S.projects[0]?.id || '')));
   const cs = casesOf(pid);
   const runs = S.tasks.filter(t => (t.project_id || '') === (pid || '') && tyOf(t.type_id)?.key === 'testrun').sort((a, b) => (b.created_at || '').localeCompare(a.created_at || '')).slice(0, 5);
   const lastFails = cs.filter(c => lastResult(c.id)?.result === 'fail').length;
   const tools = h('div', { class: 'tools' }, h('button', { class: 'btn', 'data-add-cases': '1', onclick: () => openCases(pid) }, icon('plus', 16), isPhone() ? 'Cases' : 'Add cases'),
-    h('button', { class: 'btn pri', 'data-start-run': '1', disabled: !cs.length, onclick: () => startRun(pid) }, icon('play', 14), 'Start a test run'));
-  const pick = h('div', { class: 'chips' }, [...S.projects.map(p => [p.id, p.name]), ['', 'No project']].map(([id, n]) => h('button', { class: 'chipbtn', 'aria-pressed': String((pid || '') === id), onclick: () => go({ v: 'tests', pid: id }) }, n,
-    h('span', { class: 'ct', text: String(casesOf(id).length || '') }))));
+    cs.length ? h('button', { class: 'btn pri', 'data-start-run': '1', onclick: () => startRun(pid) }, icon('play', 14), isPhone() ? 'Run' : 'Start a test run') : null);
+  /* one project picker, not a wall of buttons: projects with cases first */
+  const opts = [...S.projects.map(p => [p.id, p.name]), ['', 'No project']].map(([id, n]) => ({ id, n, k: casesOf(id).length }));
+  const withCases = opts.filter(o => o.k), without = opts.filter(o => !o.k);
+  const opt = o => h('option', { value: o.id, selected: (pid || '') === o.id }, o.k ? `${o.n} (${o.k})` : o.n);
+  const sel = h('select', { id: 'tcProject', 'aria-label': 'Project', onchange: e => { store.set('tests.pid.' + S.ws.id, e.target.value); go({ v: 'tests', pid: e.target.value }); } },
+    withCases.length && without.length ? [h('optgroup', { label: 'With test cases' }, withCases.map(opt)), h('optgroup', { label: 'No cases yet' }, without.map(opt))] : opts.map(opt));
+  const pick = h('label', { class: 'field tcproj' }, 'Project', sel);
   const row = c => { const lr = lastResult(c.id); return h('button', { class: 'tcrow', 'data-case': c.id, onclick: () => openCases(pid, c) },
     h('span', { class: 'tres ' + (lr?.result || 'none'), text: lr ? RESULTS.find(x => x[0] === lr.result)[1] : 'Not run' }),
     h('span', { class: 'grow' }, h('b', { text: c.title }), c.area || c.expected ? h('span', { class: 'sm mute', text: [c.area, c.expected ? 'Expect: ' + c.expected : null].filter(Boolean).join(' · ') }) : null)); };
