@@ -2,7 +2,7 @@
 const PRIO_TOK = { urgent: 1, u: 1, high: 2, h: 2, medium: 3, med: 3, m: 3, low: 4, l: 4 };
 function openCreate(opts = {}) {
   const draft = store.get('draft.' + (S.ws?.id || ''), null);
-  const bugTy = S.types.find(t => t.is_bug); const defTy = S.types.find(t => !t.is_bug) || S.types[0];
+  const bugTy = S.types.find(t => t.is_bug); const defTy = deptTypeKeys().map(k => S.types.find(x => x.key === k && !x.is_bug)).find(Boolean) || S.types.find(t => !t.is_bug) || S.types[0];
   const st = {
     type_id: opts.type === 'bug' ? bugTy?.id : opts.typeKey && S.types.find(x => x.key === opts.typeKey) ? S.types.find(x => x.key === opts.typeKey).id : (opts.preset?.type_id || draft?.type_id || (S.route.v === 'bugs' ? bugTy?.id : defTy?.id)),
     title: opts.prefill?.title || draft?.title || '', description: draft?.description || '', assignee_id: opts.preset?.assignee_id ?? null, assigneeManual: false, priority: opts.preset?.priority ?? 0,
@@ -32,7 +32,15 @@ function openCreate(opts = {}) {
     micBtn.addEventListener('click', async () => { const v = await recordVoice('Speak the task'); if (v) runDraft({ audio: v.blob }, micBtn); });
     aiBtn.addEventListener('click', () => { const text = [title.value, ...Object.values(st.secs)].filter(x => String(x || '').trim()).join('\n'); if (!text.trim()) { title.focus(); return toast('Type a few words first (any language), or tap Speak'); } runDraft({ text }, aiBtn); });
     const aiRow = h('div', { class: 'ai-row' }, micBtn, aiBtn, aiNote);
-    const drawTypes = () => types.replaceChildren(...S.types.map(ty => h('button', { class: 'fchip' + (st.type_id === ty.id ? ' on' : ''), role: 'radio', 'aria-checked': String(st.type_id === ty.id), style: st.type_id === ty.id ? { borderColor: ty.color, background: `color-mix(in srgb,${ty.color} 14%,var(--surface))` } : null, onclick: () => { st.type_id = ty.id; drawAll(); title.focus(); } }, h('span', { class: 'swatch', style: { width: '10px', height: '10px', background: ty.color, border: '0' } }), ty.name)));
+    const typeChip = ty => h('button', { class: 'fchip' + (st.type_id === ty.id ? ' on' : ''), role: 'radio', 'aria-checked': String(st.type_id === ty.id), style: st.type_id === ty.id ? { borderColor: ty.color, background: `color-mix(in srgb,${ty.color} 14%,var(--surface))` } : null, onclick: () => { st.type_id = ty.id; drawAll(); title.focus(); } }, h('span', { class: 'swatch', style: { width: '10px', height: '10px', background: ty.color, border: '0' } }), ty.name);
+    let moreTypes = false; /* the department's own types first; the rest one tap away */
+    const drawTypes = () => {
+      const keys = deptTypeKeys().filter(k => S.types.some(x => x.key === k)); const rank = x => keys.indexOf(x.key);
+      const mine = keys.length ? S.types.filter(x => keys.includes(x.key) || x.id === st.type_id).sort((a, b) => (rank(a) < 0 ? 99 : rank(a)) - (rank(b) < 0 ? 99 : rank(b))) : S.types;
+      const rest = S.types.filter(x => !mine.includes(x));
+      types.replaceChildren(...mine.map(typeChip), ...(!rest.length || officeOnly() ? [] : moreTypes ? rest.map(typeChip)
+        : [h('button', { class: 'fchip moretypes', type: 'button', onclick: () => { moreTypes = true; drawTypes(); } }, `More types (${rest.length})`)]));
+    };
     const parse = () => {
       let raw = title.value; const found = {};
       raw = raw.replace(/(^|\s)@([\w.\-]+)/g, (m, sp, n) => { const mm = S.members.find(x => norm(first(prof(x.user_id))) === norm(n) || norm(dname(prof(x.user_id))).startsWith(norm(n))); if (mm) { found.assignee = mm.user_id; return sp; } return m; });

@@ -50,6 +50,8 @@ const ICONS = {
   eye: '<svg viewBox="0 0 20 20" fill="none"><path d="M2.5 10S5.3 4.8 10 4.8 17.5 10 17.5 10 14.7 15.2 10 15.2 2.5 10 2.5 10Z" stroke="currentColor" stroke-width="1.6"/><circle cx="10" cy="10" r="2.3" stroke="currentColor" stroke-width="1.6"/></svg>',
   leave: '<svg viewBox="0 0 20 20" fill="none"><path d="M4.4 15.6a5.6 5.6 0 0 1 11.2 0z" fill="currentColor"/><path d="M2.8 17h14.4M10 8V2.8m0 0L12.4 5M10 2.8 7.6 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   lock: '<svg viewBox="0 0 20 20" fill="none"><rect x="4.5" y="9" width="11" height="8" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9" stroke="currentColor" stroke-width="1.6"/></svg>',
+  play: '<svg viewBox="0 0 20 20" fill="currentColor"><path d="M6.5 4.2c0-.8.9-1.3 1.6-.9l8 5c.6.4.6 1.3 0 1.7l-8 5c-.7.4-1.6-.1-1.6-.9z"/></svg>',
+  pause: '<svg viewBox="0 0 20 20" fill="currentColor"><rect x="5" y="4" width="3.6" height="12" rx="1"/><rect x="11.4" y="4" width="3.6" height="12" rx="1"/></svg>',
   bell: '<svg viewBox="0 0 20 20" fill="currentColor" fill-rule="evenodd"><path d="M10 2.2a5.4 5.4 0 0 1 5.4 5.4v4.1l1.5 2.2c.4.5 0 1.1-.6 1.1H3.7c-.6 0-1-.6-.6-1.1l1.5-2.2V7.6A5.4 5.4 0 0 1 10 2.2zM8 16.3h4a2 2 0 0 1-4 0z"/></svg>',
   invite: '<svg viewBox="0 0 20 20" fill="none"><circle cx="8" cy="7" r="3.2" stroke="currentColor" stroke-width="1.6"/><path d="M2.5 17c.6-3 2.8-4.6 5.5-4.6s4.9 1.6 5.5 4.6" stroke="currentColor" stroke-width="1.6"/><path d="M15.5 6v6M12.5 9h6" stroke="currentColor" stroke-width="1.6"/></svg>',
   menu: '<svg viewBox="0 0 20 20" fill="currentColor" fill-rule="evenodd"><circle cx="4.5" cy="10" r="2"/><circle cx="10" cy="10" r="2"/><circle cx="15.5" cy="10" r="2"/></svg>',
@@ -165,7 +167,7 @@ function popover(anchor, build, opts = {}) {
     pop.style.left = left + 'px'; pop.style.top = top + 'px';
   };
   place();
-  const onDown = e => { if (!pop.contains(e.target) && !anchor.contains(e.target)) closePop(); };
+  const onDown = e => { if (e.target.closest?.('.wait-ov')) return; if (!pop.contains(e.target) && !anchor.contains(e.target)) closePop(); }; // a tap on the loading mark changes nothing
   const onKey = e => { if (e.key === 'Escape') { e.stopPropagation(); closePop(); anchor.focus?.(); } };
   setTimeout(() => document.addEventListener('pointerdown', onDown, true), 0);
   document.addEventListener('keydown', onKey, true);
@@ -213,7 +215,7 @@ function picker(anchor, { options, value, multi, search = true, onPick, placehol
 function menu(anchor, items) {
   popover(anchor, pop => {
     const box = h('div', { class: 'opts', role: 'menu' });
-    for (const it of items) {
+    for (const it of items.filter(Boolean)) {
       if (it === '-') { box.append(h('div', { class: 'sep' })); continue; }
       if (it.header) { box.append(h('div', { class: 'ph', text: it.header })); continue; }
       box.append(h('button', { class: 'opt' + (it.danger ? ' danger' : ''), role: 'menuitem', onclick: () => { closePop(); it.fn(); } }, it.icon ? icon(it.icon, 16) : null, h('span', { text: it.label, style: { flex: '1' } }), it.sub ? h('span', { class: 'sub', text: it.sub }) : null));

@@ -3,7 +3,9 @@ const isAr = () => LANG === 'ar';
 var I18N_SKIP = '.row .t,.tc:not(.waitrow) .tt>b,.card>.t,.inrow .t,.stuck-row .t,.rv-item .t,.md,.mdbox,.mbody,.ev .txt,.ttl,textarea,input,select,[contenteditable],code,pre,kbd,.notr,.wordmark,.wm-anim,.mark-anim,.plate,.cp-t b,.cp-in>h1,.mhead b,.cv-name b,.chip-task,.mention,.toast .notr,.cl-row .nm>div:first-child,.prow .nm>div:first-child';
 var I18N = (() => {
   const exact = new Map(Object.entries(AR.exact || {}));
-  const pats = (AR.patterns || []).map(([re, to]) => { try { return [new RegExp(re, 'u'), to]; } catch { return null; } }).filter(Boolean);
+  const pats = (AR.patterns || []).map(([re, to]) => { try { const r = new RegExp(re, 'u'); return [r, to, new RegExp(r.source + '|', 'u').exec('').length - 1]; } catch { return null; } }).filter(Boolean);
+  /* a piece the pattern keeps (a department, a page name) is translated too when it is itself interface text */
+  const fill = (to, g) => to.replace(/\$(\d)/g, (_, i) => { const v = g[i - 1]; return v == null ? '' : (exact.get(v) ?? v); });
   const cache = new Map(); const made = new Set(exact.values());
   const hasLatin = /[A-Za-z]/;
   function tr(s) {
@@ -14,7 +16,7 @@ var I18N = (() => {
     if (out == null) {
       const m = s.match(/^(\s*)([\s\S]*?)(\s*)$/); const core = m[2];
       let t = exact.get(core);
-      if (t == null) for (const [re, to] of pats) { if (re.test(core)) { t = core.replace(re, to); break; } }
+      if (t == null) for (const [re, to, n] of pats) { const g = core.match(re); if (g) { t = core.replace(re, fill(to, g.slice(1, n + 1))); break; } }
       out = t == null ? s : m[1] + t + m[3];
     }
     if (cache.size > 6000) cache.clear();

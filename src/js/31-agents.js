@@ -71,14 +71,19 @@ function moneyFacts(side) {
     late: lateMoney() }, late_work: ps.map(p => ({ project: p.name, late_tasks: pTasks(p.id).filter(t => !isClosed(t) && t.due_date && t.due_date < todayIso()).length })) };
 }
 /* ── the card on the person's home page ── */
-const agentJobs = () => (AGENTS[myMember()?.department] || []).map(k => [k, AGENT_JOBS[k]]).filter(([, j]) => j && (!j.show || j.show()));
+const deptShort = d => d.k === 'design' && !wsDeptCfg()?.names?.design ? 'Design' : d.l.split(' /')[0];
+let agentDeptPick = null; /* which of the person's departments the agent card shows (the main one by default) */
+const agentDept = () => { const ds = myDepts().filter(d => (AGENTS[d.base || d.k] || []).length); return ds.find(d => d.k === agentDeptPick) || ds[0] || null; };
+const agentJobs = () => (AGENTS[agentDept()?.base || agentDept()?.k] || []).map(k => [k, AGENT_JOBS[k]]).filter(([, j]) => j && (!j.show || j.show()));
 const agentHome = () => { const d = myDept(); const hm = d && deptHome(d); return ['home', 'deals', 'company'].includes(hm) ? hm : 'myturn'; };
 function agentCard() {
   const d = myDept(); if (!d || S.route.v !== agentHome()) return null;
   const jobs = agentJobs(); if (!jobs.length) return null;
   const on = aiKnown();
-  return h('section', { class: 'tsec agentsec', 'data-agent': d.k },
-    h('h3', {}, h('span', { class: 'tellspark', 'aria-hidden': 'true', text: '✦' }), ` Your ${d.l.split(' /')[0]} agent`),
+  const ad = agentDept() || d; const others = myDepts().filter(x => (AGENTS[x.base || x.k] || []).length);
+  return h('section', { class: 'tsec agentsec', 'data-agent': ad.k },
+    h('h3', {}, h('span', { class: 'tellspark', 'aria-hidden': 'true', text: '✦' }), ` Your ${deptShort(ad)} agent`),
+    others.length > 1 ? h('div', { class: 'chips agentdepts', role: 'tablist' }, others.map(x => h('button', { class: 'chipbtn', role: 'tab', 'data-agent-dept': x.k, 'aria-pressed': String(x.k === ad.k), onclick: () => { agentDeptPick = x.k; render(); } }, deptShort(x)))) : null,
     h('div', { class: 'agentjobs' }, jobs.map(([k, j]) => h('button', { class: 'agentjob', 'data-job': k, onclick: () => on ? runAgent(k) : toast(isAdmin() ? 'Turn on AI in Settings → AI first' : 'Ask an admin to turn on AI in Settings → AI') },
       h('b', { text: j.label }), h('span', { text: j.hint })))),
     on ? h('p', { class: 'note', text: 'It writes a draft from what you can already see. Nothing is saved until you check it and press the button.' })

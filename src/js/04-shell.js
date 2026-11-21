@@ -24,11 +24,12 @@ function render() {
   applyTheme(); syncBadge(); splashOut();
   let app = $('#app > .app');
   if (!app) { app = h('div', { class: 'app' }); $('#app').replaceChildren(app); }
-  const oldScroll = $('.main .scroll', app); const sx = oldScroll?.scrollLeft || 0, sy = oldScroll?.scrollTop || 0; // before building: a React page is moved into the new screen while it is built
   const side = renderSide(); const main = S.loaded ? renderMain() : h('main', { class: 'main', 'aria-label': 'Loading', html: bootLoader() }); const tabs = renderTabs();
+  const oldScroll = $('.main .scroll', app); const sx = oldScroll?.scrollLeft || 0, sy = oldScroll?.scrollTop || 0;
   app.replaceChildren(side, main, tabs);
   const ns = $('.main .scroll', app); if (ns) { ns.scrollLeft = sx; ns.scrollTop = sy; }
   if (S.loaded) motionIn(app);
+  syncTimerPill();
   tourKick();
 }
 const tourKick = debounce(() => tours.kick(), 500);
@@ -59,13 +60,21 @@ function renderSide() {
         ['bugs', navItem({ v: 'bugs' }, 'Bugs', icon('bug'), S.tasks.filter(t => isBug(t) && !isClosed(t)).length || null)],
         ['sprint', navItem({ v: 'sprint' }, `Sprint ${sprintOf()}`, icon('sprint'))],
         ['clients', navItem({ v: 'clients' }, 'Clients', icon('client'))],
+        ['visits', navItem({ v: 'visits' }, 'Site visits', icon('calendar'), visitsBadge())],
+        ['tickets', navItem({ v: 'tickets' }, 'Tickets', icon('headset'), ticketsBadge())],
+        ['tests', navItem({ v: 'tests' }, 'Test library', icon('review'))],
+        ['incidents', navItem({ v: 'incidents' }, 'Incidents', icon('bell'), incidentsBadge())],
+        ['approvals', approvalsBadge() || inDept(myMember(), 'management', 'finance', 'operations', 'hr') ? navItem({ v: 'approvals' }, 'Approvals', icon('check'), approvalsBadge()) : null],
+        ['stock', navItem({ v: 'stock' }, 'Stock', icon('folder'), (S.stock || []).filter(i => i.min_qty > 0 && i.qty <= i.min_qty).length || null)],
+        ['devices', navItem({ v: 'devices' }, 'Devices', icon('wifi'), (S.devices || []).filter(d => d.state === 'faulty').length || null)],
         ['projects', navItem({ v: 'projects' }, 'Projects', icon('folder'))],
         ['vault', navItem({ v: 'vault' }, 'Access', icon('key'))],
         ['leave', h('button', { class: 'navi', 'data-nav': 'leave', onclick: () => openLeave() }, icon('leave'), h('span', { class: 't', text: 'Going on leave' }))],
         ['all', navItem({ v: 'all' }, 'All tasks', icon('all'))],
         ['insights', isAdmin() ? navItem({ v: 'insights' }, 'Insights', icon('chart')) : null],
         ['report', isAdmin() ? h('button', { class: 'navi', 'data-nav': 'report', onclick: () => openWeeklyReport() }, icon('export'), h('span', { class: 't', text: 'Weekly report' })) : null],
-        ['owner', ownerAdmin ? navItem({ v: 'owner' }, 'Ovrto owner', icon('mark')) : null]]),
+        ['owner', ownerAdmin ? navItem({ v: 'owner' }, 'Ovrto owner', icon('mark')) : null]].filter(([k]) => !pageHidden(k))),
+      hasHiddenPages() ? h('button', { class: 'navi allpages', 'data-nav': 'allpages', onclick: () => toggleAllPages() }, icon(showAllPages() ? 'eye' : 'menu'), h('span', { class: 't', text: showAllPages() ? 'Only my department’s pages' : 'Show all pages' })) : null,
       h('h4', {}, 'Views', h('button', { 'aria-label': 'New view', title: 'New view', onclick: () => newViewFromCurrent() }, icon('plus', 14))),
       mine.length || shared.length ? [...mine, ...shared].map(v => navItem({ v: 'view', id: v.id }, v.name + (v.shared && v.owner_id !== uid() ? ' · shared' : ''), icon('view'))) : h('div', { class: 'note', style: { padding: '0 8px' }, text: 'Filter any list, then save it here.' }),
       h('h4', {}, 'Projects', isAdmin() || true ? h('button', { 'aria-label': 'New project', title: 'New project', onclick: () => openNewProject() }, icon('plus', 14)) : null),
@@ -83,12 +92,13 @@ function sideOrder(pairs) {
 }
 function renderTabs() {
   const t = (r, label, ic, badge) => h('button', { class: 'tab', 'aria-current': S.route.v === r.v ? 'page' : null, 'data-nav': r.v, onclick: () => go(r) }, ic, label, badge ? h('span', { class: 'badge', text: badge > 99 ? '99+' : String(badge) }) : null);
-  const workish = !['myturn', 'review', 'inbox', 'chat', 'insights', 'owner', 'vault', 'company', 'home', 'deals', 'deal'].includes(S.route.v);
+  const workish = !['myturn', 'review', 'inbox', 'chat', 'insights', 'owner', 'vault', 'company', 'home', 'deals', 'deal', 'devices', 'visits', 'tickets', 'tests', 'incidents', 'approvals', 'stock'].includes(S.route.v);
   return h('nav', { class: 'tabs', 'aria-label': 'Main' },
     t({ v: 'myturn' }, 'My turn', icon('turn', 22)),
     h('button', { class: 'tab', 'aria-current': workish ? 'page' : null, 'data-nav': 'work', onclick: () => workish ? viewSwitcher() : go({ v: 'work' }) }, icon('work', 22), 'Work'),
     h('button', { class: 'tab plus', 'aria-label': 'New task', 'data-tour': 'create-btn', onclick: () => openCreate() }, h('span', { class: 'pl' }, icon('plus', 22))),
-    t({ v: 'review' }, 'Review', icon('review', 22), reviewCount() || null),
+    !pageHidden('review') || !morePins().length ? t({ v: 'review' }, 'Review', icon('review', 22), reviewCount() || null)
+      : t({ v: morePins()[0] }, PAGE_LABEL[morePins()[0]], icon(PAGE_ICON[morePins()[0]], 22)),
     t({ v: 'chat' }, 'Chat', icon('chat', 22), chatBadge() || null),
     h('button', { class: 'tab', 'data-nav': 'more', 'aria-label': 'More: settings, members, import', onclick: () => openMore() }, icon('menu', 22), 'More'));
 }
@@ -100,8 +110,8 @@ function wsMenu(anchor) {
 function viewSwitcher() {
   openSheet({ title: 'Go to', kind: 'center', build: (sh) => {
     const body = h('div', { class: 'sbody' });
-    const grp = (title, items) => items.length ? h('div', {}, h('div', { class: 'ph', style: { padding: '0 0 6px', font: '600 12px var(--display)', letterSpacing: '0', color: 'var(--mute)' }, text: title }), ...items) : null;
-    const it = (r, label, ic) => h('button', { class: 'navi', style: { height: '44px' }, onclick: () => { closeSheet(true); go(r); } }, ic, h('span', { class: 't', text: label }));
+    const grp = (title, items) => (items = items.filter(Boolean)).length ? h('div', {}, h('div', { class: 'ph', style: { padding: '0 0 6px', font: '600 12px var(--display)', letterSpacing: '0', color: 'var(--mute)' }, text: title }), ...items) : null;
+    const it = (r, label, ic) => pageHidden(r.v) ? null : h('button', { class: 'navi', style: { height: '44px' }, onclick: () => { closeSheet(true); go(r); } }, ic, h('span', { class: 't', text: label }));
     body.append(...[
       grp('Views', [it({ v: 'work' }, 'Work', icon('work')), it({ v: 'bugs' }, 'Bugs', icon('bug')), it({ v: 'sprint' }, `Sprint ${sprintOf()}`, icon('sprint')), it({ v: 'clients' }, 'Clients', icon('client')), it({ v: 'projects' }, 'Projects', icon('folder')), it({ v: 'all' }, 'All tasks', icon('all'))]),
       grp('Saved views', S.views.map(v => it({ v: 'view', id: v.id }, v.name, icon('view')))),
@@ -112,6 +122,8 @@ function viewSwitcher() {
 }
 
 function renderMain() {
+  // an old link or a removed view: open the person's start page, not an unfiltered list of everything
+  if (!BUILTIN[S.route.v] && !['view', 'project', 'deal'].includes(S.route.v) || (S.route.v === 'view' && !S.views.find(x => x.id === S.route.id)) || (S.route.v === 'project' && !S.projects.find(x => x.id === S.route.id) && S.loaded)) { setTimeout(() => go({ v: deptHome(myDept()) }), 0); }
   const r = S.route; const special = BUILTIN[r.v]?.special;
   const main = h('main', { class: 'main', 'aria-label': routeTitle() });
   if (special === 'myturn') main.append(...viewMyTurn());
@@ -124,6 +136,13 @@ function renderMain() {
   else if (special === 'company') main.append(...viewCompany());
   else if (special === 'home') main.append(...viewDeptHome());
   else if (special === 'deals') main.append(...viewDeals());
+  else if (special === 'devices') main.append(...viewDevices());
+  else if (special === 'visits') main.append(...viewVisits());
+  else if (special === 'tickets') main.append(...viewTickets());
+  else if (special === 'tests') main.append(...viewTests());
+  else if (special === 'incidents') main.append(...viewIncidents());
+  else if (special === 'approvals') main.append(...viewApprovals());
+  else if (special === 'stock') main.append(...viewStock());
   else if (r.v === 'deal') main.append(...viewDeal());
   else if (r.v === 'project') main.append(...viewProject());
   else if (special === 'chat') { main.classList.add('chatpage'); main.append(...viewChat()); }
@@ -144,7 +163,8 @@ function pageHead(title, sub, tools, extra) {
 /* ── task card + row ── */
 function cardFields(t) {
   const out = [];
-  for (const f of S.fields.filter(f => f.show_on_card && fieldApplies(f, t)).slice(0, 3)) {
+  const off = plainOnly();
+  for (const f of S.fields.filter(f => f.show_on_card && fieldApplies(f, t) && !(off && OFFICE_HIDE_FIELDS.includes(f.key))).slice(0, 3)) {
     const v = fieldVal(t, f); if (!hasVal(v)) continue;
     if (f.kind === 'select') { const o = optOf(f, v); if (o) out.push(tag(o.label, o.color)); }
     else if (f.kind === 'multi') for (const id of v.slice(0, 2)) { const o = optOf(f, id); if (o) out.push(tag(o.label, o.color)); }
@@ -273,9 +293,27 @@ function bugsTriage(tasks) {
   const tri = tasks.filter(t => ['backlog', 'unstarted'].includes(catOf(t))).sort(SORTS.created);
   return h('div', { class: 'list', 'data-tour': 'triage', style: { paddingBottom: '0' } }, h('div', { class: 'group' },
     h('div', { class: 'ghead' }, h('span', { class: 'no', text: '00' }), h('span', { class: 'nm', text: 'Triage' }), h('span', { class: 'ct', text: String(tri.length) })),
-    tri.length ? tri.map(taskRow) : h('div', { class: 'colempty', style: { margin: '8px 0' }, text: 'Nothing new' })));
+    tri.length ? capped(tri, taskRow, 'tri') : h('div', { class: 'colempty', style: { margin: '8px 0' }, text: 'Nothing new' })));
 }
 function setVc(patch) { Object.assign(vc(), patch); if (patch.layout && !['view'].includes(S.route.v)) savePrefs({ layout: patch.layout }); render(); }
+/* long lists draw in pages: the first rows at once, the rest as the person scrolls (or taps "Show more").
+   What someone already opened stays open across re-renders, so an edit never jumps them back to the top. */
+const SHOWN = new Map();
+function capped(items, draw, key, step = 100, tag = 'div') {
+  const k = S.route.v + (S.route.id || '') + ':' + key; let n = Math.max(step, SHOWN.get(k) || step);
+  if (items.length <= n) return items.map(draw);
+  const out = items.slice(0, n).map(draw);
+  const more = h(tag === 'tr' ? 'tr' : 'div', { class: 'moreload', 'data-more': key }, h(tag === 'tr' ? 'td' : 'span', { colspan: 99 },
+    h('button', { class: 'lnk sm', onclick: () => grow() }, `Show ${Math.min(step, items.length - n)} more of ${items.length - n}`)));
+  const grow = () => {
+    const next = items.slice(n, n + step); n += next.length; SHOWN.set(k, n);
+    more.before(...next.map(draw));
+    if (n >= items.length) { io.disconnect(); more.remove(); } else more.querySelector('button').textContent = `Show ${Math.min(step, items.length - n)} more of ${items.length - n}`;
+  };
+  const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting) && more.isConnected) grow(); }, { rootMargin: '600px' });
+  requestAnimationFrame(() => { if (more.isConnected) io.observe(more); });
+  return [...out, more];
+}
 function boardView(tasks, cfg) {
   const groups = groupTasks(tasks, cfg.group === 'none' ? 'status' : cfg.group);
   const board = h('div', { class: 'board', 'data-tour': 'board' });
@@ -284,7 +322,7 @@ function boardView(tasks, cfg) {
       h('div', { class: 'colhead' }, h('span', { class: 'no', text: String(i + 1).padStart(2, '0') }), g.icon || (g.color ? h('span', { class: 'swatch', style: { width: '10px', height: '10px', background: g.color } }) : null),
         h('span', { class: 'nm', text: g.label }), h('span', { class: 'ct', text: String(g.tasks.length) }),
         (g.patch || g.fieldSet) ? h('button', { class: 'add', 'aria-label': `New task in ${g.label}`, onclick: () => openCreate({ preset: groupPatch({ fields: {} }, g) }) }, icon('plus', 16)) : null),
-      h('div', { class: 'cards' }, g.tasks.length ? g.tasks.map(t => taskCard(t)) : h('div', { class: 'colempty', text: 'Empty' })));
+      h('div', { class: 'cards' }, g.tasks.length ? capped(g.tasks, t => taskCard(t), 'b' + g.key, 40) : h('div', { class: 'colempty', text: 'Empty' })));
     if (g.patch || g.fieldSet) {
       col.addEventListener('dragover', e => { e.preventDefault(); col.classList.add('drop'); });
       col.addEventListener('dragleave', e => { if (!col.contains(e.relatedTarget)) col.classList.remove('drop'); });
@@ -306,7 +344,7 @@ function listView(tasks, cfg) {
     const tb = h('tbody');
     groups.forEach(g => {
       if (cfg.group !== 'none') tb.append(h('tr', { class: 'gh' }, h('td', { colspan: cols.length, text: `${g.label} · ${g.tasks.length}` })));
-      for (const t of g.tasks) tb.append(h('tr', { class: 'trow', onclick: () => openTask(t.id), 'data-id': t.id }, cols.map(([k, c]) => h('td', { class: k === 'key' ? 'mono' : '', text: c.get(t) }))));
+      tb.append(...capped(g.tasks, t => h('tr', { class: 'trow', onclick: () => openTask(t.id), 'data-id': t.id }, cols.map(([k, c]) => h('td', { class: k === 'key' ? 'mono' : '', text: c.get(t) }))), 't' + g.key, 100, 'tr'));
     });
     return h('div', { class: 'tbl' }, h('table', {}, h('thead', {}, h('tr', {}, cols.map(([, c]) => h('th', { text: c.n })))), tb));
   }
@@ -321,7 +359,7 @@ function listView(tasks, cfg) {
     }
     return h('div', { class: 'group' },
       cfg.group !== 'none' ? h('div', { class: 'ghead' }, h('span', { class: 'no', text: String(i + 1).padStart(2, '0') }), g.icon || (g.color ? h('span', { class: 'swatch', style: { width: '10px', height: '10px', background: g.color } }) : null), h('span', { class: 'nm', text: g.label }), extra, h('span', { class: 'ct', text: String(g.tasks.length) })) : null,
-      g.tasks.map(taskRow));
+      capped(g.tasks, taskRow, 'l' + g.key));
   }));
 }
 
@@ -435,8 +473,8 @@ function viewMyTurn() {
   const m = me(); const hr = new Date().getHours();
   const hello = `${hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening'}, ${first(m)}`;
   const day = new Date().toLocaleDateString(UI_LOC, { weekday: 'long', day: 'numeric', month: 'short' });
-  const jump = sel => () => { const el = $(sel); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
-  const stat = (n, label, sel, cls) => h('button', { class: 'tstat' + (cls ? ' ' + cls : ''), onclick: jump(sel) }, h('b', { text: String(n) }), h('span', { text: label }));
+  const jump = sel => () => { const el = $(sel); if (!el) return; el.scrollIntoView({ behavior: 'smooth', block: 'start' }); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1300); };
+  const stat = (n, label, sel, cls) => h(n ? 'button' : 'div', { class: 'tstat' + (cls ? ' ' + cls : '') + (n ? '' : ' zero'), onclick: n ? jump(sel) : null }, h('b', { text: String(n) }), h('span', { text: label }));
   const hero = h('header', { class: 'thero' }, h('div', { class: 'hrow' },
     h('div', { style: { minWidth: '0', flex: '1' } }, h('h1', { class: 'ptitle', text: hello }), h('div', { class: 'thsub', text: day })),
     isPhone() ? h('button', { class: 'x gsearch-m', 'data-gsearch': '1', 'aria-label': 'Search', title: 'Search', onclick: () => cmdk.open() }, icon('search', 22)) : null,
@@ -477,14 +515,15 @@ function viewReview() {
   if (!q.length) return [head, h('div', { class: 'scroll' }, emptyState('QUEUE · 0', 'Review queue is clear.', null))];
   // every waiting task in one list (phone too): open any of them, pass or send back from the row
   const ph = isPhone();
-  return [head, h('div', { class: 'scroll' }, h('div', { class: 'list rv-list', 'data-tour': 'review-list' }, q.map((t, i) => {
+  const rk = 'review:rv'; if ((SHOWN.get(rk) || 100) <= reviewIdx) SHOWN.set(rk, reviewIdx + 50); /* J/K never lands on an undrawn row */
+  return [head, h('div', { class: 'scroll' }, h('div', { class: 'list rv-list', 'data-tour': 'review-list' }, capped(q.map((t, i) => [t, i]), ([t, i]) => {
     const r = taskRow(t); if (i === reviewIdx && !ph) r.classList.add('sel');
     const acts = canReview(t) ? h('span', { class: 'rv-acts' },
       h('button', { class: 'btn sm', onclick: e => { e.stopPropagation(); sendBack(t); } }, icon('back', 14), 'Send back'),
       h('button', { class: 'btn sm pri', onclick: e => { e.stopPropagation(); passTask(t); } }, icon('pass', 14), 'Approve'))
       : h('span', { class: 'rv-acts sm mute', text: `${first(prof(reviewerOf(t))) || 'An admin'} reviews this` });
     return h('div', { class: 'rv-item' }, r, acts);
-  })))];
+  }, 'rv')))];
 }
 function reviewDeck(q) {
   const wrap = h('div', { 'data-tour': 'review-deck' });
@@ -698,18 +737,22 @@ function openMore() {
     const n = badgeCount(); const pinned = v => morePins().includes(v);
     sh.append(h('div', { class: 'sbody more' },
       h('button', { class: 'more-me', onclick: () => { closeSheet(true); openSettings('me'); } }, avatar(m, { size: 'lg' }), h('span', { class: 'who' }, h('b', { text: dname(m) }), h('span', { class: 'sm mute', text: m?.email || '' })), icon('chev', 16)),
-      morePins().length ? h('div', { class: 'more-g', 'data-dept-pins': '1' }, h('div', { class: 'more-h', text: `For ${myDept().l}` }), morePins().map(v => it(PAGE_ICON[v], PAGE_LABEL[v], () => go({ v })))) : null,
+      morePins().length ? h('div', { class: 'more-g', 'data-dept-pins': '1' }, h('div', { class: 'more-h', text: 'Your pages' }), morePins().map(v => it(PAGE_ICON[v], PAGE_LABEL[v], () => go({ v })))) : null,
       h('div', { class: 'more-g' },
         it('bell', 'Notifications', () => openNotifs(), n ? h('span', { class: 'badge', text: n > 99 ? '99+' : String(n) }) : null),
-        canSeeSomeMoney() && !pinned('company') ? it('company', canSeeMoney() ? 'Company' : 'Hardware', () => go({ v: 'company' })) : null,
-        dealsInMenu() && !pinned('deals') ? it('deal', 'Deals', () => go({ v: 'deals' })) : null,
-        pinned('projects') ? null : it('folder', 'Projects', () => go({ v: 'projects' })),
-        pinned('vault') ? null : it('key', 'Access', () => go({ v: 'vault' })),
+        canSeeSomeMoney() && !pinned('company') && !pageHidden('company') ? it('company', canSeeMoney() ? 'Company' : 'Hardware', () => go({ v: 'company' })) : null,
+        dealsInMenu() && !pinned('deals') && !pageHidden('deals') ? it('deal', 'Deals', () => go({ v: 'deals' })) : null,
+        pinned('projects') || pageHidden('projects') ? null : it('folder', 'Projects', () => go({ v: 'projects' })),
+        it('check', 'Approvals', () => go({ v: 'approvals' }), approvalsBadge() ? h('span', { class: 'badge', text: String(approvalsBadge()) }) : null),
+        inDept(myMember(), 'hr', 'management') || isAdmin() ? it('invite', 'Start onboarding', () => openOnboarding()) : null,
+        ...['visits', 'tickets', 'devices', 'tests', 'incidents', 'stock'].filter(v => !pinned(v) && !pageHidden(v)).map(v => it(PAGE_ICON[v], PAGE_LABEL[v], () => go({ v }))),
+        pinned('vault') || pageHidden('vault') ? null : it('key', 'Access', () => go({ v: 'vault' })),
         it('leave', 'Going on leave', () => openLeave()),
         canInvite() ? it('invite', 'Add members', () => openInviteSheet()) : null,
-        isAdmin() && !pinned('insights') ? it('chart', 'Insights', () => go({ v: 'insights' })) : null,
+        isAdmin() && !pinned('insights') && !pageHidden('insights') ? it('chart', 'Insights', () => go({ v: 'insights' })) : null,
         isAdmin() ? it('export', 'Weekly report', () => openWeeklyReport()) : null,
         ownerAdmin ? it('mark', 'Ovrto owner', () => go({ v: 'owner' })) : null,
+        hasHiddenPages() ? it(showAllPages() ? 'eye' : 'menu', showAllPages() ? 'Only my department’s pages' : 'Show all pages', () => toggleAllPages()) : null,
         it('upload', 'Import tasks', () => openImport()),
         it('export', 'Export', () => openExport())),
       h('div', { class: 'more-g' },

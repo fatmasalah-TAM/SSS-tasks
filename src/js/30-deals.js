@@ -14,8 +14,8 @@ const dealTasks = id => S.tasks.filter(t => t.deal_id === id);
 const isPresalesTask = t => PRESALES.some(([k]) => tyOf(t.type_id)?.key === k);
 const dealLate = d => OPEN_STAGES.includes(d.stage) && (!d.next_date || d.next_date <= todayIso());
 /* who sees Deals in the menu: sales, pre-sales, admins, and anyone once there are deals */
-const dealsInMenu = () => ['sales', 'presales', 'success', 'management', 'product', 'pm'].includes(myMember()?.department) || isAdmin() || canSeeSomeMoney();
-const dealsBadge = () => ['sales', 'presales'].includes(myMember()?.department) ? (S.deals || []).filter(dealLate).length || null : null;
+const dealsInMenu = () => inDept(myMember(), 'sales', 'presales', 'success', 'management', 'product', 'pm') || isAdmin() || canSeeSomeMoney();
+const dealsBadge = () => inDept(myMember(), 'sales', 'presales') ? (S.deals || []).filter(dealLate).length || null : null;
 /* who writes the contract of a won deal: the owner for software, the hardware head(s) for hardware */
 const contractWriters = dept => dept === 'hardware' && (S.ws.money_hw_viewers || []).length ? S.ws.money_hw_viewers : [S.ws.owner_id].filter(Boolean);
 const namesOf = ids => ids.map(id => first(prof(id)) || 'someone').join(' and ');
@@ -99,7 +99,7 @@ function viewDeal() {
 /* new deal, edit, or (nextOnly) just the next step */
 function editDeal(d, nextOnly) {
   const c = d?.contact || {};
-  const sellers = S.members.filter(m => m.department === 'sales' || m.user_id === uid() || m.user_id === d?.owner_id).map(m => [m.user_id, first(prof(m.user_id)) || 'Someone']);
+  const sellers = S.members.filter(m => inDept(m, 'sales') || m.user_id === uid() || m.user_id === d?.owner_id).map(m => [m.user_id, first(prof(m.user_id)) || 'Someone']);
   const nextF = [{ key: 'next_step', id: 'dNext', label: 'Next step', value: nextOnly && d?.next_step && d.next_date && d.next_date <= todayIso() ? '' : d?.next_step, ph: 'e.g. Call Mr. Adel about the proposal' }, { key: 'next_date', id: 'dDate', label: 'When', type: 'date', value: d?.next_date }];
   const fields = nextOnly ? nextF : [{ key: 'name', id: 'dName', label: 'Client name', value: d?.name, ph: 'e.g. Royal City', required: true },
     { key: 'kind', label: 'What they want', type: 'choice', value: d?.kind || 'software', options: DEAL_KINDS },
@@ -120,7 +120,7 @@ function editDeal(d, nextOnly) {
 }
 function askPresales(d, key) {
   const ty = typeByKey(key); if (!ty) return;
-  const pre = S.members.filter(m => m.department === 'presales');
+  const pre = S.members.filter(m => inDept(m, 'presales'));
   openCreate({ typeKey: key, showDetails: true, prefill: { title: `${ty.name} · ${d.name}` }, extra: { deal_id: d.id }, preset: { assignee_id: pre.length === 1 ? pre[0].user_id : null } });
 }
 /* won: make the project(s) — one per side — and tell who writes each contract */

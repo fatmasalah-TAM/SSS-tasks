@@ -25,7 +25,7 @@ function companyData(split = coSplit()) {
   d.late.sort((a, b) => a.y.due.localeCompare(b.y.due)); d.coming.sort((a, b) => a.y.due.localeCompare(b.y.due));
   d.projects.sort((a, b) => (b.x.value - a.x.value) || (b.open - a.open) || a.p.name.localeCompare(b.p.name));
   let people = []; try { people = reportData('this').people; } catch (e) { people = []; }
-  if (split === 'hardware') { const hw = new Set(S.members.filter(m => HW_DEPTS.includes(m.department)).map(m => m.user_id)); people = people.filter(x => hw.has(x.id)); }
+  if (split === 'hardware') { const hw = new Set(S.members.filter(m => HW_DEPTS.includes(baseKey(m.department))).map(m => m.user_id)); people = people.filter(x => hw.has(x.id)); }
   d.people = people;
   return d;
 }

@@ -4,15 +4,16 @@
 const HOME_OF = { qa: 'testing', backend: 'code', frontend: 'code', mobile: 'code', devops: 'code', embedded: 'code', data: 'code', product: 'product', pm: 'product', presales: 'presales' };
 const HOME_NAME = { testing: 'Testing', code: 'My code', product: 'My product', presales: 'Requests' };
 const HOME_ICON = { testing: 'review', code: 'work', product: 'chart', presales: 'deal' };
-const homeKind = () => HOME_OF[myMember()?.department] || null;
+const homeKind = () => HOME_OF[baseKey(myMember()?.department)] || null;
 const typeByKey = k => S.types.find(x => x.key === k) || (k === 'bug' ? bugType() : null);
 function viewDeptHome() {
   const kind = homeKind();
+  if (!kind && myMember()?.department) { setTimeout(() => go({ v: deptHome(myDept()) }), 0); return [h('div', { class: 'scroll' })]; }
   if (!kind) return [h('div', { class: 'scroll' }, pageHead('Home'), emptyState('NO DEPARTMENT', 'Pick your department to get a page made for your job.', { label: 'Pick my department', fn: () => openDeptPicker() }))];
   const m = me(); const hr = new Date().getHours(); const d = myDept();
   const hello = `${hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening'}, ${first(m)}`;
   const P = kind === 'testing' ? testingParts() : kind === 'code' ? codeParts(d) : kind === 'presales' ? presalesParts() : productParts();
-  const stat = (n, label, sel, cls) => h('button', { class: 'tstat' + (cls ? ' ' + cls : ''), onclick: () => $(sel)?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }, h('b', { text: String(n) }), h('span', { text: label }));
+  const stat = (n, label, sel, cls) => h(n ? 'button' : 'div', { class: 'tstat' + (cls ? ' ' + cls : '') + (n ? '' : ' zero'), onclick: n ? () => { const el = $(sel); if (!el) return; el.scrollIntoView({ behavior: 'smooth', block: 'start' }); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1300); } : null }, h('b', { text: String(n) }), h('span', { text: label }));
   const hero = h('header', { class: 'thero' }, h('div', { class: 'hrow' },
     h('div', { style: { minWidth: '0', flex: '1' } }, h('h1', { class: 'ptitle', text: hello }), h('div', { class: 'thsub', text: P.sub })),
     isPhone() ? h('button', { class: 'x', 'data-gsearch': '1', 'aria-label': 'Search', title: 'Search', onclick: () => cmdk.open() }, icon('search', 22)) : null,

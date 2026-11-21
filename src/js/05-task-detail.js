@@ -11,12 +11,32 @@ function openTask(id) {
     build: sh => { detail = { id, sh, filter: store.get('actFilter', 'comments'), comments: [], activity: [], loading: true }; drawDetail(true); loadThread(id); } });
   tours.request('detail');
 }
+/* mute a task or project: its updates stop; the person's turn and mentions still come (the database enforces it) */
+const isMuted = id => (S.mutes || []).some(m => m.target_id === id);
+async function toggleMute(kind, id) {
+  S.mutes = S.mutes || [];
+  if (isMuted(id)) {
+    const was = S.mutes; S.mutes = S.mutes.filter(m => m.target_id !== id); render();
+    const { error } = await sb.from('notif_mutes').delete().eq('user_id', uid()).eq('target_id', id);
+    if (error) { S.mutes = was; render(); return toast(errText(error)); }
+    toast(kind === 'project' ? 'Project updates on again' : 'Task updates on again');
+  } else {
+    const row = { user_id: uid(), workspace_id: S.ws.id, target_id: id, target_kind: kind }; S.mutes = [...S.mutes, row]; render();
+    const { error } = await sb.from('notif_mutes').insert(row);
+    if (error) { S.mutes = S.mutes.filter(m => m !== row); render(); return toast(errText(error)); }
+    toast('Muted. You still hear when it’s your turn or someone mentions you');
+  }
+}
 function taskMenu(anchor, t) {
   menu(anchor, [
     { label: 'Copy link', icon: 'share', fn: () => copyText(taskLink(t), 'Link copied') },
     { label: 'Copy ID', fn: () => copyText(taskKey(t), 'ID copied') },
     { label: 'Duplicate', fn: async () => { const c = await createTask({ title: t.title + ' (copy)', description: t.description, type_id: t.type_id, priority: t.priority, project_id: t.project_id, fields: clone(t.fields), assignee_id: t.assignee_id, sprint: t.sprint }); if (c) { toast(`${taskKey(c)} created`); openTask(c.id); } } },
     { label: 'Add sub-task', fn: () => openCreate({ parent: t.id }) },
+    woOf(t.id) ? null : { label: 'Make it a site visit', fn: () => makeVisit(t) },
+    tkOf(t.id) ? null : { label: 'Make it a client ticket', fn: () => makeTicket(t) },
+    incOf(t.id) ? null : { label: 'Make it an incident', fn: () => makeIncident(t) },
+    t.project_id && isMuted(t.project_id) ? { label: 'Updates muted with its project', fn: () => toggleMute('project', t.project_id) } : { label: isMuted(t.id) ? 'Unmute updates' : 'Mute updates', fn: () => toggleMute('task', t.id) },
     '-',
     ...(t.created_by === uid() || isAdmin() ? [{ label: 'Delete task', danger: true, fn: () => confirmIn($('.sbody', currentSheet()) || $('.mainc', currentSheet()), { text: `Delete ${taskKey(t)} and its comments? This can’t be undone.`, yes: 'Delete', danger: true, onYes: async () => { if (await deleteTask(t.id)) closeSheet(); } }) }] : []), // only the person who made it, or an admin
   ]);
@@ -66,6 +86,10 @@ function drawDetail(full) {
   replaceIn(mainc, 'd-turn', () => turnStrip(t));
   replaceIn(mainc, 'd-client', () => clientReportBlock(t));
   if (!keep('.d-desc')) replaceIn(mainc, 'd-desc', () => descBlock(t));
+  if (!keep('.d-visit')) replaceIn(mainc, 'd-visit', () => visitBlock(t) || h('span'));
+  if (!keep('.d-ticket')) replaceIn(mainc, 'd-ticket', () => ticketBlock(t) || h('span'));
+  if (!keep('.d-inc')) replaceIn(mainc, 'd-inc', () => incidentBlock(t) || h('span'));
+  replaceIn(mainc, 'd-run', () => runBlock(t) || h('span'));
   replaceIn(mainc, 'd-waits', () => waitsBlock(t));
   replaceIn(mainc, 'd-cause', () => causeBlock(t));
   if (!keep('.d-stopped')) replaceIn(mainc, 'd-stopped', () => stoppedBlock(t));
@@ -83,7 +107,8 @@ function replaceIn(parent, cls, make) {
 }
 /* the sentence: Type for Client in Area · developer X · priority · sprint · due */
 const KIND_RANK = { select: 0, multi: 1, person: 2, date: 3, text: 4, number: 5, checkbox: 6 };
-function sentenceFields(t) { return S.fields.filter(f => f.show_on_card && fieldApplies(f, t)).sort((a, b) => (KIND_RANK[a.kind] - KIND_RANK[b.kind]) || a.position - b.position); }
+const OFFICE_HIDE_FIELDS = ['area', 'tier', 'phase'];
+function sentenceFields(t) { const off = plainOnly(); return S.fields.filter(f => f.show_on_card && fieldApplies(f, t) && !(off && (OFFICE_HIDE_FIELDS.includes(f.key) || (f.key === 'client' && myDepts().every(d => (d.hide || []).includes('clients')))))).sort((a, b) => (KIND_RANK[a.kind] - KIND_RANK[b.kind]) || a.position - b.position); }
 function sentence(t) {
   const ty = tyOf(t.type_id); const parts = [];
   const w = (label, onclick, empty, tourId) => h('button', { class: 'w' + (empty ? ' blank' : ''), onclick, 'data-tour': tourId || null }, label);
@@ -95,7 +120,7 @@ function sentence(t) {
   }
   parts.push(devWord(), w(t.assignee_id ? dname(prof(t.assignee_id)) : 'nobody yet', e => pickPerson(e.currentTarget, t.assignee_id, v => patchTask(t.id, { assignee_id: v }, { toast: v ? `${first(prof(v))}’s on it` : 'Developer cleared' })), !t.assignee_id));
   parts.push(', ', w(t.priority ? prioName(t.priority) + ' priority' : 'no priority', e => pickPriority(e.currentTarget, t), !t.priority));
-  if (usesSprints() || t.sprint) parts.push(', ', w(t.sprint ? `Sprint ${t.sprint}` : 'no sprint', e => pickSprint(e.currentTarget, t), !t.sprint));
+  if (usesSprints() || (t.sprint && !plainOnly())) parts.push(', ', w(t.sprint ? `Sprint ${t.sprint}` : 'no sprint', e => pickSprint(e.currentTarget, t), !t.sprint));
   parts.push(', ', w(t.due_date ? 'due ' + fmtDate(t.due_date) : 'no due date', e => pickDate(e.currentTarget, t.due_date, v => patchTask(t.id, { due_date: v }, { toast: v ? 'Due date set' : 'Due date cleared' })), !t.due_date), '.');
   return h('p', { class: 'sentence', style: { margin: '0' } }, parts);
 }
@@ -108,7 +133,7 @@ function nextMoves(t) {
   else if ((c === 'backlog' || c === 'unstarted') && (turnIsMine(t) || t.assignee_id === uid() || isAdmin())) act('Start work', () => moveTask(t, { status_id: (firstStatus('started') || defaultStatus()).id }));
   else if (c === 'started' && (turnIsMine(t) || t.assignee_id === uid() || !t.assignee_id || isAdmin())) { const r = firstStatus('review'); act(r ? 'Send to review' : 'Mark done', () => r ? handoff(t, 'Send to review', { status_id: r.id }) : passTask(t)); }
   else if (c === 'review') { if (canReview(t)) { act('Send back', () => sendBack(t), false, 'back'); act('Approve', () => passTask(t), true, 'pass'); } }
-  else act('Reopen', () => moveTask(t, { status_id: (firstStatus('started') || defaultStatus()).id, gate_checks: [] }), false);
+  else if (c === 'done' || c === 'canceled') act('Reopen', () => moveTask(t, { status_id: (firstStatus('started') || defaultStatus()).id, gate_checks: [] }), false);
   return out;
 }
 /* turn strip: whose turn it is + one next move */
@@ -246,18 +271,21 @@ function fieldsPanel(t) {
   const st = stOf(t.status_id);
   row('Status', pick(st?.name || '—', e => pickStatus(e.currentTarget, t), false, stIcon(st)));
   row('Type', pick(tyOf(t.type_id)?.name || '—', e => pickType(e.currentTarget, t)));
-  row('Developer', pick(t.assignee_id ? dname(prof(t.assignee_id)) : 'Unassigned', e => pickPerson(e.currentTarget, t.assignee_id, v => patchTask(t.id, { assignee_id: v }, { toast: v ? `${first(prof(v))}’s on it` : 'Developer cleared' })), !t.assignee_id, avatar(prof(t.assignee_id), { size: 'xs' })));
+  row(softwareTeam() && !plainOnly() ? 'Developer' : 'Assigned to', pick(t.assignee_id ? dname(prof(t.assignee_id)) : 'Unassigned', e => pickPerson(e.currentTarget, t.assignee_id, v => patchTask(t.id, { assignee_id: v }, { toast: v ? `${first(prof(v))}’s on it` : 'Developer cleared' })), !t.assignee_id, avatar(prof(t.assignee_id), { size: 'xs' })));
   row('Reviewer', pick(t.reviewer_id ? dname(prof(t.reviewer_id)) : 'Workspace default', e => pickPerson(e.currentTarget, t.reviewer_id, v => patchTask(t.id, { reviewer_id: v }, { toast: 'Reviewer updated' })), !t.reviewer_id, avatar(prof(t.reviewer_id), { size: 'xs' })));
   row('Priority', pick(prioName(t.priority || 0), e => pickPriority(e.currentTarget, t), !t.priority, prioGlyph(t.priority || 0)));
   row('Project', pick(pjOf(t.project_id)?.name || 'No project', e => picker(e.currentTarget, { options: [...S.projects.map(p => ({ v: p.id, label: p.name })), { v: null, label: 'No project' }], value: t.project_id, onPick: v => patchTask(t.id, { project_id: v }, { toast: 'Project updated' }) }), !t.project_id));
-  row('Sprint', pick(t.sprint ? `Sprint ${t.sprint}` : 'No sprint', e => pickSprint(e.currentTarget, t), !t.sprint));
-  row('Due', pick(t.due_date ? fmtDate(t.due_date) : 'No date', e => pickDate(e.currentTarget, t.due_date, v => patchTask(t.id, { due_date: v })), !t.due_date));
+  if (!plainOnly()) row('Sprint', pick(t.sprint ? `Sprint ${t.sprint}` : 'No sprint', e => pickSprint(e.currentTarget, t), !t.sprint));
+  startRow(t, row, pick);
+  row('Due', pick(t.due_date ? fmtDate(t.due_date) : 'No date', e => pickDate(e.currentTarget, t.due_date, v => { if (v && t.start_date && v < t.start_date) return toast('The due date can’t be before the start'); patchTask(t.id, { due_date: v }); }), !t.due_date));
+  waitsRow(t, row);
   row('Flags', pick((t.flags || []).map(k => FLAGS.find(f => f.k === k)?.n).filter(Boolean).join(', ') || 'None', e => picker(e.currentTarget, { options: FLAGS.map(f => ({ v: f.k, label: f.n, sub: '' })), value: t.flags || [], multi: true, search: false, onPick: v => patchTask(t.id, { flags: v }) }), !(t.flags || []).length));
-  const applicable = S.fields.filter(f => fieldApplies(f, t)); const empty = applicable.filter(f => f.hide_empty && !hasVal(fieldVal(t, f)) && f.kind !== 'checkbox');
+  const applicable = S.fields.filter(f => fieldApplies(f, t) && !(plainOnly() && OFFICE_HIDE_FIELDS.includes(f.key))); const empty = applicable.filter(f => f.hide_empty && !hasVal(fieldVal(t, f)) && f.kind !== 'checkbox');
   const shown = applicable.filter(f => !empty.includes(f) || detail?.showEmpty);
   for (const f of shown) row(f.name, fieldEditor(t, f), f.help);
   const box = h('div', {}, h('h4', { style: { margin: '0 0 8px', font: '600 12px/16px var(--display)', letterSpacing: '0', color: 'var(--fg2)' }, text: 'Fields' }), kv);
   if (empty.length && !detail?.showEmpty) box.append(h('button', { class: 'link', style: { marginTop: '8px' }, onclick: () => { detail.showEmpty = true; $('.rail', detail.sh).replaceChildren(fieldsPanel(taskOf(t.id))); } }, `+${empty.length} empty field${empty.length > 1 ? 's' : ''}`));
+  box.append(timeBlock(t));
   box.append(h('div', { class: 'sm mute', style: { marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '4px' } },
     h('span', { text: `Reported by ${!t.created_by && t.client_report ? `${t.client_report.name || 'the client'} (client)` : dname(prof(t.created_by))} · ${t.created_at ? fmtDT(t.created_at) : ''}` }), h('span', { text: `Updated ${ago(t.updated_at)} ago` })));
   return box;

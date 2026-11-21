@@ -39,7 +39,7 @@ async function catchUp() {
     if (detail) loadThread(detail.id);
   } catch (_) { /* try again next round */ } finally { catching = false; }
 }
-setInterval(catchUp, 15000);
+setInterval(() => quietly(catchUp), 15000); // the 15-second check for news never shows the loading mark
 addEventListener('online', () => { if (S.ws) { flushOutbox(); setupRealtime(); catchUp(); } });
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { checkUpdate(); if (S.ws) { flushOutbox(); setupRealtime(); catchUp(); } } });
 

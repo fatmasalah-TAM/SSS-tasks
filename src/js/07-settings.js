@@ -64,12 +64,17 @@ function setWorkspace(body) {
       h('label', { class: 'field' }, 'ID prefix', h('span', { class: 'h', text: `Tasks read like ${w.prefix}-142.` }), txtInput(w.prefix, v => { v = v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5); v && saveWs({ prefix: v }, 'Prefix updated'); }, { id: 'wsPrefix', maxlength: '5' }))),
     h('div', { class: 'field' }, 'Accent color', h('div', { class: 'swatches' }, ACCENTS.map(a => h('button', { style: { background: a.l }, title: a.n, 'aria-label': a.n, 'aria-pressed': String((w.accent || 'teal') === a.k), onclick: () => saveWs({ accent: a.k }, `${a.n} applied`) })))))));
 
+  body.append(panel('Promises to clients (SLA)', 'sla', slaPanel()));
+  body.append(panel('Onboarding checklist', 'onboarding', onboardingPanel()));
+  body.append(panel('Departments', 'depts', h('div', { class: 'pbody' }, h('div', { style: { display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' } },
+    h('div', { style: { flex: '1', minWidth: '200px' } }, h('b', { 'data-dept-summary': '1', text: deptSummary() }), h('div', { class: 'note', text: 'Which departments your company has, their names, and whether everyone sees every page.' })),
+    h('button', { class: 'btn', 'data-dept-setup': '1', onclick: () => openDeptSetup() }, 'Set up departments')))));
   // members
   const counts = id => S.tasks.filter(t => t.assignee_id === id && !isClosed(t)).length;
   body.append(panel(`Members · ${S.members.length}`, 'members', ...S.members.map(m => {
     const p = prof(m.user_id); const self = m.user_id === uid();
     return h('div', { class: 'prow' }, avatar(p, { size: 'lg' }), h('div', { class: 'nm' }, h('div', { text: dname(p) + (self ? ' (you)' : '') }), h('div', { class: 'sub', text: `${p?.email || ''} · ${counts(m.user_id)} open` }),
-        h('button', { class: 'lnk sm', 'data-member-dept': m.user_id, onclick: () => openDeptPicker({ forUser: m.user_id }) }, deptOf(m.department)?.l || 'Set department')),
+        h('button', { class: 'lnk sm', 'data-member-dept': m.user_id, onclick: () => openDeptPicker({ forUser: m.user_id }) }, deptLabel(m) || 'Set department')),
       self ? h('span', { class: 'sub', text: m.role === 'admin' ? 'Admin' : 'Member' }) :
         h('select', { 'aria-label': `Role for ${dname(p)}`, onchange: async e => { const { error } = await sb.from('workspace_members').update({ role: e.target.value }).eq('workspace_id', S.ws.id).eq('user_id', m.user_id).select(); if (error) { toast(errText(error)); e.target.value = m.role; } else { m.role = e.target.value; toast('Role updated'); render(); } } },
           h('option', { value: 'member', selected: m.role === 'member' }, 'Member'), h('option', { value: 'admin', selected: m.role === 'admin' }, 'Admin')),
@@ -104,7 +109,7 @@ function invitePanel(redraw) {
   const nameI = h('input', { type: 'text', id: 'inviteName', placeholder: 'Full name', 'aria-label': 'Name' });
   const emailI = h('input', { type: 'email', id: 'inviteEmail', placeholder: 'name@company.com', 'aria-label': 'Email' });
   const roleI = h('select', { 'aria-label': 'Role', hidden: !isAdmin() }, h('option', { value: 'member' }, 'Member'), isAdmin() && h('option', { value: 'admin' }, 'Admin')); // people an admin trusted to add others invite members only
-  const deptI = h('select', { id: 'inviteDept', 'aria-label': 'Department' }, h('option', { value: '' }, 'Department (they pick if empty)'), ...['Software', 'Hardware', 'Business'].map(g => h('optgroup', { label: g }, DEPTS.filter(d => d.g === g).map(d => h('option', { value: d.k }, d.l)))));
+  const deptI = h('select', { id: 'inviteDept', 'aria-label': 'Department' }, h('option', { value: '' }, 'Department (they pick if empty)'), ...['Software', 'Hardware', 'Business'].map(g => h('optgroup', { label: g }, deptsOn().filter(d => d.g === g).map(d => h('option', { value: d.k }, d.l)))));
   const sendBtn = h('button', { class: 'btn pri', onclick: () => send() }, 'Create invite');
   const send = async () => {
     const email = emailI.value.trim().toLowerCase(); const full_name = nameI.value.trim();
@@ -327,8 +332,8 @@ function setMe(body) {
       h('label', { class: 'field' }, 'Name', txtInput(m?.full_name, v => v && saveProfile({ full_name: v }, 'Name updated'), { id: 'myName' })),
       h('label', { class: 'field' }, 'Time zone', h('span', { class: 'h', text: 'Teammates see your local time on handoffs.' }), h('select', { id: 'myTz', onchange: e => saveProfile({ tz: e.target.value }, 'Time zone saved') }, tzOptions(m?.tz || myTz())))),
     h('div', { class: 'field', 'data-my-dept': '1' }, 'Department', h('div', { style: { display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' } },
-      h('b', { text: myDept()?.l || 'Not set yet' }),
-      isAdmin() || !myDept() ? h('button', { class: 'btn sm', onclick: () => openDeptPicker() }, myDept() ? 'Change' : 'Set it') : h('span', { class: 'note', text: 'Ask an admin to change it.' }))),
+      h('b', { text: myDepts().map(d => d.l).join(' · ') || 'Not set yet' }),
+      h('button', { class: 'btn sm', 'data-my-dept-btn': '1', onclick: () => openDeptPicker() }, !myDept() ? 'Set it' : isAdmin() ? 'Change' : 'Other jobs'))),
     h('p', { class: 'note', text: `${m?.email || ''} · ${isAdmin() ? 'Admin' : 'Member'} of ${S.ws.name}` }))));
 
   const seg = (k, val, opts, onPick) => h('div', { class: 'seg', role: 'group', 'aria-label': k }, opts.map(([v, l]) => h('button', { 'aria-pressed': String(val === v), onclick: () => onPick(v) }, l)));
@@ -342,6 +347,9 @@ function setMe(body) {
   body.append(panel('Notifications', 'notify', h('div', { class: 'pbody' },
     h('div', { style: { display: 'flex', gap: '12px', alignItems: 'center' } }, sw(p.push !== false && 'Notification' in window && Notification.permission === 'granted', v => { savePrefs({ push: v }); if (v) enablePush(true); else disablePush(); drawSettings(); }, 'Push alerts'), h('div', {}, h('b', { text: 'Push alerts' }), h('div', { class: 'note', text: `When it’s your turn or someone mentions you. ${pushState}` }))),
     h('div', { style: { display: 'flex', gap: '12px', alignItems: 'center' } }, sw(m?.email_updates !== false, v => saveProfile({ email_updates: v }, v ? 'Email updates on' : 'Email updates off'), 'Email updates'), h('div', {}, h('b', { text: 'Email updates' }), h('div', { class: 'note', text: 'Same events by email, if your workspace has email sending set up.' }))),
+    h('div', { style: { display: 'flex', gap: '12px', alignItems: 'flex-start' }, 'data-quiet': '1' }, sw(!!p.quiet_on, v => { savePrefs({ quiet_on: v, quiet_from: p.quiet_from ?? 22, quiet_to: p.quiet_to ?? 8 }); toast(v ? 'Quiet hours on' : 'Quiet hours off'); drawSettings(); }, 'Quiet hours'),
+      h('div', {}, h('b', { text: 'Quiet hours' }), h('div', { class: 'note', text: 'No phone alerts or emails in these hours. When they end, one summary tells you what waited.' }),
+        p.quiet_on ? h('div', { class: 'quietrow' }, h('label', {}, 'From ', hourSel(p.quiet_from ?? 22, v => savePrefs({ quiet_from: v }), 'quietFrom')), h('label', {}, 'To ', hourSel(p.quiet_to ?? 8, v => savePrefs({ quiet_to: v }), 'quietTo'))) : null)),
     h('div', { style: { display: 'flex', gap: '12px', alignItems: 'center' } }, sw(!!p.data_saver, v => { savePrefs({ data_saver: v }); toast(v ? 'Data saver on' : 'Data saver off'); setupRealtime(); render(); drawSettings(); }, 'Data saver'), h('div', {}, h('b', { text: 'Data saver' }), h('div', { class: 'note', text: 'No photos, no live updates. The app refreshes when you come back to it.' }))))));
 
   body.append(panel('Sounds', 'sounds', soundsPanel()));
@@ -352,6 +360,8 @@ function setMe(body) {
     h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } }, isAdmin() ? h('button', { class: 'btn', onclick: () => openCreateWs() }, icon('plus', 14), 'Create a workspace') : null, h('button', { class: 'btn danger', onclick: () => signOut() }, 'Sign out')))));
 }
 function tzOptions(cur) { let zones = []; try { zones = Intl.supportedValuesOf('timeZone'); } catch { zones = [cur, 'Africa/Cairo', 'Europe/London', 'Europe/Berlin', 'Asia/Dubai', 'Asia/Kolkata', 'America/New_York', 'UTC']; } if (!zones.includes(cur)) zones.unshift(cur); return zones.map(z => h('option', { value: z, selected: z === cur }, z.replace(/_/g, ' '))); }
+const hourSel = (val, on, id) => h('select', { id, 'aria-label': id === 'quietFrom' ? 'Quiet from' : 'Quiet until', onchange: e => { on(Number(e.target.value)); toast('Quiet hours saved'); } },
+  Array.from({ length: 24 }, (_, i) => h('option', { value: String(i), selected: i === Number(val), text: String(i).padStart(2, '0') + ':00' })));
 async function saveProfile(patch, msg) {
   const p = me(); const prev = {}; for (const k in patch) prev[k] = p[k]; Object.assign(p, patch); render(); drawSettings();
   const r = await write({ t: 'profiles', op: 'update', id: uid(), patch }); if (r.error) { Object.assign(p, prev); render(); drawSettings(); return toast(errText(r.error)); }
@@ -409,7 +419,7 @@ function openCreateWs() {
       if (!n.value.trim()) return n.focus(); const done = busy(go_, 'Creating…');
       const { data, error } = await sb.rpc('create_workspace', { ws_name: n.value.trim(), ws_prefix: (p.value || n.value).trim().slice(0, 5) || 'TSK', preset: preset.value });
       done(); if (error) return toast(errText(error));
-      closeAllSheets(true); await loadWorkspaces(); switchWs(data); toast('Workspace created');
+      closeAllSheets(true); await loadWorkspaces(); await switchWs(data); toast('Workspace created'); setTimeout(() => openDeptSetup({ first: true }), 600);
     });
     sh.append(h('div', { class: 'sbody' }, h('label', { class: 'field' }, 'Name', n), h('label', { class: 'field' }, 'ID prefix', p), h('label', { class: 'field' }, 'Start from', preset), h('p', { class: 'note', text: 'You’ll be the admin. Invite people from Settings → Workspace.' })),
       h('div', { class: 'sfoot' }, h('span', { class: 'sp' }), h('button', { class: 'btn ghost', onclick: () => closeSheet() }, 'Cancel'), go_));

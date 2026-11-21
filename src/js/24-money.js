@@ -51,6 +51,7 @@ function moneyMath(pid) {
 }
 /* how much of the team's finished work went to this project lately: a starting point for the share */
 function suggestedShare(pid) {
+  const byTime = timeShare(pid); if (byTime != null) return byTime; // logged hours first, finished tasks otherwise
   const since = Date.now() - 90 * 864e5; const done = S.tasks.filter(t => t.completed_at && new Date(t.completed_at) > since);
   if (!done.length) return null; return Math.round(100 * done.filter(t => t.project_id === pid).length / done.length);
 }
@@ -80,7 +81,7 @@ function projectMoney(p) {
       const late = !y.paid_at && y.due && y.due < todayIso();
       return h('div', { class: 'pjrow' }, h('span', { class: 'grow' }, h('b', { text: `${fmtMoney(Number(y.amount))} · ${y.label || 'Payment'}` }),
         h('span', { class: 'sm ' + (late ? 'pjalert' : 'mute'), text: y.paid_at ? `Paid ${fmtDate(y.paid_at.slice(0, 10))}` : y.due ? (late ? `Not paid · late, was due ${fmtDate(y.due)}` : `Not paid yet · due ${fmtDate(y.due)}`) : 'Not paid yet · no due date' })),
-        !ed ? null : y.paid_at ? h('button', { class: 'btn sm ghost', onclick: () => editPayment(p, y) }, 'Edit') : h('button', { class: 'btn sm', 'data-mark-paid': '1', 'aria-label': `Mark ${y.label || 'this payment'} as paid`, onclick: async () => {
+        h('button', { class: 'btn sm ghost', 'data-invoice': y.id, onclick: () => printInvoice(p, y) }, 'Invoice'), !ed ? null : y.paid_at ? h('button', { class: 'btn sm ghost', onclick: () => editPayment(p, y) }, 'Edit') : h('button', { class: 'btn sm', 'data-mark-paid': '1', 'aria-label': `Mark ${y.label || 'this payment'} as paid`, onclick: async () => {
           const before = m.payments; if (!(await saveMoney(p.id, { payments: m.payments.map(z => z.id === y.id ? Object.assign({}, z, { paid_at: nowIso() }) : z) }))) return;
           toast(`Marked as paid: ${fmtMoney(Number(y.amount))}`, { label: 'Undo', fn: () => saveMoney(p.id, { payments: before }, 'Back to not paid') }, 8000);
         } }, icon('check', 14), 'Mark as paid'));
@@ -91,7 +92,7 @@ function projectMoney(p) {
     canSeeSalaries() ? sec('The team', canEditSalaries() ? ['Edit', () => editShare(p)] : null, h('div', { class: 'pjlist' }, h('div', { class: 'pjrow' }, h('span', { class: 'grow' },
       h('b', { text: x.team != null ? `${fmtMoney(x.team)} so far` : 'Not set yet' }),
       ...teamWhyZero(p, x, m),
-      h('span', { class: 'sm mute', text: salOf(p) ? (m.share != null ? `${m.share}% of the team’s time × ${fmtMoney(Number(salOf(p)))} a month × ${x.months.toFixed(1)} months` : `Set what share of the team’s time this project takes${suggestedShare(p.id) != null ? ` (about ${suggestedShare(p.id)}% of tasks done lately)` : ''}`) : 'Set the team’s total monthly salaries first' }))))) : null,
+      h('span', { class: 'sm mute', text: salOf(p) ? (m.share != null ? `${m.share}% of the team’s time × ${fmtMoney(Number(salOf(p)))} a month × ${x.months.toFixed(1)} months` : `Set what share of the team’s time this project takes${suggestedShare(p.id) != null ? ` (about ${suggestedShare(p.id)}${timeShare(p.id) != null ? '% of logged hours lately' : '% of tasks done lately'})` : ''}`) : 'Set the team’s total monthly salaries first' }))))) : null,
     h('section', { class: 'moneysum' }, h('div', { class: 'mrow' }, h('span', { text: 'Contract' }), h('b', { text: fmtMoney(x.value) })), h('div', { class: 'mrow' }, h('span', { text: 'Costs' }), h('b', { text: '− ' + fmtMoney(x.costs) })),
       h('div', { class: 'mrow tot' }, h('span', { text: 'Profit before the team' }), h('b', { text: fmtMoney(x.before) })),
       x.team != null ? [h('div', { class: 'mrow' }, h('span', { text: 'Team' }), h('b', { text: '− ' + fmtMoney(x.team) })), h('div', { class: 'mrow tot' + (x.net < 0 ? ' bad' : '') }, h('span', { text: 'Profit after the team' }), h('b', { text: fmtMoney(x.net) }))] : null),
@@ -169,7 +170,7 @@ function editShare(p) {
   const m = moneyOf(p.id); const sug = suggestedShare(p.id);
   const hw = pDept(p) === 'hardware';
   moneyForm('The team on this project', [{ key: 'team', id: 'mTeam', label: hw ? 'All hardware salaries together, per month (the hardware team)' : 'All software salaries together, per month (the software team)', type: 'number', value: salOf(p), ph: 'e.g. 250000', positive: true },
-    { key: 'share', id: 'mShare', label: `Share of the team’s time on ${p.name}, in %${sug ? ` (about ${sug}% of tasks done lately)` : ''}`, type: 'number', value: m.share || (sug || null), ph: 'e.g. 20' }],
+    { key: 'share', id: 'mShare', label: `Share of the team’s time on ${p.name}, in %${sug ? ` (about ${sug}${timeShare(p.id) != null ? '% of logged hours lately' : '% of tasks done lately'})` : ''}`, type: 'number', value: m.share || (sug || null), ph: 'e.g. 20' }],
     async v => {
       if (v.share != null && (v.share < 0 || v.share > 100)) { toast('Share is between 0 and 100'); return false; }
       if (!v.share) { $('#mShare')?.focus(); toast('Write how much of the team’s time this project takes, e.g. 20'); return false; }

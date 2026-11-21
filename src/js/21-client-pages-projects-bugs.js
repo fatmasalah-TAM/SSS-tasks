@@ -206,8 +206,8 @@ function clientWhatsApp(cf, o, l) {
 /* ── Projects: one page per client or internal project, holding its work, bugs, notes and docs ──
    A project is 'client' (work we do for a customer) or 'internal' (something we build for ourselves).
    Everything here is derived from tasks that already exist, so nobody has to keep a second record up to date. */
-const P_TABS0 = [['overview', 'Overview'], ['work', 'Work'], ['bugs', 'Bugs'], ['docs', 'Docs']];
-const pTabs = () => canSeeProjMoney(S.projects.find(p => p.id === S.route.id)) ? [...P_TABS0, ['money', 'Money']] : P_TABS0;
+const P_TABS0 = [['overview', 'Overview'], ['work', 'Work'], ['timeline', 'Timeline'], ['bugs', 'Bugs'], ['docs', 'Docs']];
+const pTabs = () => { const base = officeOnly() ? P_TABS0.filter(([k]) => k !== 'bugs') : P_TABS0; return canSeeProjMoney(S.projects.find(p => p.id === S.route.id)) ? [...base, ['money', 'Money']] : base; };
 const pTab = () => (S.route.v === 'project' && pTabs().some(t => t[0] === S.route.tab) ? S.route.tab : 'overview');
 const pTasks = id => S.tasks.filter(t => t.project_id === id);
 const pKind = p => (p?.kind === 'client' ? 'client' : 'internal');
@@ -226,7 +226,7 @@ function viewProjects() {
   const tools = h('div', { class: 'tools' }, h('button', { class: 'btn pri' + (isPhone() ? ' icon' : ''), 'data-new-project': '1', 'aria-label': 'New project', title: 'New project', onclick: () => openNewProject() }, icon('plus', 16), isPhone() ? null : 'New project'));
   const head = pageHead('Projects', null, tools);
   const card = p => {
-    const ts = pTasks(p.id); const left = ts.filter(t => !isClosed(t)).length; const bugs = ts.filter(t => isBug(t) && !isClosed(t)).length;
+    const ts = pTasks(p.id); const left = ts.filter(t => !isClosed(t)).length; const bugs = officeOnly() ? 0 : ts.filter(t => isBug(t) && !isClosed(t)).length;
     return h('button', { class: 'pjcard', 'data-project': p.id, onclick: () => go({ v: 'project', id: p.id }) },
       h('span', { class: 'swatch', style: { background: p.color } }),
       h('span', { class: 'grow' }, h('b', { text: p.name }), h('span', { class: 'sm mute', text: [pDept(p) === 'hardware' ? 'Hardware' : null, plural(left, 'task') + ' left', bugs ? plural(bugs, 'open bug') : null].filter(Boolean).join(' · ') })),
@@ -244,7 +244,7 @@ function viewProjects() {
 }
 function openNewProject() {
   openSheet({ title: 'New project', kind: 'center', build: sh => {
-    let kind = null; let dept = ['hardware', 'embedded', 'field', 'support', 'hwlead'].includes(myMember()?.department) ? 'hardware' : 'software';
+    let kind = null; let dept = ['hardware', 'embedded', 'field', 'support', 'hwlead'].includes(baseKey(myMember()?.department)) ? 'hardware' : 'software';
     const name = h('input', { type: 'text', id: 'npName', placeholder: 'Name', 'aria-label': 'Project name', style: { width: '100%' } });
     const go_ = h('button', { class: 'btn pri', disabled: true }, 'Create');
     const opt = (k, t, s) => h('button', { class: 'kindopt', 'aria-pressed': 'false', 'data-kind': k, onclick: e => { kind = k; $$('.kindopt', sh).forEach(b => b.setAttribute('aria-pressed', String(b === e.currentTarget))); name.placeholder = k === 'client' ? 'Client name, e.g. Palm Hills' : 'Project name, e.g. ERP Finance'; sync(); name.focus(); } }, h('b', { text: t }), h('span', { class: 'sm mute', text: s }));
@@ -273,10 +273,11 @@ function viewProject() {
   if (tab === 'work') return [pageHead(p.name, null, h('div', { class: 'tools' }, h('button', { class: 'btn pri', onclick: () => openCreate({ preset: { project_id: p.id } }) }, icon('plus', 16), isPhone() ? 'Task' : 'New task')), projectTabs()), h('div', { class: 'scroll' }, h('div', { class: 'pjpage' }, projectWork(p)))];
   const tools = tab === 'money' ? null : h('div', { class: 'tools' },
     tab === 'bugs' ? h('button', { class: 'btn pri', onclick: () => openCreate({ type: 'bug', preset: { project_id: p.id } }) }, icon('plus', 16), 'Report bug')
+      : tab === 'timeline' ? h('button', { class: 'btn pri', onclick: () => openCreate({ preset: { project_id: p.id } }) }, icon('plus', 16), isPhone() ? 'Task' : 'New task')
       : tab === 'docs' ? h('button', { class: 'btn pri', 'data-new-doc': '1', onclick: () => openDoc(p) }, icon('plus', 16), 'New doc')
       : h('button', { class: 'btn icon ghost', 'aria-label': 'Project settings', title: 'Project settings', onclick: e => projectMenu(e.currentTarget, p) }, icon('more')));
   const head = pageHead(p.name, h('span', {}, pKind(p) === 'client' ? 'Client' : 'Our own project', pDept(p) === 'hardware' ? ' · Hardware' : ' · Software', p.about ? ' · ' + p.about : ''), tools, projectTabs());
-  const body = tab === 'bugs' ? projectBugs(p) : tab === 'docs' ? projectDocs(p) : tab === 'money' ? projectMoney(p) : projectOverview(p);
+  const body = tab === 'timeline' ? projectTimeline(p) : tab === 'bugs' ? projectBugs(p) : tab === 'docs' ? projectDocs(p) : tab === 'money' ? projectMoney(p) : projectOverview(p);
   return [head, h('div', { class: 'scroll' }, h('div', { class: 'pjpage' }, body))];
 }
 /* "MG: Fix login" reads "Fix login" inside the MG project */
@@ -305,6 +306,7 @@ function projectMenu(a, p) {
   menu(a, [
     { label: pKind(p) === 'client' ? 'Change to our own project' : 'Change to a client', fn: () => cfgUpsert('projects', Object.assign({}, p, { kind: pKind(p) === 'client' ? 'internal' : 'client' }), 'Project type changed') },
     isAdmin() || canSeeMoney() ? { label: pDept(p) === 'hardware' ? 'Move to Software' : 'Move to Hardware', fn: () => cfgUpsert('projects', Object.assign({}, p, { department: pDept(p) === 'hardware' ? 'software' : 'hardware' }), pDept(p) === 'hardware' ? 'Moved to Software' : 'Moved to Hardware') } : null,
+    { label: isMuted(p.id) ? 'Unmute project updates' : 'Mute project updates', fn: () => toggleMute('project', p.id) },
     { label: 'Rename or delete', icon: 'gear', fn: () => openSettings('items', 'projects') },
   ].filter(Boolean));
 }
@@ -325,7 +327,7 @@ function projectOverview(p) {
   const stops = open.filter(t => t.stopped?.text).sort((a, b) => (b.stopped.at || '').localeCompare(a.stopped.at || '')).slice(0, 6);
   const people = [...new Set(open.map(t => t.assignee_id).filter(Boolean))].map(prof).filter(Boolean);
   return [
-    h('div', { class: 'pjnums' }, num(open.length, open.length === 1 ? 'task left' : 'tasks left', 'work'), num(bugs.length, bugs.length === 1 ? 'open bug' : 'open bugs', 'bugs'), num(done, 'done this week', 'work'), num((p.docs || []).length, (p.docs || []).length === 1 ? 'doc' : 'docs', 'docs')),
+    h('div', { class: 'pjnums' }, num(open.length, open.length === 1 ? 'task left' : 'tasks left', 'work'), officeOnly() ? null : num(bugs.length, bugs.length === 1 ? 'open bug' : 'open bugs', 'bugs'), num(done, 'done this week', 'work'), num((p.docs || []).length, (p.docs || []).length === 1 ? 'doc' : 'docs', 'docs')),
     h('section', {}, h('h2', { text: 'Needs attention' }),
       attn.length ? h('div', { class: 'pjlist' }, attn.slice(0, 8).map(a => h('button', { class: 'pjrow', onclick: () => openTask(a.t.id) },
         h('span', { class: 'lvl ' + a.lvl, text: a.lvl === 'now' ? 'Now' : 'Soon' }), h('span', { class: 'grow' }, h('b', { text: a.t.title }), h('span', { class: 'sm mute', text: `${taskKey(a.t)} · ${a.why}` })))))
@@ -334,7 +336,7 @@ function projectOverview(p) {
       stops.length ? h('div', { class: 'pjlist' }, stops.map(t => h('button', { class: 'pjrow', onclick: () => openTask(t.id) }, avatar(prof(t.stopped.by), { size: 'xs' }),
         h('span', { class: 'grow' }, h('b', { text: t.title }), h('span', { class: 'sm', text: t.stopped.text }), h('span', { class: 'sm mute', text: `${first(prof(t.stopped.by)) || 'Someone'} · ${ago(t.stopped.at)} ago` })))))
         : h('p', { class: 'note', text: 'When someone writes where they stopped on a task, it shows here, so anyone can continue their work.' })),
-    deploysBlock(p),
+    officeOnly() ? null : deploysBlock(p),
     people.length ? h('section', {}, h('h2', { text: 'Working on it' }), h('div', { class: 'pjpeople' }, people.map(m => h('span', { class: 'pjperson' }, avatar(m, { size: 'xs' }), h('span', { text: first(m) }), h('span', { class: 'sm mute', text: String(open.filter(t => t.assignee_id === m.id).length) }))))) : null,
   ];
 }

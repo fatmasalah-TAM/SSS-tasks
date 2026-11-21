@@ -33,43 +33,52 @@ const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = se
 const isPhone = () => matchMedia('(max-width:820px)').matches;
 const isTyping = () => { const a = document.activeElement; if (!a) return false; if (a.tagName === 'INPUT') return !/^(checkbox|radio|button|submit|file|color|range)$/.test(a.type); return /^(TEXTAREA|SELECT)$/.test(a.tagName) || a.isContentEditable; };
 
-/* ── "working on it" overlay: a request that starts right after a tap or Enter (or continues one) and takes
-   over a second shows the animated Ovrto mark in the middle of the page, and holds taps until it's done,
-   so nobody presses twice. Background work (sync, the offline outbox, live updates) never shows it. ── */
-const WAIT = { n: 0, timer: null, el: null, shownAt: 0, gesture: 0, lastEnd: 0, quiet: 0, cap: null };
-['pointerdown', 'keydown'].forEach(ev => addEventListener(ev, e => {
-  if (ev === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
-  if (WAIT.el && e.target && WAIT.el.contains(e.target)) return;
-  WAIT.gesture = Date.now();
-}, true));
+/* ── "working on it" overlay: only a request that starts right after the person presses something (a tap that
+   ends as a click, a switch or picker change, Enter) — or continues that same action — shows the animated Ovrto mark.
+   Scrolling, swiping and background work (sync, the offline outbox, live updates) never show it. It goes away the
+   moment the work is done: no minimum time, so nothing feels slower. ── */
+const WAIT = { n: 0, timer: null, el: null, gesture: 0, lastEnd: 0, quiet: 0, cap: null };
+const markAct = e => { if (WAIT.el && e.target && WAIT.el.contains(e.target)) return; WAIT.gesture = Date.now(); };
+let downAt = null; /* where the press started: a press that moved is a scroll or a drag, not a press */
+addEventListener('pointerdown', e => { downAt = [e.clientX, e.clientY]; }, true);
+addEventListener('click', e => {
+  const moved = downAt && e.detail && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 10; downAt = null;
+  if (!moved) markAct(e);
+}, true);
+addEventListener('change', markAct, true);
+addEventListener('submit', markAct, true);
+addEventListener('keydown', e => { if (e.key === 'Enter') markAct(e); }, true);
 function waitShow() {
   if (WAIT.el) return;
   WAIT.el = h('div', { class: 'wait-ov', role: 'status', 'aria-live': 'polite' },
     h('div', { class: 'wait-card' }, h('div', { class: 'wait-mark loop', 'aria-hidden': 'true', html: ICONS.markAnim }), h('div', { class: 'wait-t', text: 'Working on it…' })));
   ['pointerdown', 'click', 'keydown'].forEach(ev => WAIT.el.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); }));
-  document.body.append(WAIT.el); WAIT.shownAt = Date.now();
-  clearTimeout(WAIT.cap); WAIT.cap = setTimeout(() => { WAIT.n = 0; waitHide(true); }, 60000);
+  document.body.append(WAIT.el);
+  clearTimeout(WAIT.cap); WAIT.cap = setTimeout(() => { WAIT.n = 0; waitHide(); }, 60000);
 }
-function waitHide(now) {
+function waitHide() {
   clearTimeout(WAIT.timer); WAIT.timer = null;
   if (!WAIT.el) return;
-  const el = WAIT.el, wait = now ? 0 : Math.max(0, 350 - (Date.now() - WAIT.shownAt));
-  WAIT.el = null; clearTimeout(WAIT.cap);
-  setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 160); }, wait);
+  const el = WAIT.el; WAIT.el = null; clearTimeout(WAIT.cap);
+  el.classList.add('out'); setTimeout(() => el.remove(), 120);
 }
+/* saves nobody waits for: usage counts, display settings, read marks, live updates */
+const WAIT_SKIP = /\/realtime\/|rpc\/track\b|\/prefs\b|chat_reads\b/;
 function trackedFetch(url, opts) {
   const t = Date.now(), u = String(url && url.url || url);
-  const act = !WAIT.quiet && !/\/realtime\//.test(u) && (t - WAIT.gesture < 800 || WAIT.n > 0 || t - WAIT.lastEnd < 300);
+  const act = !WAIT.quiet && !WAIT_SKIP.test(u) && (t - WAIT.gesture < 600 || WAIT.n > 0 || t - WAIT.lastEnd < 200);
   if (!act) return fetch(url, opts);
   WAIT.n++;
-  if (!WAIT.el && !WAIT.timer) WAIT.timer = setTimeout(() => { WAIT.timer = null; if (WAIT.n > 0) waitShow(); }, 1000);
+  if (!WAIT.el && !WAIT.timer) WAIT.timer = setTimeout(() => { WAIT.timer = null; if (WAIT.n > 0) waitShow(); }, 0);
   const done = () => { WAIT.n = Math.max(0, WAIT.n - 1); WAIT.lastEnd = Date.now(); if (!WAIT.n) waitHide(); };
   return fetch(url, opts).then(r => { done(); return r; }, e => { done(); throw e; });
 }
+/* background work nobody is waiting for: never shows the mark */
+async function quietly(fn) { WAIT.quiet++; try { return await fn(); } finally { WAIT.quiet--; } }
 /* long work the app runs itself (many saves in a row): show the mark after a second too */
 async function withWait(fn) {
   WAIT.n++;
-  if (!WAIT.el && !WAIT.timer) WAIT.timer = setTimeout(() => { WAIT.timer = null; if (WAIT.n > 0) waitShow(); }, 1000);
+  if (!WAIT.el && !WAIT.timer) WAIT.timer = setTimeout(() => { WAIT.timer = null; if (WAIT.n > 0) waitShow(); }, 0);
   try { return await fn(); } finally { WAIT.n = Math.max(0, WAIT.n - 1); WAIT.lastEnd = Date.now(); if (!WAIT.n) waitHide(); }
 }
 const sb = supabase.createClient(CFG.url, CFG.key, { global: { fetch: (u, o) => trackedFetch(u, o) } });
@@ -201,16 +210,16 @@ function errText(e) {
 const isNetErr = e => /Failed to fetch|NetworkError|Load failed|network|fetch/i.test(e?.message || String(e)) || !navigator.onLine;
 
 /* ── data loading ── */
-const WS_TABLES = ['statuses', 'task_types', 'fields', 'routing_rules', 'views', 'projects', 'tasks', 'invites', 'leaves', 'deploys', 'deals'];
-const LOCAL = { statuses: 'statuses', task_types: 'types', fields: 'fields', routing_rules: 'rules', views: 'views', projects: 'projects', tasks: 'tasks', invites: 'invites', leaves: 'leaves', deploys: 'deploys', deals: 'deals' };
-const ORDER = { statuses: 'position', task_types: 'position', fields: 'position', routing_rules: 'position', views: 'position', projects: 'created_at', tasks: 'number', invites: 'created_at', leaves: 'start_date', deploys: 'at', deals: 'created_at' };
+const WS_TABLES = ['statuses', 'task_types', 'fields', 'routing_rules', 'views', 'projects', 'tasks', 'invites', 'leaves', 'deploys', 'deals', 'notif_mutes', 'task_time', 'devices', 'work_orders', 'tickets', 'test_cases', 'test_results', 'incidents', 'approvals', 'stock_items', 'stock_moves'];
+const LOCAL = { statuses: 'statuses', task_types: 'types', fields: 'fields', routing_rules: 'rules', views: 'views', projects: 'projects', tasks: 'tasks', invites: 'invites', leaves: 'leaves', deploys: 'deploys', deals: 'deals', notif_mutes: 'mutes', task_time: 'time', devices: 'devices', work_orders: 'workOrders', tickets: 'tickets', test_cases: 'testCases', test_results: 'testResults', incidents: 'incidents', approvals: 'approvals', stock_items: 'stock', stock_moves: 'stockMoves' };
+const ORDER = { statuses: 'position', task_types: 'position', fields: 'position', routing_rules: 'position', views: 'position', projects: 'created_at', tasks: 'number', invites: 'created_at', leaves: 'start_date', deploys: 'at', deals: 'created_at' , notif_mutes: 'created_at', task_time: 'started_at', devices: 'created_at', work_orders: 'created_at', tickets: 'created_at', test_cases: 'position', test_results: 'tested_at', incidents: 'created_at', approvals: 'created_at', stock_items: 'name', stock_moves: 'created_at' };
 
 async function loadTable(t) {
   if (!S.ws) return;
   const ws = S.ws.id;
   const { data, error } = await sb.from(t).select('*').eq('workspace_id', ws).order(ORDER[t], { ascending: true });
   if (S.ws?.id !== ws) return; // switched workspace while this was loading
-  if (error) { if (t === 'invites' || t === 'leaves' || t === 'deploys' || t === 'deals') S[LOCAL[t]] = []; return; }
+  if (error) { if (['invites', 'leaves', 'deploys', 'deals', 'notif_mutes', 'task_time', 'devices', 'work_orders', 'tickets', 'test_cases', 'test_results', 'incidents', 'approvals', 'stock_items', 'stock_moves'].includes(t)) S[LOCAL[t]] = []; return; }
   S[LOCAL[t]] = data || [];
 }
 async function loadMembers() {
@@ -227,7 +236,7 @@ async function loadNotifs() {
   const ws = S.ws?.id;
   const { data, error } = await sb.from('notifications').select('*').eq('user_id', uid()).order('created_at', { ascending: false }).limit(300);
   if (S.ws?.id !== ws) return;
-  if (!error && data) S.notifs = data.filter(n => !n.workspace_id || n.workspace_id === S.ws?.id);
+  if (!error && data) S.notifs = data.filter(n => n.kind !== 'digest' && (!n.workspace_id || n.workspace_id === S.ws?.id)); // the quiet-hours summary is only an alert
 }
 async function loadWorkspaces() {
   const { data } = await sb.from('workspaces').select('*').order('created_at', { ascending: true });
@@ -245,7 +254,7 @@ async function loadAll() {
   const ws = S.ws?.id;
   await Promise.all([loadMembers(), ...WS_TABLES.map(loadTable), loadNotifs(), loadChat()]);
   if (S.ws?.id !== ws) return;
-  S.loaded = true; snapshot();
+  S.loaded = true; snapshot(); ensureDeptTypes();
 }
 const snapshot = debounce(() => {
   if (!S.ws) return;
@@ -259,13 +268,10 @@ function restoreSnapshot(wsId) {
 /* ── writes with offline outbox ── */
 function persistOutbox() { store.set('outbox', S.outbox); renderPill(); }
 async function exec(op) {
-  WAIT.quiet++; try { return await execNow(op); } finally { WAIT.quiet--; }
-}
-async function execNow(op) {
   let q = sb.from(op.t);
   if (op.op === 'insert') q = q.insert(op.row).select().single();
   else if (op.op === 'upsert') q = q.upsert(op.row).select();
-  else if (op.op === 'update') q = q.update(op.patch).eq(op.key || 'id', op.id).select();
+  else if (op.op === 'update') { q = q.update(op.patch).eq(op.key || 'id', op.id); if (op.extraEq) q = q.eq(op.extraEq[0], op.extraEq[1]); q = q.select(); }
   else if (op.op === 'delete') q = q.delete().eq(op.key || 'id', op.id);
   return await q;
 }
@@ -292,7 +298,7 @@ async function flushOutbox() {
   while (S.outbox.length && navigator.onLine) {
     const op = S.outbox[0];
     try {
-      const r = await exec(op);
+      WAIT.quiet++; let r; try { r = await exec(op); } finally { WAIT.quiet--; }
       if (r.error && isNetErr(r.error)) break;
       if (r.error && !(op.op === 'insert' && /duplicate key/i.test(r.error.message || ''))) failed++; else saved++;
       S.outbox.shift(); persistOutbox();
@@ -329,13 +335,25 @@ async function patchTask(id, patch, opts = {}) {
   const fixedForClient = 'status_id' in patch && t.client_report?.phone && catOf(t) === 'done' && stOf(prev.status_id)?.category !== 'done';
   // a client reported it: once it is done, offer to tell them on WhatsApp (after the caller's own toast, so its Undo stays)
   if (fixedForClient) setTimeout(() => toast(`${taskKey(t)} is done. Tell ${String(t.client_report.name || 'the client').split(' ')[0]} on WhatsApp?`, { label: 'WhatsApp', fn: () => clientFixedWhatsApp(taskOf(id) || t) }, 12000, true), 60);
+  if ('status_id' in patch && typeof syncTicketClosed === 'function') syncTicketClosed(t);
   if (opts.toast) toast(opts.toast, opts.noUndo ? null : { label: 'Undo', fn: () => patchTask(id, prev) });
   return true;
 }
 /* software teams talk about developers and sprints; agencies and other teams just have an owner */
 function softwareTeam() { return !['agency', 'general'].includes(S.ws?.template); }
-function devWord() { return softwareTeam() ? ', developer ' : ', assigned to '; }
-function usesSprints() { return softwareTeam(); }
+function devWord() { return softwareTeam() && !plainOnly() ? ', developer ' : ', assigned to '; }
+function usesSprints() { return softwareTeam() && !plainOnly(); }
+const BASIC_TYPES = [['task', 'Task', '#1F55B8', 'dot', ['Details']], ['followup', 'Follow-up', '#0E6A6E', 'arrow', ['Who and what']], ['issue', 'Problem', '#B42318', 'bug', ['What happened', 'Where']]];
+let typesEnsured = false;
+async function ensureDeptTypes() {
+  if (typesEnsured || !isAdmin() || !S.ws || !S.types.length || !softwareTeam()) return; typesEnsured = true; // a software company's office teams need plain types too
+  const st = S.statuses.find(s => s.key === 'todo') || defaultStatus(); let pos = Math.max(0, ...S.types.map(t => t.position || 0));
+  for (const [key, name, color, ic, template] of BASIC_TYPES) {
+    if (S.types.some(t => t.key === key)) continue;
+    const row = { id: uuid(), workspace_id: S.ws.id, key, name, color, icon: ic, template, default_status: st?.id || null, auto_route: false, is_bug: false, position: ++pos };
+    const r = await write({ t: 'task_types', op: 'insert', row }); if (!r?.error) S.types.push(row);
+  }
+}
 async function createTask(row, opts = {}) {
   row = Object.assign({ id: uuid(), workspace_id: S.ws.id, title: '', description: '', priority: 0, flags: [], fields: {}, checklist: [], gate_checks: [], created_by: uid(), created_at: nowIso(), updated_at: nowIso(), sendbacks: 0 }, row);
   if (!row.status_id) row.status_id = tyOf(row.type_id)?.default_status || defaultStatus()?.id;

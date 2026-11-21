@@ -16,6 +16,13 @@ const BUILTIN = {
   company: { name: 'Company', icon: 'company', special: 'company' },
   home: { name: 'Home', icon: 'turn', special: 'home' },
   deals: { name: 'Deals', icon: 'deal', special: 'deals' },
+  devices: { name: 'Devices', icon: 'wifi', special: 'devices' },
+  visits: { name: 'Site visits', icon: 'calendar', special: 'visits' },
+  tickets: { name: 'Tickets', icon: 'headset', special: 'tickets' },
+  tests: { name: 'Test library', icon: 'review', special: 'tests' },
+  incidents: { name: 'Incidents', icon: 'bell', special: 'incidents' },
+  approvals: { name: 'Approvals', icon: 'check', special: 'approvals' },
+  stock: { name: 'Stock', icon: 'folder', special: 'stock' },
   all: { name: 'All tasks', icon: 'all', config: () => ({ filters: [], group: 'status', sort: 'priority', layout: S.prefs?.layout || 'board', columns: DEFAULT_COLS }) },
 };
 const DEFAULT_COLS = ['key', 'title', 'type', 'status', 'developer', 'priority', 'turn', 'due'];
@@ -48,7 +55,7 @@ function filterFields() {
   const list = [
     { k: 'type', n: 'Type' }, { k: 'kind', n: 'Kind' }, { k: 'status', n: 'Status' }, { k: 'category', n: 'Status group' },
     { k: 'developer', n: 'Developer' }, { k: 'reviewer', n: 'Reviewer' }, { k: 'turn', n: 'Whose turn' }, { k: 'priority', n: 'Priority' },
-    { k: 'project', n: 'Project' }, { k: 'sprint', n: 'Sprint' }, { k: 'flag', n: 'Flag' }, { k: 'due', n: 'Due date' }, { k: 'closed', n: 'Open or closed' }, { k: 'finished', n: 'Finished' },
+    { k: 'project', n: 'Project' }, { k: 'sprint', n: 'Sprint' }, { k: 'flag', n: 'Flag' }, { k: 'due', n: 'Due date' }, { k: 'closed', n: 'Open or closed' },
   ];
   for (const f of S.fields) list.push({ k: 'f:' + f.id, n: f.name, field: f });
   return list;
@@ -67,7 +74,6 @@ function filterOptions(k) {
   if (k === 'flag') return FLAGS.map(f => ({ v: f.k, label: f.n }));
   if (k === 'due') return [{ v: 'overdue', label: 'Overdue' }, { v: 'week', label: 'Due this week' }, { v: 'set', label: 'Has a due date' }, { v: '__none', label: 'No due date' }];
   if (k === 'closed') return [{ v: 'closed', label: 'Done or canceled' }];
-  if (k === 'finished') return [7, 14, 30, 90].map(n => ({ v: String(n), label: `Last ${n} days` }));
   if (k.startsWith('f:')) {
     const f = fdOf(k.slice(2)); if (!f) return [];
     if (f.kind === 'select' || f.kind === 'multi') return [...f.options.map(o => ({ v: o.id, label: o.label })), { v: '__none', label: 'Empty' }];
@@ -93,7 +99,6 @@ function valuesOf(t, k) {
     case 'sprint': { const c = sprintOf(); const out = [t.sprint ?? '__none']; if (t.sprint === c) out.push('current'); if (t.sprint === c + 1) out.push('next'); if (t.sprint === c - 1) out.push('previous'); return out; }
     case 'flag': return t.flags || [];
     case 'closed': return isClosed(t) ? ['closed'] : ['open'];
-    case 'finished': { if (!t.completed_at || !isClosed(t)) return []; const d = (Date.now() - new Date(t.completed_at).getTime()) / 864e5; return [7, 14, 30, 90].filter(n => d <= n).map(String); }
     case 'due': { const d = dueInfo(t); if (!d) return ['__none']; const out = ['set']; if (d.over) out.push('overdue'); const days = (new Date(t.due_date + 'T00:00:00') - new Date()) / 864e5; if (days < 7 && days > -1) out.push('week'); return out; }
   }
   if (k.startsWith('f:')) {
@@ -121,8 +126,8 @@ let searchQ = '';
 function visibleTasks(cfg = vc()) {
   const q = searchQ.trim().toLowerCase();
   const pj = S.route.v === 'project' ? S.route.id : null; // a project page shows only its own tasks, without a filter chip
-  const fo = deptFocus();
-  return S.tasks.filter(t => (!pj || t.project_id === pj) && (!fo || fo.test(t)) && matches(t, cfg.filters || []) && (!q || `${taskKey(t)} ${t.title} ${t.description}`.toLowerCase().includes(q)));
+  const fo = deptFocus(); const noBugs = officeOnly() && ['clients', 'project'].includes(S.route.v);
+  return S.tasks.filter(t => (!pj || t.project_id === pj) && (!fo || fo.test(t)) && (!noBugs || !isBug(t)) && matches(t, cfg.filters || []) && (!q || `${taskKey(t)} ${t.title} ${t.description}`.toLowerCase().includes(q)));
 }
 const SORTS = {
   priority: (a, b) => ((a.priority || 9) - (b.priority || 9)) || (b.updated_at || '').localeCompare(a.updated_at || ''),

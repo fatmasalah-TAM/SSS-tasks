@@ -10,7 +10,7 @@ function waitsBlock(t) {
     ws.length ? h('div', { class: 'waits' }, ws.map(w => h('div', { class: 'wait' }, avatar(prof(w.user), { size: 'xs' }),
       h('span', { class: 'grow' }, h('b', { text: first(prof(w.user)) || 'Someone' }), h('span', { class: 'sm', text: w.what }), h('span', { class: 'sm mute', text: `asked by ${w.by === uid() ? 'you' : first(prof(w.by)) || 'someone'} · ${ago(w.at)} ago` })),
       canEdit && (w.user === uid() || w.by === uid() || t.assignee_id === uid() || isAdmin()) ? h('button', { class: 'btn sm', onclick: () => clearWait(t, w) }, icon('check', 14), w.user === uid() ? 'Done, I gave it' : 'Got it') : null)))
-      : h('p', { class: 'sm mute', style: { margin: '0 0 8px' }, text: 'Waiting for an API, a design, an answer? Say who, and it lands in their My turn.' }),
+      : h('p', { class: 'sm mute', style: { margin: '0 0 8px' }, text: plainOnly() ? 'Waiting for a document, a signature or an answer? Say who, and it lands in their My turn.' : 'Waiting for an API, a design, an answer? Say who, and it lands in their My turn.' }),
     add);
 }
 function addWait(anchor, t) {

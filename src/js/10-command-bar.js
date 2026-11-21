@@ -1,4 +1,9 @@
 /* ═════════════ command bar ═════════════ */
+/* search stays quick with thousands of tasks: each task's searchable text is prepared once (until it changes),
+   and only the few best matches are sorted */
+const SEARCH_IDX = new Map();
+const idx = t => { const v = t.updated_at + '|' + t.title; let x = SEARCH_IDX.get(t.id); if (!x || x.v !== v) { x = { v, k: `${taskKey(t)} ${t.title}`.toLowerCase(), d: norm(t.description || '') }; SEARCH_IDX.set(t.id, x); } return x; };
+function topN(arr, cmp, n) { const out = []; for (const x of arr) { if (out.length < n) { out.push(x); out.sort(cmp); } else if (cmp(x, out[n - 1]) < 0) { out[n - 1] = x; out.sort(cmp); } } return out; }
 const cmdk = (() => {
   let el = null;
   function open() {
@@ -25,7 +30,7 @@ const cmdk = (() => {
       ];
       // everything here was already limited by the server to what this person may see; admin-only places are left out below
       const nq = norm(q); const has = s => nq && norm(s).includes(nq);
-      const tasks = S.tasks.filter(t => !q || `${taskKey(t)} ${t.title}`.toLowerCase().includes(q) || (q.length > 2 && has(t.description))).sort(SORTS.updated).slice(0, q ? 8 : 5);
+      const tasks = topN(S.tasks.filter(t => { if (!q) return true; const x = idx(t); return x.k.includes(q) || (q.length > 2 && !!nq && x.d.includes(nq)); }), SORTS.updated, q ? 8 : 5);
       const more = [];
       if (q) {
         for (const p of S.projects.filter(p => has(p.name)).slice(0, 4)) more.push({ g: 'Projects', label: p.name, sub: pKind(p) === 'client' ? 'Client' : 'Our own', ic: 'folder', fn: () => go({ v: 'project', id: p.id }) });
