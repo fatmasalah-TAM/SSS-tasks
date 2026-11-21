@@ -39,7 +39,7 @@ nav .sp{flex:1}
 .btn.ghost{border-color:transparent}
 .btn:focus-visible,.lang:focus-visible{outline:2px solid var(--cobalt);outline-offset:2px}
 .lang{font:600 14px var(--ar);background:none;border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:6px 12px;cursor:pointer;min-height:36px}
-@media (max-width:560px){nav .ghost{display:none}}
+@media (max-width:560px){nav .in{gap:6px}nav .btn{padding-inline:10px;font-size:14px}nav .lang{padding-inline:8px;font-size:13px}nav .wm svg{width:84px}}
 
 .hero{padding-block:56px 40px;overflow-x:hidden;overflow-x:clip}
 .hero .in{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:40px;align-items:center}
@@ -103,8 +103,8 @@ html[dir="rtl"] .arrow span{display:inline-block;transform:scaleX(-1)}
 .turn{display:inline-flex;gap:6px;align-items:center;font-size:13px;font-weight:600;margin-top:12px;padding:4px 10px;border-radius:999px;background:var(--soft);color:var(--cobalt)}
 
 /* pricing */
-.plans{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
-@media (max-width:860px){.plans{grid-template-columns:minmax(0,1fr)}}
+.plans{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+@media (max-width:1100px){.plans{grid-template-columns:repeat(2,minmax(0,1fr))}}@media (max-width:620px){.plans{grid-template-columns:minmax(0,1fr)}}
 .plan{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:24px;display:flex;flex-direction:column;gap:10px}
 .plan.hot{border:2px solid var(--cobalt)}
 .plan h3{margin:0;font-size:19px}
@@ -226,13 +226,16 @@ footer .in{display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-conte
     <h2 id="p-h"><span lang="ar">ابدأ ببلاش. وادفع لما فريقك يكبر.</span><span lang="en">Start free. Pay when your team grows.</span></h2>
     <div class="beta"><span lang="ar">الفترة التجريبية: كل الخطط مجانية للفرق الأولى اللي هتنضم دلوقتي.</span><span lang="en">Early access: every plan is free for the first teams that join now.</span></div>
     <div class="plans">
-      <div class="plan"><h3><span lang="ar">مجاني</span><span lang="en">Free</span></h3><div class="p">$0</div><div class="eg"><span lang="ar">لحد 5 أعضاء</span><span lang="en">Up to 5 members</span></div>
-        <ul><li><span lang="ar">مهام ومراجعة بلا حد</span><span lang="en">Unlimited tasks and reviews</span></li><li><span lang="ar">شات آخر 90 يوم</span><span lang="en">90 days of chat</span></li><li><span lang="ar">20 مهمة بالذكاء الاصطناعي في الشهر</span><span lang="en">20 AI-written tasks a month</span></li><li><span lang="ar">صفحة لعميل واحد</span><span lang="en">One client page</span></li></ul></div>
-      <div class="plan hot"><h3>Pro</h3><div class="p">$7 <small><span lang="ar">للفرد في الشهر</span><span lang="en">per member / month</span></small></div><div class="eg"><span lang="ar">في مصر: 149 ج.م · دفع سنوي</span><span lang="en">Billed yearly · Egypt: EGP 149</span></div>
-        <ul><li><span lang="ar">أعضاء بلا حد وشات كامل</span><span lang="en">Unlimited members and chat history</span></li><li><span lang="ar">مكالمات جوه التطبيق</span><span lang="en">In-app huddles</span></li><li><span lang="ar">صفحات لكل العملاء وInsights</span><span lang="en">All client pages and Insights</span></li><li><span lang="ar">ذكاء اصطناعي من غير مفتاح</span><span lang="en">AI with no key to set up</span></li></ul></div>
-      <div class="plan"><h3>Business</h3><div class="p">$14 <small><span lang="ar">للفرد في الشهر</span><span lang="en">per member / month</span></small></div><div class="eg"><span lang="ar">في مصر: 299 ج.م · دفع سنوي</span><span lang="en">Billed yearly · Egypt: EGP 299</span></div>
-        <ul><li><span lang="ar">أكتر من مساحة عمل</span><span lang="en">Multiple workspaces</span></li><li><span lang="ar">صلاحيات أدق وسجل التعديلات</span><span lang="en">Finer permissions and an audit log</span></li><li><span lang="ar">دعم أسرع</span><span lang="en">Faster support</span></li></ul></div>
+      <div class="plan"><h3><span lang="ar">مجاني</span><span lang="en">Free</span></h3><div class="p">$0</div><div class="eg"><span lang="ar">لحد 3 أشخاص</span><span lang="en">Up to 3 people</span></div>
+        <ul><li><span lang="ar">المهام ودور مين والمراجعة</span><span lang="en">Tasks, whose turn and review</span></li><li><span lang="ar">الشات والعربي والموبايل</span><span lang="en">Chat, Arabic and the phone app</span></li><li><span lang="ar">مشروعين</span><span lang="en">2 projects</span></li><li><span lang="ar">20 مسودة AI في الشهر</span><span lang="en">20 AI drafts a month</span></li></ul></div>
+      <div class="plan hot"><h3>Team</h3><div class="p">$7 <small><span lang="ar">للفرد في الشهر</span><span lang="en">per person / month</span></small></div><div class="eg"><span lang="ar">سنوي · $9 شهري · في مصر: 199 ج.م سنوي · 249 شهري</span><span lang="en">Billed yearly · $9 monthly · Egypt: EGP 199 yearly · 249 monthly</span></div>
+        <ul><li><span lang="ar">مشاريع بلا حد</span><span lang="en">Unlimited projects</span></li><li><span lang="ar">22 قسم وأقسام شركتك</span><span lang="en">22 departments and your own</span></li><li><span lang="ar">مساعدين AI لكل قسم</span><span lang="en">AI helpers for every department</span></li><li><span lang="ar">تتبع الوقت والـ timeline والمكالمات</span><span lang="en">Time tracking, timeline and huddles</span></li></ul></div>
+      <div class="plan"><h3>Business</h3><div class="p">$13 <small><span lang="ar">للفرد في الشهر</span><span lang="en">per person / month</span></small></div><div class="eg"><span lang="ar">سنوي · $16 شهري · في مصر: 379 ج.م سنوي · 469 شهري</span><span lang="en">Billed yearly · $16 monthly · Egypt: EGP 379 yearly · 469 monthly</span></div>
+        <ul><li><span lang="ar">فلوس المشاريع وصفحة الشركة</span><span lang="en">Project money and the company page</span></li><li><span lang="ar">الصفقات والـ pre-sales</span><span lang="en">Deals and pre-sales</span></li><li><span lang="ar">الشغل الميداني وتذاكر العملاء</span><span lang="en">Field work and client tickets</span></li><li><span lang="ar">الموافقات والمخزون</span><span lang="en">Approvals and stock</span></li></ul></div>
+      <div class="plan"><h3>Enterprise</h3><div class="p"><span lang="ar">بالاتفاق</span><span lang="en">Custom</span></div><div class="eg"><span lang="ar">من 50 شخص</span><span lang="en">From 50 people</span></div>
+        <ul><li><span lang="ar">سيرفرات في الخليج عند الطلب</span><span lang="en">Gulf data hosting on request</span></li><li><span lang="ar">دخول موحّد (SSO)</span><span lang="en">Single sign-on (SSO)</span></li><li><span lang="ar">إعداد وتدريب</span><span lang="en">Setup and training</span></li><li><span lang="ar">عقد وفاتورة</span><span lang="en">Contract and invoice</span></li></ul></div>
     </div>
+    <p class="eg" style="text-align:center;margin-top:12px"><span lang="ar">بتدفع على كل شخص لوحده، من غير حد أدنى. الـ AI داخل في السعر.</span><span lang="en">Pay per person, no seat minimum. AI is included.</span></p>
   </div>
 </section>
 
