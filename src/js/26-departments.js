@@ -4,27 +4,27 @@
    and which pages sit at the top of More. An admin picks it in the invite; if nobody did, Ovrto asks on first sign-in.
    areas: words matched against the options of the workspace's Area field. */
 const BASE_DEPTS = [
-  { k: 'backend', g: 'Software', l: 'Backend development', home: 'home', areas: ['backend', 'api', 'server', 'database'], pins: ['work', 'bugs', 'vault'], hide: ['deals', 'clients', 'company'], types: ['feature', 'bug', 'improvement', 'chore', 'task'] },
-  { k: 'frontend', g: 'Software', l: 'Frontend / web', home: 'home', areas: ['dashboard', 'portal', 'web', 'frontend', 'website'], pins: ['work', 'bugs', 'vault'], hide: ['deals', 'clients', 'company'], types: ['feature', 'bug', 'improvement', 'chore', 'task'] },
-  { k: 'mobile', g: 'Software', l: 'Mobile apps', home: 'home', areas: ['mobile', 'app', 'ios', 'android'], pins: ['work', 'bugs', 'vault'], hide: ['deals', 'clients', 'company'], types: ['feature', 'bug', 'improvement', 'chore', 'task'] },
-  { k: 'qa', g: 'Software', l: 'QA / testing', home: 'home', areas: [], pins: ['review', 'tests', 'bugs', 'projects', 'vault'], hide: ['deals', 'company', 'clients', 'sprint'], types: ['testrun', 'testcase', 'bug', 'task'] },
-  { k: 'design', g: 'Software', l: 'UI / UX design', home: 'myturn', areas: ['design', 'ui', 'ux'], pins: ['work', 'projects'], hide: ['bugs', 'vault', 'deals', 'company'], types: ['task', 'feature', 'improvement'] },
-  { k: 'devops', g: 'Software', l: 'DevOps / infrastructure', home: 'home', areas: ['devops', 'infra', 'server', 'security', 'cloud'], pins: ['incidents', 'work', 'bugs', 'vault'], hide: ['deals', 'clients', 'company'], types: ['chore', 'bug', 'task', 'improvement'] },
-  { k: 'data', g: 'Software', l: 'Data / AI', home: 'home', areas: ['data', 'ai', 'analytics', 'report'], pins: ['work', 'insights'], hide: ['deals', 'vault', 'company'], types: ['task', 'feature', 'improvement'] },
-  { k: 'hardware', g: 'Hardware', l: 'Hardware engineering', home: 'myturn', areas: ['gates', 'hardware', 'device', 'signage', 'parking'], pins: ['work', 'bugs', 'projects'], hide: ['sprint', 'deals', 'company'], types: ['task', 'bug', 'issue', 'chore'] },
-  { k: 'embedded', g: 'Hardware', l: 'Embedded / firmware', home: 'home', areas: ['gates', 'firmware', 'embedded', 'device'], pins: ['work', 'bugs', 'vault'], hide: ['deals', 'clients', 'company'], types: ['task', 'bug', 'improvement', 'chore'] },
-  { k: 'hwlead', g: 'Hardware', l: 'Head of hardware / CTO', home: 'company', areas: ['gates', 'hardware', 'device', 'firmware', 'installation'], pins: ['company', 'visits', 'devices', 'projects', 'work'], hide: ['sprint', 'all'], types: ['task', 'issue', 'survey', 'bug'] },
-  { k: 'field', g: 'Hardware', l: 'Installation & field', home: 'myturn', areas: ['gates', 'installation', 'site', 'field'], pins: ['visits', 'devices', 'work', 'vault'], hide: ['sprint', 'review', 'insights', 'all', 'deals', 'company'], types: ['task', 'survey', 'issue', 'followup'] },
-  { k: 'support', g: 'Hardware', l: 'Technical support', home: 'bugs', areas: [], pins: ['tickets', 'bugs', 'devices'], hide: ['sprint', 'deals', 'company'], types: ['bug', 'issue', 'followup', 'task'] },
-  { k: 'product', g: 'Business', l: 'Product / PM', home: 'home', areas: [], pins: ['company', 'projects', 'insights', 'clients'], hide: ['vault'], types: ['feature', 'brd', 'improvement', 'bug', 'task'] },
-  { k: 'pm', g: 'Business', l: 'Project management', home: 'home', areas: [], pins: ['projects', 'clients', 'insights'], hide: ['bugs', 'vault'], types: ['task', 'followup', 'brd', 'issue'] },
+  { k: 'backend', g: 'Software', l: 'Backend development', home: 'home', areas: ['backend', 'api', 'server', 'database'], pins: ['work', 'bugs', 'vault'], hide: ['deals', 'clients', 'company', 'all'], types: ['feature', 'bug', 'improvement', 'chore', 'task'] },
+  { k: 'frontend', g: 'Software', l: 'Frontend / web', home: 'home', areas: ['dashboard', 'portal', 'web', 'frontend', 'website'], pins: ['work', 'bugs', 'vault'], hide: ['deals', 'clients', 'company', 'all'], types: ['feature', 'bug', 'improvement', 'chore', 'task'] },
+  { k: 'mobile', g: 'Software', l: 'Mobile apps', home: 'home', areas: ['mobile', 'app', 'ios', 'android'], pins: ['work', 'bugs', 'vault'], hide: ['deals', 'clients', 'company', 'all'], types: ['feature', 'bug', 'improvement', 'chore', 'task'] },
+  { k: 'qa', g: 'Software', l: 'QA / testing', home: 'home', areas: [], pins: ['review', 'tests', 'bugs', 'projects', 'vault'], hide: ['deals', 'company', 'clients', 'sprint', 'all'], types: ['testrun', 'testcase', 'bug', 'task'] },
+  { k: 'design', g: 'Software', l: 'UI / UX design', home: 'myturn', areas: ['design', 'ui', 'ux'], pins: ['work', 'projects'], hide: ['bugs', 'vault', 'deals', 'company', 'clients', 'all'], types: ['task', 'feature', 'improvement'] },
+  { k: 'devops', g: 'Software', l: 'DevOps / infrastructure', home: 'home', areas: ['devops', 'infra', 'server', 'security', 'cloud'], pins: ['incidents', 'work', 'bugs', 'vault'], hide: ['deals', 'clients', 'company', 'all'], types: ['chore', 'bug', 'task', 'improvement'] },
+  { k: 'data', g: 'Software', l: 'Data / AI', home: 'home', areas: ['data', 'ai', 'analytics', 'report'], pins: ['work', 'insights'], hide: ['deals', 'vault', 'company', 'bugs', 'clients', 'all'], types: ['task', 'feature', 'improvement'] },
+  { k: 'hardware', g: 'Hardware', l: 'Hardware engineering', home: 'myturn', areas: ['gates', 'hardware', 'device', 'signage', 'parking'], pins: ['work', 'bugs', 'projects'], hide: ['sprint', 'deals', 'company', 'clients', 'vault', 'all'], types: ['task', 'bug', 'issue', 'chore'] },
+  { k: 'embedded', g: 'Hardware', l: 'Embedded / firmware', home: 'home', areas: ['gates', 'firmware', 'embedded', 'device'], pins: ['work', 'bugs', 'vault'], hide: ['deals', 'clients', 'company', 'sprint', 'all'], types: ['task', 'bug', 'improvement', 'chore'] },
+  { k: 'hwlead', g: 'Hardware', l: 'Head of hardware / CTO', home: 'company', areas: ['gates', 'hardware', 'device', 'firmware', 'installation'], pins: ['company', 'visits', 'devices', 'projects', 'work'], hide: ['sprint', 'all', 'review'], types: ['task', 'issue', 'survey', 'bug'] },
+  { k: 'field', g: 'Hardware', l: 'Installation & field', home: 'myturn', areas: ['gates', 'installation', 'site', 'field'], pins: ['visits', 'devices', 'work', 'vault'], hide: ['sprint', 'review', 'insights', 'all', 'deals', 'company', 'bugs', 'clients', 'projects'], types: ['task', 'survey', 'issue', 'followup'] },
+  { k: 'support', g: 'Hardware', l: 'Technical support', home: 'bugs', areas: [], pins: ['tickets', 'bugs', 'devices'], hide: ['sprint', 'deals', 'company', 'review', 'all'], types: ['bug', 'issue', 'followup', 'task'] },
+  { k: 'product', g: 'Business', l: 'Product / PM', home: 'home', areas: [], pins: ['company', 'projects', 'insights', 'clients'], hide: ['vault', 'all'], types: ['feature', 'brd', 'improvement', 'bug', 'task'] },
+  { k: 'pm', g: 'Business', l: 'Project management', home: 'home', areas: [], pins: ['projects', 'clients', 'insights'], hide: ['bugs', 'vault', 'sprint', 'all'], types: ['task', 'followup', 'brd', 'issue'] },
   { k: 'management', g: 'Business', l: 'Management', home: 'company', areas: [], pins: ['company', 'projects', 'insights', 'approvals'], hide: ['sprint', 'bugs', 'review', 'vault', 'all'], types: ['task', 'followup', 'issue'] },
   { k: 'sales', g: 'Business', l: 'Sales', home: 'deals', areas: [], pins: ['deals', 'clients', 'projects'], hide: ['bugs', 'sprint', 'review', 'vault', 'company'], types: ['followup', 'task', 'demo'] },
-  { k: 'presales', g: 'Business', l: 'Pre-sales', home: 'home', areas: [], pins: ['deals', 'projects', 'clients'], hide: ['sprint', 'bugs', 'company'], types: ['proposal', 'demo', 'survey', 'followup'] },
-  { k: 'success', g: 'Business', l: 'Customer success / accounts', home: 'myturn', areas: [], pins: ['clients', 'bugs', 'projects'], hide: ['sprint', 'review', 'company'], types: ['followup', 'issue', 'bug', 'task'] },
+  { k: 'presales', g: 'Business', l: 'Pre-sales', home: 'home', areas: [], pins: ['deals', 'projects', 'clients'], hide: ['sprint', 'bugs', 'company', 'review', 'vault', 'all'], types: ['proposal', 'demo', 'survey', 'followup'] },
+  { k: 'success', g: 'Business', l: 'Customer success / accounts', home: 'myturn', areas: [], pins: ['clients', 'bugs', 'projects'], hide: ['sprint', 'review', 'company', 'vault', 'all'], types: ['followup', 'issue', 'bug', 'task'] },
   { k: 'marketing', g: 'Business', l: 'Marketing', home: 'myturn', areas: [], pins: ['projects', 'work'], hide: ['bugs', 'sprint', 'review', 'vault', 'clients', 'deals'], types: ['task', 'followup'] },
   { k: 'finance', g: 'Business', l: 'Finance & accounts', home: 'company', areas: [], pins: ['company', 'approvals', 'projects', 'work'], hide: ['bugs', 'sprint', 'review', 'vault', 'clients'], types: ['task', 'followup', 'issue'] },
-  { k: 'operations', g: 'Business', l: 'Operations & procurement', home: 'myturn', areas: [], pins: ['approvals', 'stock', 'projects', 'work'], hide: ['bugs', 'sprint', 'review', 'deals', 'company'], types: ['task', 'followup', 'issue'] },
+  { k: 'operations', g: 'Business', l: 'Operations & procurement', home: 'myturn', areas: [], pins: ['approvals', 'stock', 'projects', 'work'], hide: ['bugs', 'sprint', 'review', 'deals', 'company', 'clients', 'vault'], types: ['task', 'followup', 'issue'] },
   { k: 'hr', g: 'Business', l: 'HR & admin', home: 'myturn', areas: [], pins: ['approvals', 'work', 'projects'], hide: ['bugs', 'sprint', 'review', 'clients', 'deals', 'vault'], types: ['task', 'followup', 'issue'] },
 ];
 /* each company sets its departments: which built-in ones it uses, their names, its own extra ones (each works like a
@@ -49,9 +49,14 @@ const extrasOf = m => (m?.extra_departments || []).filter(k => k !== m?.departme
 const myDepts = () => { const m = myMember(); return [m?.department, ...extrasOf(m)].map(deptOf).filter(Boolean); };
 /* HR, finance, operations, marketing and sales (admins still see everything): plain work, no bugs, sprints, areas or developers */
 const OFFICE = ['hr', 'finance', 'operations', 'marketing', 'sales'];
-const officeOnly = () => { const ds = myDepts(); return !isAdmin() && !!ds.length && !smallTeam() && ds.every(d => OFFICE.includes(baseKey(d.k))); };
+/* the plain view follows the main job; extra jobs on the business side (pre-sales, management, success…) keep it, an engineering extra job ends it */
+const businessOnly = ds => ds.every(d => (BASE_DEPTS.find(b => b.k === baseKey(d.k)) || {}).g === 'Business');
+const officeOnly = () => { const ds = myDepts(); return !isAdmin() && !!ds.length && !smallTeam() && OFFICE.includes(baseKey(ds[0].k)) && businessOnly(ds); };
+/* engineers: someone with a software or hardware job (or no department yet) */
+const techPerson = () => { const ds = myDepts(); return !ds.length || smallTeam() || isAdmin() || ds.some(d => ['Software', 'Hardware'].includes((BASE_DEPTS.find(b => b.k === baseKey(d.k)) || {}).g)); };
+const softwarePerson = () => { const ds = myDepts(); return !ds.length || smallTeam() || isAdmin() || ds.some(d => (BASE_DEPTS.find(b => b.k === baseKey(d.k)) || {}).g === 'Software' || ['pm', 'product'].includes(baseKey(d.k))); };
 /* plus management: plain words (no developer, sprint or area) while still seeing the whole company's work */
-const plainOnly = () => { const ds = myDepts(); return !isAdmin() && !!ds.length && !smallTeam() && ds.every(d => [...OFFICE, 'management'].includes(baseKey(d.k))); };
+const plainOnly = () => { const ds = myDepts(); return !isAdmin() && !!ds.length && !smallTeam() && [...OFFICE, 'management'].includes(baseKey(ds[0].k)) && businessOnly(ds); };
 const deptPeople = () => { const ks = myDepts().map(d => baseKey(d.k)); return new Set(S.members.filter(m => inDept(m, ...ks)).map(m => m.user_id)); };
 const inDept = (m, ...ks) => !!m && (ks.includes(baseKey(m.department)) || extrasOf(m).some(k => ks.includes(baseKey(k))));
 const deptLabel = m => { const d = deptOf(m?.department); const n = extrasOf(m).length; return d ? d.l + (n ? ` +${n}` : '') : null; };

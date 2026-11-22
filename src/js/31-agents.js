@@ -23,7 +23,7 @@ const AGENT_JOBS = {
   pnl: { label: 'Monthly money note', hint: 'What came in, what is late, margins, risks', show: () => canSeeSomeMoney(), facts: () => moneyFacts(), out: 'copy' },
   collections: { label: 'Payment reminders', hint: 'A polite message for each late payment', show: () => canSeeSomeMoney(), facts: () => ({ money: { late: lateMoney() } }), out: 'messages' },
   changelog: { label: 'Firmware changelog', hint: 'What changed, what was fixed, which devices', input: 'Paste your commit list or notes', facts: () => ({}), out: 'copy' },
-  fieldbug: { label: 'Bug from a device log', hint: 'Steps, expected, actual, site and firmware', input: 'Paste the log or describe what the device did', type: 'bug', facts: () => ({}), out: 'task' },
+  fieldbug: { label: 'Fault from a device log', hint: 'Steps, expected, actual, site and firmware', input: 'Paste the log or describe what the device did', type: 'bug', facts: () => ({}), out: 'task' },
   servicereport: { label: 'Service report', hint: 'For the client to sign: what was done, tests, materials', input: 'e.g. Mivida gate 2: replaced QR reader SN 4471, tested 20 scans OK, used 10 m cable', facts: () => ({}), out: 'copy' },
   surveynotes: { label: 'Site survey from notes', hint: 'Gates, power and network, devices', input: 'Type or paste what you saw on site', type: 'survey', facts: () => ({}), out: 'task' },
   complaint: { label: 'Bug from a complaint', hint: 'A clear bug the developers can follow', input: 'Paste the client’s message', type: 'bug', facts: () => ({}), out: 'task' },

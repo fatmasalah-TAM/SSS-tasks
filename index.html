@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-KzMwe8jvp2JuIli/BEPmIUhLpDVrzvw0YlPAtu/SBYg=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-OYdvAYxU7+tsLaFBEAX0tAjAaimif5ALsZPvMLV5J1k=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-KzMwe8jvp2JuIli/BEPmIUhLpDVrzvw0YlPAtu/SBYg=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-6MmIksg025tkaxCI4e2qDmOBzguKfSZDAeSjMaoOXKs=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<meta name="ovrto-build" content="1796a2084b80">
+<meta name="ovrto-build" content="acb627dc6772">
 <title>Ovrto</title>
 <meta name="description" content="Over to you. Every task shows whose turn it is.">
 <meta name="theme-color" content="#0D0D0F">
@@ -1754,8 +1754,9 @@ async function patchTask(id, patch, opts = {}) {
 }
 /* software teams talk about developers and sprints; agencies and other teams just have an owner */
 function softwareTeam() { return !['agency', 'general'].includes(S.ws?.template); }
-function devWord() { return softwareTeam() && !plainOnly() ? ', developer ' : ', assigned to '; }
-function usesSprints() { return softwareTeam() && !plainOnly(); }
+function devWord() { return softwareTeam() && softwarePerson() ? ', developer ' : ', assigned to '; }
+function usesSprints() { return softwareTeam() && softwarePerson() && !myDepts().every(d => (d.hide || []).includes('sprint')); }
+const devLabel = () => softwareTeam() && softwarePerson() ? 'Developer' : 'Assigned to';
 const BASIC_TYPES = [['task', 'Task', '#1F55B8', 'dot', ['Details']], ['followup', 'Follow-up', '#0E6A6E', 'arrow', ['Who and what']], ['issue', 'Problem', '#B42318', 'bug', ['What happened', 'Where']]];
 let typesEnsured = false;
 async function ensureDeptTypes() {
@@ -2489,7 +2490,7 @@ function pageHead(title, sub, tools, extra) {
 /* ── task card + row ── */
 function cardFields(t) {
   const out = [];
-  const off = plainOnly();
+  const off = !techPerson();
   for (const f of S.fields.filter(f => f.show_on_card && fieldApplies(f, t) && !(off && OFFICE_HIDE_FIELDS.includes(f.key))).slice(0, 3)) {
     const v = fieldVal(t, f); if (!hasVal(v)) continue;
     if (f.kind === 'select') { const o = optOf(f, v); if (o) out.push(tag(o.label, o.color)); }
@@ -2512,7 +2513,7 @@ function taskCard(t, { draggable = true } = {}) {
     h('div', { class: 't', text: t.title || 'Untitled' }),
     (() => { const f = cardFields(t); return f.length ? h('div', { class: 'tags' }, f) : null; })(),
     h('div', { class: 'foot' },
-      h('span', { title: 'Developer: ' + dname(dev), style: { display: 'inline-flex', alignItems: 'center', gap: '6px' } }, avatar(dev, { size: 'xs', turn: devIsTurn }), h('span', { class: 'meta', text: dev ? first(dev) : 'No dev' })),
+      h('span', { title: devLabel() + ': ' + dname(dev), style: { display: 'inline-flex', alignItems: 'center', gap: '6px' } }, avatar(dev, { size: 'xs', turn: devIsTurn }), h('span', { class: 'meta', text: dev ? first(dev) : 'No dev' })),
       !devIsTurn && t.turn_owner ? h('span', { class: 'meta', title: 'Whose turn' }, '→', turnAvatar(t, 'xs')) : null,
       turnLine(t),
       h('span', { class: 'sp' }),
@@ -2647,7 +2648,7 @@ function boardView(tasks, cfg) {
     const col = h('section', { class: 'col', 'data-key': String(g.key), 'aria-label': g.label },
       h('div', { class: 'colhead' }, h('span', { class: 'no', text: String(i + 1).padStart(2, '0') }), g.icon || (g.color ? h('span', { class: 'swatch', style: { width: '10px', height: '10px', background: g.color } }) : null),
         h('span', { class: 'nm', text: g.label }), h('span', { class: 'ct', text: String(g.tasks.length) }),
-        (g.patch || g.fieldSet) ? h('button', { class: 'add', 'aria-label': `New task in ${g.label}`, onclick: () => openCreate({ preset: groupPatch({ fields: {} }, g) }) }, icon('plus', 16)) : null),
+        (g.patch || g.fieldSet) && !(g.patch?.status_id && ['done', 'canceled'].includes(stOf(g.patch.status_id)?.category)) ? h('button', { class: 'add', 'aria-label': `New task in ${g.label}`, onclick: () => openCreate({ preset: groupPatch({ fields: {} }, g) }) }, icon('plus', 16)) : null),
       h('div', { class: 'cards' }, g.tasks.length ? capped(g.tasks, t => taskCard(t), 'b' + g.key, 40) : h('div', { class: 'colempty', text: 'Empty' })));
     if (g.patch || g.fieldSet) {
       col.addEventListener('dragover', e => { e.preventDefault(); col.classList.add('drop'); });
@@ -2694,7 +2695,9 @@ function filterBar(cfg) {
   const chips = (cfg.filters || []).map((f, i) => {
     const ff = filterFields().find(x => x.k === f.f); if (!ff) return null;
     const opts = filterOptions(f.f); const labels = f.op === 'contains' ? [`“${f.v[0]}”`] : f.v.map(v => opts.find(o => o.v === v)?.label || String(v));
-    const label = f.f === 'kind' && f.v.length === 1 && f.v[0] === 'bug' ? (f.op === 'none' ? 'Hiding bugs' : 'Only bugs') : `${ff.n} ${f.op === 'none' ? 'is not' : f.op === 'contains' ? 'contains' : 'is'} ${labels.join(', ')}`;
+    const label = f.f === 'kind' && f.v.length === 1 && f.v[0] === 'bug' ? (f.op === 'none' ? 'Hiding bugs' : 'Only bugs')
+      : f.f === 'closed' && f.v.length === 1 ? ((f.op === 'none') === (f.v[0] === 'closed') ? 'Open only' : 'Closed only')
+      : f.f === 'sprint' && f.v.length === 1 && f.op !== 'none' && String(f.v[0]).toLowerCase() === 'current' ? 'This sprint' : `${ff.n} ${f.op === 'none' ? 'is not' : f.op === 'contains' ? 'contains' : 'is'} ${labels.join(', ')}`;
     return h('span', { class: 'fchip on' },
       h('button', { onclick: e => editFilter(e.currentTarget, i), text: label, style: { maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis' } }),
       h('button', { class: 'x', style: { width: '22px', height: '22px' }, 'aria-label': 'Remove filter', onclick: () => { cfg.filters.splice(i, 1); render(); } }, icon('x', 14)));
@@ -2821,7 +2824,7 @@ function viewMyTurn() {
   if (!S.tasks.length) return [h('div', { class: 'scroll turnpage' }, ...top, h('div', { 'data-tour': 'turn-now' }, emptyState('0 TASKS', 'Clear ground. Add the first task.', { label: 'New task', fn: () => openCreate() }, { label: 'Import from a file', fn: () => openImport() })))];
   return [h('div', { class: 'scroll turnpage' }, ...top,
     now.length ? sec('Your tasks', now, 'turn-now') : h('div', { 'data-tour': 'turn-now' }, emptyState('YOUR MOVE · 0', 'No tasks of yours right now.', { label: 'See the board', fn: () => go({ v: 'work' }) })),
-    sec('Waiting on others', waiting, 'turn-waiting', 'Nothing you’ve passed on', withWho),
+    sec('Waiting on others', waiting, 'turn-waiting', 'You haven’t handed anything to anyone', withWho),
     upcoming.length ? sec('Upcoming', upcoming, null) : null)];
 }
 
@@ -3136,7 +3139,7 @@ function taskMenu(anchor, t) {
 }
 const taskLink = t => location.origin + location.pathname + '#task-' + t.id;
 function shareTask(t) {
-  const txt = `*${taskKey(t)}* ${t.title}\n${stOf(t.status_id)?.name || ''} · Developer: ${dname(prof(t.assignee_id))}\n${taskLink(t)}`;
+  const txt = `*${taskKey(t)}* ${t.title}\n${stOf(t.status_id)?.name || ''} · ${devLabel()}: ${dname(prof(t.assignee_id))}\n${taskLink(t)}`;
   if (navigator.share && isPhone()) navigator.share({ text: txt }).catch(() => {});
   else window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank', 'noopener');
 }
@@ -3201,7 +3204,7 @@ function replaceIn(parent, cls, make) {
 /* the sentence: Type for Client in Area · developer X · priority · sprint · due */
 const KIND_RANK = { select: 0, multi: 1, person: 2, date: 3, text: 4, number: 5, checkbox: 6 };
 const OFFICE_HIDE_FIELDS = ['area', 'tier', 'phase'];
-function sentenceFields(t) { const off = plainOnly(); return S.fields.filter(f => f.show_on_card && fieldApplies(f, t) && !(off && (OFFICE_HIDE_FIELDS.includes(f.key) || (f.key === 'client' && myDepts().every(d => (d.hide || []).includes('clients')))))).sort((a, b) => (KIND_RANK[a.kind] - KIND_RANK[b.kind]) || a.position - b.position); }
+function sentenceFields(t) { const off = !techPerson(); return S.fields.filter(f => f.show_on_card && fieldApplies(f, t) && !(off && OFFICE_HIDE_FIELDS.includes(f.key)) && !(f.key === 'client' && !isAdmin() && !smallTeam() && myDepts().length && myDepts().every(d => (d.hide || []).includes('clients')))).sort((a, b) => (KIND_RANK[a.kind] - KIND_RANK[b.kind]) || a.position - b.position); }
 function sentence(t) {
   const ty = tyOf(t.type_id); const parts = [];
   const w = (label, onclick, empty, tourId) => h('button', { class: 'w' + (empty ? ' blank' : ''), onclick, 'data-tour': tourId || null }, label);
@@ -3209,11 +3212,11 @@ function sentence(t) {
   let usedFor = false, usedIn = false;
   for (const f of sentenceFields(t)) {
     const txt = fieldText(t, f); const word = f.kind === 'select' && !usedFor ? (usedFor = true, 'for') : f.kind === 'multi' && !usedIn ? (usedIn = true, 'in') : f.name.toLowerCase();
-    parts.push(' ' + word + ' ', w(txt || f.name.toLowerCase() + '?', e => pickField(e.currentTarget, t, f), !txt));
+    parts.push(txt ? ' ' + word + ' ' : ', ', w(txt || 'no ' + f.name.toLowerCase(), e => pickField(e.currentTarget, t, f), !txt));
   }
-  parts.push(devWord(), w(t.assignee_id ? dname(prof(t.assignee_id)) : 'nobody yet', e => pickPerson(e.currentTarget, t.assignee_id, v => patchTask(t.id, { assignee_id: v }, { toast: v ? `${first(prof(v))}’s on it` : 'Developer cleared' })), !t.assignee_id));
+  parts.push(devWord(), w(t.assignee_id ? dname(prof(t.assignee_id)) : 'no one yet', e => pickPerson(e.currentTarget, t.assignee_id, v => patchTask(t.id, { assignee_id: v }, { toast: v ? `${first(prof(v))}’s on it` : 'Developer cleared' })), !t.assignee_id));
   parts.push(', ', w(t.priority ? prioName(t.priority) + ' priority' : 'no priority', e => pickPriority(e.currentTarget, t), !t.priority));
-  if (usesSprints() || (t.sprint && !plainOnly())) parts.push(', ', w(t.sprint ? `Sprint ${t.sprint}` : 'no sprint', e => pickSprint(e.currentTarget, t), !t.sprint));
+  if (usesSprints() || (t.sprint && softwarePerson())) parts.push(', ', w(t.sprint ? `Sprint ${t.sprint}` : 'no sprint', e => pickSprint(e.currentTarget, t), !t.sprint));
   parts.push(', ', w(t.due_date ? 'due ' + fmtDate(t.due_date) : 'no due date', e => pickDate(e.currentTarget, t.due_date, v => patchTask(t.id, { due_date: v }, { toast: v ? 'Due date set' : 'Due date cleared' })), !t.due_date), '.');
   return h('p', { class: 'sentence', style: { margin: '0' } }, parts);
 }
@@ -3364,16 +3367,16 @@ function fieldsPanel(t) {
   const st = stOf(t.status_id);
   row('Status', pick(st?.name || '—', e => pickStatus(e.currentTarget, t), false, stIcon(st)));
   row('Type', pick(tyOf(t.type_id)?.name || '—', e => pickType(e.currentTarget, t)));
-  row(softwareTeam() && !plainOnly() ? 'Developer' : 'Assigned to', pick(t.assignee_id ? dname(prof(t.assignee_id)) : 'Unassigned', e => pickPerson(e.currentTarget, t.assignee_id, v => patchTask(t.id, { assignee_id: v }, { toast: v ? `${first(prof(v))}’s on it` : 'Developer cleared' })), !t.assignee_id, avatar(prof(t.assignee_id), { size: 'xs' })));
+  row(devLabel(), pick(t.assignee_id ? dname(prof(t.assignee_id)) : 'Unassigned', e => pickPerson(e.currentTarget, t.assignee_id, v => patchTask(t.id, { assignee_id: v }, { toast: v ? `${first(prof(v))}’s on it` : 'Developer cleared' })), !t.assignee_id, avatar(prof(t.assignee_id), { size: 'xs' })));
   row('Reviewer', pick(t.reviewer_id ? dname(prof(t.reviewer_id)) : 'Workspace default', e => pickPerson(e.currentTarget, t.reviewer_id, v => patchTask(t.id, { reviewer_id: v }, { toast: 'Reviewer updated' })), !t.reviewer_id, avatar(prof(t.reviewer_id), { size: 'xs' })));
   row('Priority', pick(prioName(t.priority || 0), e => pickPriority(e.currentTarget, t), !t.priority, prioGlyph(t.priority || 0)));
   row('Project', pick(pjOf(t.project_id)?.name || 'No project', e => picker(e.currentTarget, { options: [...S.projects.map(p => ({ v: p.id, label: p.name })), { v: null, label: 'No project' }], value: t.project_id, onPick: v => patchTask(t.id, { project_id: v }, { toast: 'Project updated' }) }), !t.project_id));
-  if (!plainOnly()) row('Sprint', pick(t.sprint ? `Sprint ${t.sprint}` : 'No sprint', e => pickSprint(e.currentTarget, t), !t.sprint));
+  if (usesSprints() || t.sprint && softwarePerson()) row('Sprint', pick(t.sprint ? `Sprint ${t.sprint}` : 'No sprint', e => pickSprint(e.currentTarget, t), !t.sprint));
   startRow(t, row, pick);
   row('Due', pick(t.due_date ? fmtDate(t.due_date) : 'No date', e => pickDate(e.currentTarget, t.due_date, v => { if (v && t.start_date && v < t.start_date) return toast('The due date can’t be before the start'); patchTask(t.id, { due_date: v }); }), !t.due_date));
   waitsRow(t, row);
-  row('Flags', pick((t.flags || []).map(k => FLAGS.find(f => f.k === k)?.n).filter(Boolean).join(', ') || 'None', e => picker(e.currentTarget, { options: FLAGS.map(f => ({ v: f.k, label: f.n, sub: '' })), value: t.flags || [], multi: true, search: false, onPick: v => patchTask(t.id, { flags: v }) }), !(t.flags || []).length));
-  const applicable = S.fields.filter(f => fieldApplies(f, t) && !(plainOnly() && OFFICE_HIDE_FIELDS.includes(f.key))); const empty = applicable.filter(f => f.hide_empty && !hasVal(fieldVal(t, f)) && f.kind !== 'checkbox');
+  row('Flags', pick((t.flags || []).map(k => FLAGS.find(f => f.k === k)?.n).filter(Boolean).join(', ') || 'No flags', e => picker(e.currentTarget, { options: FLAGS.map(f => ({ v: f.k, label: f.n, sub: '' })), value: t.flags || [], multi: true, search: false, onPick: v => patchTask(t.id, { flags: v }) }), !(t.flags || []).length));
+  const applicable = S.fields.filter(f => fieldApplies(f, t) && !(!techPerson() && OFFICE_HIDE_FIELDS.includes(f.key))); const empty = applicable.filter(f => f.hide_empty && !hasVal(fieldVal(t, f)) && f.kind !== 'checkbox');
   const shown = applicable.filter(f => !empty.includes(f) || detail?.showEmpty);
   for (const f of shown) row(f.name, fieldEditor(t, f), f.help);
   const box = h('div', {}, h('h4', { style: { margin: '0 0 8px', font: '600 12px/16px var(--display)', letterSpacing: '0', color: 'var(--fg2)' }, text: 'Fields' }), kv);
@@ -3428,7 +3431,7 @@ function drawThread() {
   const filt = detail.filter;
   box.replaceChildren(h('h4', {}, 'Activity', h('span', { class: 'act' }, h('div', { class: 'seg', role: 'group', 'aria-label': 'Show' },
     h('button', { 'aria-pressed': String(filt === 'comments'), onclick: () => { detail.filter = 'comments'; store.set('actFilter', 'comments'); drawThread(); } }, 'Comments'),
-    h('button', { 'aria-pressed': String(filt === 'all'), onclick: () => { detail.filter = 'all'; store.set('actFilter', 'all'); drawThread(); } }, 'Everything')))),
+    h('button', { 'aria-pressed': String(filt === 'all'), onclick: () => { detail.filter = 'all'; store.set('actFilter', 'all'); drawThread(); } }, 'All activity')))),
     timeline(), composer());
 }
 const FIELD_LABEL = { status: 'status', developer: 'developer', reviewer: 'reviewer', priority: 'priority', type: 'type', sprint: 'sprint', due: 'due date', project: 'project', flags: 'flags', fields: 'fields', title: 'title' };
@@ -3546,14 +3549,14 @@ function openCreate(opts = {}) {
       let usedFor = false, usedIn = false;
       for (const f of sentenceFields(t)) {
         const txt = fieldText(t, f); const word = f.kind === 'select' && !usedFor ? (usedFor = true, 'for') : f.kind === 'multi' && !usedIn ? (usedIn = true, 'in') : f.name.toLowerCase();
-        parts.push(' ' + word + ' ', w(txt || f.name.toLowerCase() + '?', e => {
+        parts.push(txt ? ' ' + word + ' ' : ', ', w(txt || 'no ' + f.name.toLowerCase(), e => {
           const cur = t.fields[f.id];
           if (f.kind === 'multi') picker(e.currentTarget, { options: f.options.map(o => ({ v: o.id, label: o.label })), value: cur || [], multi: true, onPick: v => { st.fields[f.id] = v; drawSentence(); } });
           else if (f.kind === 'select') picker(e.currentTarget, { options: [...f.options.map(o => ({ v: o.id, label: o.label })), { v: null, label: 'Empty' }], value: cur, onPick: v => { st.fields[f.id] = v; drawSentence(); } });
           else if (f.kind === 'person') pickPerson(e.currentTarget, cur, v => { st.fields[f.id] = v; drawSentence(); });
         }, !txt));
       }
-      parts.push(devWord(), w(t.assignee_id ? first(prof(t.assignee_id)) : route ? `${first(prof(route.user))} (${route.why})` : 'nobody yet', e => pickPerson(e.currentTarget, st.assignee_id, v => { st.assignee_id = v; st.assigneeManual = true; drawSentence(); }, route ? `Automatic: ${first(prof(route.user))} (${route.why})` : 'Nobody yet'), !t.assignee_id && !route));
+      parts.push(devWord(), w(t.assignee_id ? first(prof(t.assignee_id)) : route ? `${first(prof(route.user))} (${route.why})` : 'no one yet', e => pickPerson(e.currentTarget, st.assignee_id, v => { st.assignee_id = v; st.assigneeManual = true; drawSentence(); }, route ? `Automatic: ${first(prof(route.user))} (${route.why})` : 'Nobody yet'), !t.assignee_id && !route));
       parts.push(', ', w(t.priority ? prioName(t.priority) + ' priority' : 'no priority', e => picker(e.currentTarget, { options: PRIOS.map(p => ({ v: p.k, label: p.n, icon: prioGlyph(p.k) })), value: t.priority, search: false, onPick: v => { st.priority = v; drawSentence(); } }), !t.priority));
       if (usesSprints()) parts.push(', ', w(t.sprint ? `Sprint ${t.sprint}` : 'no sprint', e => { const c = sprintOf(); picker(e.currentTarget, { options: [c, c + 1, c + 2].map(n => ({ v: n, label: `Sprint ${n}`, sub: n === c ? 'current' : '' })).concat([{ v: null, label: 'No sprint' }]), value: st.sprint, search: false, onPick: v => { st.sprint = v; drawSentence(); } }); }, !t.sprint));
       parts.push(', ', w(t.due_date ? 'due ' + fmtDate(t.due_date) : 'no due date', e => pickDate(e.currentTarget, st.due_date, v => { st.due_date = v; drawSentence(); }), !t.due_date));
@@ -3613,7 +3616,7 @@ function openCreate(opts = {}) {
     createBtn.addEventListener('click', submit);
     createBtn.disabled = !st.title;
     body.append(types, title, aiRow, sentenceBox, hints, details);
-    sh.append(body, h('div', { class: 'sfoot' }, h('span', { class: 'sm mute', text: isPhone() ? 'Only the title is required' : 'Tip: @name  !high  #client · Enter to create' }), h('span', { class: 'sp' }), h('button', { class: 'btn ghost', onclick: () => closeSheet() }, 'Cancel'), createBtn));
+    sh.append(body, h('div', { class: 'sfoot' }, h('span', { class: 'sm mute', text: isPhone() ? 'Only the title is required' : 'Tip: type @ to assign someone · Enter to create' }), h('span', { class: 'sp' }), h('button', { class: 'btn ghost', onclick: () => closeSheet() }, 'Cancel'), createBtn));
     drawAll(); setTimeout(() => title.focus(), 60);
     if (opts.draft) { applyDraft(st, opts.draft, title); drawAll(); showAiNote(); createBtn.disabled = !parse().clean; }
   } });
@@ -4435,7 +4438,7 @@ addEventListener('online', () => { if (S.ws) { flushOutbox(); setupRealtime(); c
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { checkUpdate(); if (S.ws) { flushOutbox(); setupRealtime(); catchUp(); } } });
 
 /* a new version was uploaded: phones (and apps saved to the home screen) pick it up by themselves */
-const BUILD = '1796a2084b80';
+const BUILD = 'acb627dc6772';
 let updLast = 0, updShown = false;
 async function checkUpdate(force) {
   if (!force && Date.now() - updLast < 60000) return; updLast = Date.now();
@@ -7572,27 +7575,27 @@ function viewCompany() {
    and which pages sit at the top of More. An admin picks it in the invite; if nobody did, Ovrto asks on first sign-in.
    areas: words matched against the options of the workspace's Area field. */
 const BASE_DEPTS = [
-  { k: 'backend', g: 'Software', l: 'Backend development', home: 'home', areas: ['backend', 'api', 'server', 'database'], pins: ['work', 'bugs', 'vault'], hide: ['deals', 'clients', 'company'], types: ['feature', 'bug', 'improvement', 'chore', 'task'] },
-  { k: 'frontend', g: 'Software', l: 'Frontend / web', home: 'home', areas: ['dashboard', 'portal', 'web', 'frontend', 'website'], pins: ['work', 'bugs', 'vault'], hide: ['deals', 'clients', 'company'], types: ['feature', 'bug', 'improvement', 'chore', 'task'] },
-  { k: 'mobile', g: 'Software', l: 'Mobile apps', home: 'home', areas: ['mobile', 'app', 'ios', 'android'], pins: ['work', 'bugs', 'vault'], hide: ['deals', 'clients', 'company'], types: ['feature', 'bug', 'improvement', 'chore', 'task'] },
-  { k: 'qa', g: 'Software', l: 'QA / testing', home: 'home', areas: [], pins: ['review', 'tests', 'bugs', 'projects', 'vault'], hide: ['deals', 'company', 'clients', 'sprint'], types: ['testrun', 'testcase', 'bug', 'task'] },
-  { k: 'design', g: 'Software', l: 'UI / UX design', home: 'myturn', areas: ['design', 'ui', 'ux'], pins: ['work', 'projects'], hide: ['bugs', 'vault', 'deals', 'company'], types: ['task', 'feature', 'improvement'] },
-  { k: 'devops', g: 'Software', l: 'DevOps / infrastructure', home: 'home', areas: ['devops', 'infra', 'server', 'security', 'cloud'], pins: ['incidents', 'work', 'bugs', 'vault'], hide: ['deals', 'clients', 'company'], types: ['chore', 'bug', 'task', 'improvement'] },
-  { k: 'data', g: 'Software', l: 'Data / AI', home: 'home', areas: ['data', 'ai', 'analytics', 'report'], pins: ['work', 'insights'], hide: ['deals', 'vault', 'company'], types: ['task', 'feature', 'improvement'] },
-  { k: 'hardware', g: 'Hardware', l: 'Hardware engineering', home: 'myturn', areas: ['gates', 'hardware', 'device', 'signage', 'parking'], pins: ['work', 'bugs', 'projects'], hide: ['sprint', 'deals', 'company'], types: ['task', 'bug', 'issue', 'chore'] },
-  { k: 'embedded', g: 'Hardware', l: 'Embedded / firmware', home: 'home', areas: ['gates', 'firmware', 'embedded', 'device'], pins: ['work', 'bugs', 'vault'], hide: ['deals', 'clients', 'company'], types: ['task', 'bug', 'improvement', 'chore'] },
-  { k: 'hwlead', g: 'Hardware', l: 'Head of hardware / CTO', home: 'company', areas: ['gates', 'hardware', 'device', 'firmware', 'installation'], pins: ['company', 'visits', 'devices', 'projects', 'work'], hide: ['sprint', 'all'], types: ['task', 'issue', 'survey', 'bug'] },
-  { k: 'field', g: 'Hardware', l: 'Installation & field', home: 'myturn', areas: ['gates', 'installation', 'site', 'field'], pins: ['visits', 'devices', 'work', 'vault'], hide: ['sprint', 'review', 'insights', 'all', 'deals', 'company'], types: ['task', 'survey', 'issue', 'followup'] },
-  { k: 'support', g: 'Hardware', l: 'Technical support', home: 'bugs', areas: [], pins: ['tickets', 'bugs', 'devices'], hide: ['sprint', 'deals', 'company'], types: ['bug', 'issue', 'followup', 'task'] },
-  { k: 'product', g: 'Business', l: 'Product / PM', home: 'home', areas: [], pins: ['company', 'projects', 'insights', 'clients'], hide: ['vault'], types: ['feature', 'brd', 'improvement', 'bug', 'task'] },
-  { k: 'pm', g: 'Business', l: 'Project management', home: 'home', areas: [], pins: ['projects', 'clients', 'insights'], hide: ['bugs', 'vault'], types: ['task', 'followup', 'brd', 'issue'] },
+  { k: 'backend', g: 'Software', l: 'Backend development', home: 'home', areas: ['backend', 'api', 'server', 'database'], pins: ['work', 'bugs', 'vault'], hide: ['deals', 'clients', 'company', 'all'], types: ['feature', 'bug', 'improvement', 'chore', 'task'] },
+  { k: 'frontend', g: 'Software', l: 'Frontend / web', home: 'home', areas: ['dashboard', 'portal', 'web', 'frontend', 'website'], pins: ['work', 'bugs', 'vault'], hide: ['deals', 'clients', 'company', 'all'], types: ['feature', 'bug', 'improvement', 'chore', 'task'] },
+  { k: 'mobile', g: 'Software', l: 'Mobile apps', home: 'home', areas: ['mobile', 'app', 'ios', 'android'], pins: ['work', 'bugs', 'vault'], hide: ['deals', 'clients', 'company', 'all'], types: ['feature', 'bug', 'improvement', 'chore', 'task'] },
+  { k: 'qa', g: 'Software', l: 'QA / testing', home: 'home', areas: [], pins: ['review', 'tests', 'bugs', 'projects', 'vault'], hide: ['deals', 'company', 'clients', 'sprint', 'all'], types: ['testrun', 'testcase', 'bug', 'task'] },
+  { k: 'design', g: 'Software', l: 'UI / UX design', home: 'myturn', areas: ['design', 'ui', 'ux'], pins: ['work', 'projects'], hide: ['bugs', 'vault', 'deals', 'company', 'clients', 'all'], types: ['task', 'feature', 'improvement'] },
+  { k: 'devops', g: 'Software', l: 'DevOps / infrastructure', home: 'home', areas: ['devops', 'infra', 'server', 'security', 'cloud'], pins: ['incidents', 'work', 'bugs', 'vault'], hide: ['deals', 'clients', 'company', 'all'], types: ['chore', 'bug', 'task', 'improvement'] },
+  { k: 'data', g: 'Software', l: 'Data / AI', home: 'home', areas: ['data', 'ai', 'analytics', 'report'], pins: ['work', 'insights'], hide: ['deals', 'vault', 'company', 'bugs', 'clients', 'all'], types: ['task', 'feature', 'improvement'] },
+  { k: 'hardware', g: 'Hardware', l: 'Hardware engineering', home: 'myturn', areas: ['gates', 'hardware', 'device', 'signage', 'parking'], pins: ['work', 'bugs', 'projects'], hide: ['sprint', 'deals', 'company', 'clients', 'vault', 'all'], types: ['task', 'bug', 'issue', 'chore'] },
+  { k: 'embedded', g: 'Hardware', l: 'Embedded / firmware', home: 'home', areas: ['gates', 'firmware', 'embedded', 'device'], pins: ['work', 'bugs', 'vault'], hide: ['deals', 'clients', 'company', 'sprint', 'all'], types: ['task', 'bug', 'improvement', 'chore'] },
+  { k: 'hwlead', g: 'Hardware', l: 'Head of hardware / CTO', home: 'company', areas: ['gates', 'hardware', 'device', 'firmware', 'installation'], pins: ['company', 'visits', 'devices', 'projects', 'work'], hide: ['sprint', 'all', 'review'], types: ['task', 'issue', 'survey', 'bug'] },
+  { k: 'field', g: 'Hardware', l: 'Installation & field', home: 'myturn', areas: ['gates', 'installation', 'site', 'field'], pins: ['visits', 'devices', 'work', 'vault'], hide: ['sprint', 'review', 'insights', 'all', 'deals', 'company', 'bugs', 'clients', 'projects'], types: ['task', 'survey', 'issue', 'followup'] },
+  { k: 'support', g: 'Hardware', l: 'Technical support', home: 'bugs', areas: [], pins: ['tickets', 'bugs', 'devices'], hide: ['sprint', 'deals', 'company', 'review', 'all'], types: ['bug', 'issue', 'followup', 'task'] },
+  { k: 'product', g: 'Business', l: 'Product / PM', home: 'home', areas: [], pins: ['company', 'projects', 'insights', 'clients'], hide: ['vault', 'all'], types: ['feature', 'brd', 'improvement', 'bug', 'task'] },
+  { k: 'pm', g: 'Business', l: 'Project management', home: 'home', areas: [], pins: ['projects', 'clients', 'insights'], hide: ['bugs', 'vault', 'sprint', 'all'], types: ['task', 'followup', 'brd', 'issue'] },
   { k: 'management', g: 'Business', l: 'Management', home: 'company', areas: [], pins: ['company', 'projects', 'insights', 'approvals'], hide: ['sprint', 'bugs', 'review', 'vault', 'all'], types: ['task', 'followup', 'issue'] },
   { k: 'sales', g: 'Business', l: 'Sales', home: 'deals', areas: [], pins: ['deals', 'clients', 'projects'], hide: ['bugs', 'sprint', 'review', 'vault', 'company'], types: ['followup', 'task', 'demo'] },
-  { k: 'presales', g: 'Business', l: 'Pre-sales', home: 'home', areas: [], pins: ['deals', 'projects', 'clients'], hide: ['sprint', 'bugs', 'company'], types: ['proposal', 'demo', 'survey', 'followup'] },
-  { k: 'success', g: 'Business', l: 'Customer success / accounts', home: 'myturn', areas: [], pins: ['clients', 'bugs', 'projects'], hide: ['sprint', 'review', 'company'], types: ['followup', 'issue', 'bug', 'task'] },
+  { k: 'presales', g: 'Business', l: 'Pre-sales', home: 'home', areas: [], pins: ['deals', 'projects', 'clients'], hide: ['sprint', 'bugs', 'company', 'review', 'vault', 'all'], types: ['proposal', 'demo', 'survey', 'followup'] },
+  { k: 'success', g: 'Business', l: 'Customer success / accounts', home: 'myturn', areas: [], pins: ['clients', 'bugs', 'projects'], hide: ['sprint', 'review', 'company', 'vault', 'all'], types: ['followup', 'issue', 'bug', 'task'] },
   { k: 'marketing', g: 'Business', l: 'Marketing', home: 'myturn', areas: [], pins: ['projects', 'work'], hide: ['bugs', 'sprint', 'review', 'vault', 'clients', 'deals'], types: ['task', 'followup'] },
   { k: 'finance', g: 'Business', l: 'Finance & accounts', home: 'company', areas: [], pins: ['company', 'approvals', 'projects', 'work'], hide: ['bugs', 'sprint', 'review', 'vault', 'clients'], types: ['task', 'followup', 'issue'] },
-  { k: 'operations', g: 'Business', l: 'Operations & procurement', home: 'myturn', areas: [], pins: ['approvals', 'stock', 'projects', 'work'], hide: ['bugs', 'sprint', 'review', 'deals', 'company'], types: ['task', 'followup', 'issue'] },
+  { k: 'operations', g: 'Business', l: 'Operations & procurement', home: 'myturn', areas: [], pins: ['approvals', 'stock', 'projects', 'work'], hide: ['bugs', 'sprint', 'review', 'deals', 'company', 'clients', 'vault'], types: ['task', 'followup', 'issue'] },
   { k: 'hr', g: 'Business', l: 'HR & admin', home: 'myturn', areas: [], pins: ['approvals', 'work', 'projects'], hide: ['bugs', 'sprint', 'review', 'clients', 'deals', 'vault'], types: ['task', 'followup', 'issue'] },
 ];
 /* each company sets its departments: which built-in ones it uses, their names, its own extra ones (each works like a
@@ -7617,9 +7620,14 @@ const extrasOf = m => (m?.extra_departments || []).filter(k => k !== m?.departme
 const myDepts = () => { const m = myMember(); return [m?.department, ...extrasOf(m)].map(deptOf).filter(Boolean); };
 /* HR, finance, operations, marketing and sales (admins still see everything): plain work, no bugs, sprints, areas or developers */
 const OFFICE = ['hr', 'finance', 'operations', 'marketing', 'sales'];
-const officeOnly = () => { const ds = myDepts(); return !isAdmin() && !!ds.length && !smallTeam() && ds.every(d => OFFICE.includes(baseKey(d.k))); };
+/* the plain view follows the main job; extra jobs on the business side (pre-sales, management, success…) keep it, an engineering extra job ends it */
+const businessOnly = ds => ds.every(d => (BASE_DEPTS.find(b => b.k === baseKey(d.k)) || {}).g === 'Business');
+const officeOnly = () => { const ds = myDepts(); return !isAdmin() && !!ds.length && !smallTeam() && OFFICE.includes(baseKey(ds[0].k)) && businessOnly(ds); };
+/* engineers: someone with a software or hardware job (or no department yet) */
+const techPerson = () => { const ds = myDepts(); return !ds.length || smallTeam() || isAdmin() || ds.some(d => ['Software', 'Hardware'].includes((BASE_DEPTS.find(b => b.k === baseKey(d.k)) || {}).g)); };
+const softwarePerson = () => { const ds = myDepts(); return !ds.length || smallTeam() || isAdmin() || ds.some(d => (BASE_DEPTS.find(b => b.k === baseKey(d.k)) || {}).g === 'Software' || ['pm', 'product'].includes(baseKey(d.k))); };
 /* plus management: plain words (no developer, sprint or area) while still seeing the whole company's work */
-const plainOnly = () => { const ds = myDepts(); return !isAdmin() && !!ds.length && !smallTeam() && ds.every(d => [...OFFICE, 'management'].includes(baseKey(d.k))); };
+const plainOnly = () => { const ds = myDepts(); return !isAdmin() && !!ds.length && !smallTeam() && [...OFFICE, 'management'].includes(baseKey(ds[0].k)) && businessOnly(ds); };
 const deptPeople = () => { const ks = myDepts().map(d => baseKey(d.k)); return new Set(S.members.filter(m => inDept(m, ...ks)).map(m => m.user_id)); };
 const inDept = (m, ...ks) => !!m && (ks.includes(baseKey(m.department)) || extrasOf(m).some(k => ks.includes(baseKey(k))));
 const deptLabel = m => { const d = deptOf(m?.department); const n = extrasOf(m).length; return d ? d.l + (n ? ` +${n}` : '') : null; };
@@ -8014,7 +8022,7 @@ function productParts() {
     sections: [
       ['Needs your decision', 'h-decide', decide, t => withBtn(turnCard(t, { sub: `Asked ${ago(ageOf(t))} ago` }), 'Decide', () => openTask(t.id)), 'No decisions waiting on you.'],
       ['Requests not planned yet', 'h-asks', asks, t => withBtn(turnCard(t), 'Plan', () => openTask(t.id)), 'Every request has an owner.'],
-      ['Projects at risk', 'h-risk', risk, projCard, 'No project has late or bouncing work.']] };
+      ['Projects at risk', 'h-risk', risk, projCard, 'No project has late or sent-back work.']] };
 }
 
 /* ═════════════ Deals: sales and pre-sales ═════════════
@@ -8211,7 +8219,7 @@ const AGENT_JOBS = {
   pnl: { label: 'Monthly money note', hint: 'What came in, what is late, margins, risks', show: () => canSeeSomeMoney(), facts: () => moneyFacts(), out: 'copy' },
   collections: { label: 'Payment reminders', hint: 'A polite message for each late payment', show: () => canSeeSomeMoney(), facts: () => ({ money: { late: lateMoney() } }), out: 'messages' },
   changelog: { label: 'Firmware changelog', hint: 'What changed, what was fixed, which devices', input: 'Paste your commit list or notes', facts: () => ({}), out: 'copy' },
-  fieldbug: { label: 'Bug from a device log', hint: 'Steps, expected, actual, site and firmware', input: 'Paste the log or describe what the device did', type: 'bug', facts: () => ({}), out: 'task' },
+  fieldbug: { label: 'Fault from a device log', hint: 'Steps, expected, actual, site and firmware', input: 'Paste the log or describe what the device did', type: 'bug', facts: () => ({}), out: 'task' },
   servicereport: { label: 'Service report', hint: 'For the client to sign: what was done, tests, materials', input: 'e.g. Mivida gate 2: replaced QR reader SN 4471, tested 20 scans OK, used 10 m cable', facts: () => ({}), out: 'copy' },
   surveynotes: { label: 'Site survey from notes', hint: 'Gates, power and network, devices', input: 'Type or paste what you saw on site', type: 'survey', facts: () => ({}), out: 'task' },
   complaint: { label: 'Bug from a complaint', hint: 'A clear bug the developers can follow', input: 'Paste the client’s message', type: 'bug', facts: () => ({}), out: 'task' },
@@ -9218,7 +9226,7 @@ function waitsRow(t, row) {
   row('Waits on', h('div', { class: 'blockers' },
     bs.map(b => h('span', { class: 'blk' + (isClosed(b) ? ' done' : ''), 'data-blocker': b.id }, h('button', { class: 'lnk', onclick: () => openTask(b.id), text: taskKey(b), title: b.title }),
       h('button', { class: 'x', 'aria-label': `Stop waiting on ${taskKey(b)}`, onclick: () => patchTask(t.id, { blocked_by: (t.blocked_by || []).filter(id => id !== b.id) }) }, icon('x', 12)))),
-    h('button', { class: 'pick blank', 'data-add-blocker': '1', onclick: e => pickBlocker(e.currentTarget, t) }, h('span', { text: bs.length ? '+ Add' : 'Nothing' }))), 'Tasks that must finish before this one can start');
+    h('button', { class: 'pick blank', 'data-add-blocker': '1', onclick: e => pickBlocker(e.currentTarget, t) }, h('span', { text: bs.length ? '+ Add' : 'Not waiting on anything' }))), 'Tasks that must finish before this one can start');
 }
 /* the timeline tab */
 function projectTimeline(p) {
@@ -9265,9 +9273,9 @@ function projectTimeline(p) {
    answer deadline and a fix deadline from the workspace's SLA. All three hang off tasks, so the usual flow
    (whose turn, review, comments, time) still applies. */
 const FIELD_PAGES = {
-  devices: ['hardware', 'embedded', 'hwlead', 'field', 'support', 'presales', 'success', 'management', 'operations'],
-  visits: ['field', 'hwlead', 'hardware', 'support', 'presales', 'management'],
-  tickets: ['support', 'success', 'field', 'hwlead', 'management', 'product', 'pm'],
+  devices: ['hardware', 'embedded', 'hwlead', 'field', 'support', 'presales', 'success', 'operations'],
+  visits: ['field', 'hwlead', 'hardware', 'support', 'presales'],
+  tickets: ['support', 'success', 'hwlead', 'product', 'pm'],
 };
 const fieldPageHidden = v => { if (!FIELD_PAGES[v] || smallTeam() || showAllPages()) return false; const ds = myDepts(); return !!ds.length && !ds.some(d => FIELD_PAGES[v].includes(d.base || d.k)); };
 const DEV_STATES = [['active', 'Working'], ['faulty', 'Faulty'], ['retired', 'Retired']];
@@ -9463,8 +9471,8 @@ const ticketsBadge = () => (S.tickets || []).filter(k => !k.resolved_at && (hour
    attached to a task: severity, state (investigating → identified → monitoring → resolved), impact, then a
    postmortem with follow-up tasks. */
 Object.assign(FIELD_PAGES, {
-  tests: ['qa', 'product', 'pm', 'backend', 'frontend', 'mobile', 'devops'],
-  incidents: ['devops', 'backend', 'frontend', 'mobile', 'support', 'management', 'product', 'pm', 'hwlead', 'embedded', 'qa', 'data'],
+  tests: ['qa'],
+  incidents: ['devops', 'data'],
 });
 const RESULTS = [['pass', 'Pass'], ['fail', 'Fail'], ['blocked', 'Blocked'], ['skip', 'Skip']];
 const casesOf = pid => (S.testCases || []).filter(c => !c.archived && (c.project_id || null) === (pid || null)).sort((a, b) => a.position - b.position || a.created_at.localeCompare(b.created_at));
@@ -9841,6 +9849,12 @@ var AR = {"exact":{"Backlog":"الباكلوج","Unstarted":"لم تبدأ","Sta
 /* client reports */
 Object.assign(AR.exact, {"Found a problem?": "وجدت مشكلة؟", "Send it straight to the team. Add a screenshot if you can.": "أرسلها مباشرة إلى الفريق، وأضف صورة للشاشة إن أمكن.", "Report a problem": "أبلِغ عن مشكلة", "Write what’s wrong in a few words (at least 3 letters).": "اكتب المشكلة في كلمات قليلة (3 أحرف على الأقل).", "The details are too long. Keep them under 4,000 letters.": "التفاصيل طويلة جدًا. اجعلها أقل من 4000 حرف.", "Write your name.": "اكتب اسمك.", "Write your WhatsApp number with the country code, e.g. +20 100 123 4567.": "اكتب رقم واتساب مع رمز الدولة، مثل ⁦+20 100 123 4567⁩.", "That email doesn’t look right. Fix it or leave it empty.": "البريد الإلكتروني غير صحيح. صحّحه أو اتركه فارغًا.", "This link has sent a lot of reports in a short time. Try again in an hour, or contact the team directly.": "أُرسلت بلاغات كثيرة من هذا الرابط في وقت قصير. حاول بعد ساعة، أو تواصل مع الفريق مباشرة.", "This link isn’t active any more. Ask your contact for a new link.": "هذا الرابط لم يعد يعمل. اطلب رابطًا جديدًا من مسؤول التواصل معك.", "Screenshots must be pictures (JPG, PNG or WebP), up to 3.": "يجب أن تكون صور الشاشة صورًا (JPG أو PNG أو WebP)، بحد أقصى 3.", "e.g. The payment page shows an error": "مثال: صفحة الدفع تُظهر خطأ", "What did you do, what did you expect, and what happened instead?": "ماذا فعلت، وماذا توقعت، وماذا حدث بدلًا من ذلك؟", "e.g. Mona Adel": "مثال: منى عادل", "How bad is it?": "ما مدى خطورة المشكلة؟", "Stops our work": "توقف عملنا", "Big problem": "مشكلة كبيرة", "Normal": "متوسطة", "Small": "بسيطة", "Add screenshot": "أضف صورة للشاشة", "Send to the team": "أرسل إلى الفريق", "Couldn’t send it. Check your connection and try again.": "تعذّر الإرسال. تحقق من اتصالك وحاول مرة أخرى.", "Couldn’t send it. Try again.": "تعذّر الإرسال. حاول مرة أخرى.", "Got it. The team has your report.": "تم الاستلام. البلاغ الآن لدى الفريق.", "Your reference is": "رقم البلاغ", "We’ll tell you on WhatsApp when it’s fixed. You’ll also see it on this page, and it moves to Done when it’s fixed.": "سنخبرك على واتساب عند حلّها. وستجدها أيضًا في هذه الصفحة، وتنتقل إلى «خلص» عند حلّها.", "Back to the status page": "العودة إلى صفحة المتابعة", "Report another problem": "أبلِغ عن مشكلة تانية", "What’s wrong?": "ما المشكلة؟", "Optional. Steps, the page, the device, anything that helps.": "اختياري. الخطوات، والصفحة، والجهاز، وأي شيء يساعد.", "Screenshots": "صور الشاشة", "Optional. Up to 3 pictures.": "اختياري. 3 صور بحد أقصى.", "Your name": "اسمك", "WhatsApp number": "رقم واتساب", "We tell you here when it’s fixed.": "سنخبرك عليه عند حلّها.", "Optional.": "اختياري.", "Reported by the client": "أبلغ عنها العميل", "reported this from the client page": "أبلغ عن هذه المشكلة من صفحة العميل", "Give each client a private link to a simple page with the status of their items (titles and progress only — no comments, descriptions or names). Clients can also report a problem there: it becomes a bug for that client and goes to whoever Who gets what picks. Turn a link off any time.": "أعطِ كل عميل رابطًا خاصًا لصفحة بسيطة تعرض حالة عناصره (العناوين والتقدّم فقط، بدون تعليقات أو أوصاف أو أسماء). ويمكن للعميل الإبلاغ عن مشكلة من نفس الصفحة: فتتحوّل إلى باج لهذا العميل وتذهب لمن تحدده قواعد «مَن يستلم ماذا». يمكنك إيقاف الرابط في أي وقت.", "No bug owner yet: a client’s report that matches no rule reaches every admin and waits with nobody’s turn. Pick a bug owner in Who gets what.": "لا يوجد مسؤول باجات بعد: بلاغ العميل الذي لا يطابق أي قاعدة يصل لكل المشرفين ويبقى بلا دور لأحد. اختر مسؤول الباجات في «مَن يستلم ماذا»."});
 AR.patterns.push(...[["^It goes straight to the (.+?) team\\.$", "يصل البلاغ مباشرة إلى فريق $1."], ["^Screenshot (\\d+)$", "صورة الشاشة $1"], ["^Remove screenshot (\\d+)$", "احذف صورة الشاشة $1"], ["^(.+?) is done\\. Tell (.+?) on WhatsApp\\?$", "$1 خلصت. تبلّغ $2 على واتساب؟"], ["^Tell (.+?) it’s fixed$", "بلّغ $1 إنها اتحلت"], ["^Message (.+?) on WhatsApp$", "راسِل $1 على واتساب"], ["^(.+?) \\(client\\)$", "$1 (العميل)"], ["^(.+?) reported ([A-Z]+-\\d+)$", "$1 أبلغ عن $2"]]);
+Object.assign(AR.exact, {
+  "e.g. QR shows “Permission expired” at gate 2": "مثلًا الـ QR بيقول «الصلاحية انتهت» عند بوابة 2", "e.g. Guests get a QR from the owner app": "مثلًا الضيوف ياخدوا QR من أبلكيشن الملاك",
+  "e.g. Show the unit number on the owner card": "مثلًا اعرض رقم الوحدة على كارت المالك", "e.g. Test run: guest invitations on staging": "مثلًا جولة اختبار: دعوات الضيوف",
+  "e.g. Test cases: owner app visitors": "مثلًا حالات اختبار: زوار أبلكيشن الملاك", "e.g. BRD: guest invitations": "مثلًا BRD: دعوات الضيوف", "e.g. Demo · Palm Hills": "مثلًا ديمو · بالم هيلز",
+  "e.g. Site survey · Mivida": "مثلًا معاينة موقع · ميفيدا", "e.g. Technical proposal · Royal City": "مثلًا عرض فني · رويال سيتي", "e.g. Renew the SSL certificate": "مثلًا جدّد شهادة الـ SSL"
+});
 AR.patterns.unshift(["^Reported by (.+?) \\(client\\) · not assigned$", "بلّغ عنها $1 (العميل) · مش متسلمة لحد"], ["^Reported by (.+?) \\(client\\) · (.*)$", "أبلغ عنها $1 (العميل) · $2"]);
 /* client chat */
 Object.assign(AR.exact, {"Chat with the team": "تحدّث مع الفريق", "Write a message…": "اكتب رسالة…", "No messages yet. Say hello, ask a question, or send a photo.": "لا توجد رسائل بعد. ابدأ بالتحية أو اسأل سؤالًا أو أرسل صورة.", "You sent a lot of messages in a short time. Wait a few minutes, then try again.": "أرسلت رسائل كثيرة في وقت قصير. انتظر بضع دقائق ثم حاول مرة أخرى.", "Send pictures (JPG, PNG or WebP) or voice notes, up to 3 at a time.": "أرسل صورًا (JPG أو PNG أو WebP) أو رسائل صوتية، بحد أقصى 3 في المرة.", "Write a message first.": "اكتب رسالة أولًا.", "Add a photo": "أضف صورة", "Who answers this client": "مين بيرد على العميل ده", "They see this conversation and get its alerts. Admins can always see it.": "بيشوفوا المحادثة دي وبيجيلهم تنبيهاتها. الأدمنز يقدروا يشوفوها دايمًا.", "Choose": "اختار", "People at the client": "الأشخاص عند العميل", "Each person gets their own private link: they chat with you, see the status and report problems. Turn one off and only that link stops.": "كل شخص بياخد لينك خاص بيه: يكلمكم، ويتابع الشغل، ويبعت المشاكل. لو قفلت لينك واحد، هو بس اللي بيقف.", "Nobody yet.": "مفيش حد لسه.", "Ask an admin to add people.": "اطلب من أدمن يضيف أشخاص.", "Add a person": "أضف شخص", "Add and make their link": "أضفه واعمل اللينك بتاعه", "Adding…": "جارٍ الإضافة…", "Write the person’s name": "اكتب اسم الشخص", "Only admins can see the links": "الأدمنز بس اللي يشوفوا اللينكات", "Couldn’t open the conversation": "معرفناش نفتح المحادثة", "not opened yet": "لسه ما فتحش"});
@@ -9864,6 +9878,21 @@ Object.assign(AR.exact, {"Delete it and the 1 payment": "امسحه هو وال�
 Object.assign(AR.exact, {"Mark as paid": "علّمها اتدفعت", "Not paid yet · no due date": "لسه ما اتدفعتش · من غير ميعاد", "Back to not paid": "رجعت لسه ما اتدفعتش", "The share of the team’s time is 0%. Edit it: how much of the team works on this project?": "نسبة وقت الفريق 0%. عدّلها: قد إيه من الفريق شغال على المشروع ده؟", "No start date on the contract, so no months are counted yet. ": "مفيش تاريخ بداية للعقد، فمفيش شهور اتحسبت لسه. ", "Add the start date": "ضيف تاريخ البداية", "Write how much of the team’s time this project takes, e.g. 20": "اكتب المشروع ده واخد قد إيه من وقت الفريق، مثلًا 20"});
 AR.patterns.unshift(...[["^Not paid yet · due (.+?)$", "لسه ما اتدفعتش · ميعادها $1"], ["^Not paid · late, was due (.+?)$", "ما اتدفعتش · متأخرة، كان ميعادها $1"], ["^Marked as paid: (.+?)$", "اتعلّمت إنها اتدفعت: $1"], ["^Mark (.+?) as paid$", "علّم $1 إنها اتدفعت"], ["^The work starts (.+?); the team cost counts from then\\.$", "الشغل بيبدأ $1؛ تكلفة الفريق بتتحسب من ساعتها."]]);
 Object.assign(AR.exact, {"Run": "ابدأ", "With test cases": "فيها حالات اختبار", "No cases yet": "لسه مفيهاش حالات"});
+/* wording review, 22 Nov: one Egyptian voice, no stray English inside Arabic labels */
+Object.assign(AR.exact, {
+  "Waiting on others": "مستنيين حد", "What needs doing?": "محتاج يتعمل إيه؟", "no priority": "من غير أولوية", "no due date": "من غير ميعاد", "no project": "من غير مشروع",
+  "no one yet": "لسه محدش", "no client": "من غير عميل", "no area": "من غير قسم", "no sprint": "من غير سبرنت", "No flags": "مفيش علامات", "Not waiting on anything": "مش مستنية حاجة",
+  "Open only": "المفتوحة بس", "Closed only": "المقفولة بس", "This sprint": "السبرنت ده", "All activity": "كل اللي حصل",
+  "You haven’t handed anything to anyone": "ما سلّمتش حاجة لحد لسه", "No project has late or sent-back work.": "مفيش مشروع فيه شغل متأخر أو راجع.",
+  "Fault from a device log": "عطل من سجل الجهاز", "Deploy checklist": "قايمة مراجعة قبل النشر", "Test cases for a feature": "حالات اختبار لميزة",
+  "Tip: type @ to assign someone · Enter to create": "نصيحة: اكتب @ عشان تحدد حد · Enter للإنشاء", "who and what": "مين وإيه", "Who and what": "مين وإيه",
+  "Waiting for an API, a design, an answer? Say who, and it lands in their My turn.": "مستني API أو تصميم أو رد؟ قول مين، وهتظهرله في دوره.",
+  "Waiting for a document, a signature or an answer? Say who, and it lands in their My turn.": "مستني ورقة أو إمضاء أو رد؟ قول مين، وهتظهرله في دوره.",
+  "Assigned to": "مسؤول عنها", "Edit description": "عدّل الوصف"
+});
+AR.patterns.unshift(["^Your (.+) agent$", "مساعدك الذكي في $1"]);
+/* "بدون" reads formal next to the app's Egyptian; same meaning */
+for (const k in AR.exact) if (typeof AR.exact[k] === 'string' && AR.exact[k].startsWith('بدون ')) AR.exact[k] = 'من غير ' + AR.exact[k].slice(5);
 var LANG = (() => { try { return JSON.parse(localStorage.getItem('baton.lang') || '"en"') === 'ar' ? 'ar' : 'en'; } catch { return 'en'; } })();
 const isAr = () => LANG === 'ar';
 var I18N_SKIP = '.row .t,.tc:not(.waitrow) .tt>b,.card>.t,.inrow .t,.stuck-row .t,.rv-item .t,.md,.mdbox,.mbody,.ev .txt,.ttl,textarea,input,select,[contenteditable],code,pre,kbd,.notr,.wordmark,.wm-anim,.mark-anim,.plate,.cp-t b,.cp-in>h1,.mhead b,.cv-name b,.chip-task,.mention,.toast .notr,.cl-row .nm>div:first-child,.prow .nm>div:first-child';

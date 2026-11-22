@@ -63,14 +63,14 @@ function openCreate(opts = {}) {
       let usedFor = false, usedIn = false;
       for (const f of sentenceFields(t)) {
         const txt = fieldText(t, f); const word = f.kind === 'select' && !usedFor ? (usedFor = true, 'for') : f.kind === 'multi' && !usedIn ? (usedIn = true, 'in') : f.name.toLowerCase();
-        parts.push(' ' + word + ' ', w(txt || f.name.toLowerCase() + '?', e => {
+        parts.push(txt ? ' ' + word + ' ' : ', ', w(txt || 'no ' + f.name.toLowerCase(), e => {
           const cur = t.fields[f.id];
           if (f.kind === 'multi') picker(e.currentTarget, { options: f.options.map(o => ({ v: o.id, label: o.label })), value: cur || [], multi: true, onPick: v => { st.fields[f.id] = v; drawSentence(); } });
           else if (f.kind === 'select') picker(e.currentTarget, { options: [...f.options.map(o => ({ v: o.id, label: o.label })), { v: null, label: 'Empty' }], value: cur, onPick: v => { st.fields[f.id] = v; drawSentence(); } });
           else if (f.kind === 'person') pickPerson(e.currentTarget, cur, v => { st.fields[f.id] = v; drawSentence(); });
         }, !txt));
       }
-      parts.push(devWord(), w(t.assignee_id ? first(prof(t.assignee_id)) : route ? `${first(prof(route.user))} (${route.why})` : 'nobody yet', e => pickPerson(e.currentTarget, st.assignee_id, v => { st.assignee_id = v; st.assigneeManual = true; drawSentence(); }, route ? `Automatic: ${first(prof(route.user))} (${route.why})` : 'Nobody yet'), !t.assignee_id && !route));
+      parts.push(devWord(), w(t.assignee_id ? first(prof(t.assignee_id)) : route ? `${first(prof(route.user))} (${route.why})` : 'no one yet', e => pickPerson(e.currentTarget, st.assignee_id, v => { st.assignee_id = v; st.assigneeManual = true; drawSentence(); }, route ? `Automatic: ${first(prof(route.user))} (${route.why})` : 'Nobody yet'), !t.assignee_id && !route));
       parts.push(', ', w(t.priority ? prioName(t.priority) + ' priority' : 'no priority', e => picker(e.currentTarget, { options: PRIOS.map(p => ({ v: p.k, label: p.n, icon: prioGlyph(p.k) })), value: t.priority, search: false, onPick: v => { st.priority = v; drawSentence(); } }), !t.priority));
       if (usesSprints()) parts.push(', ', w(t.sprint ? `Sprint ${t.sprint}` : 'no sprint', e => { const c = sprintOf(); picker(e.currentTarget, { options: [c, c + 1, c + 2].map(n => ({ v: n, label: `Sprint ${n}`, sub: n === c ? 'current' : '' })).concat([{ v: null, label: 'No sprint' }]), value: st.sprint, search: false, onPick: v => { st.sprint = v; drawSentence(); } }); }, !t.sprint));
       parts.push(', ', w(t.due_date ? 'due ' + fmtDate(t.due_date) : 'no due date', e => pickDate(e.currentTarget, st.due_date, v => { st.due_date = v; drawSentence(); }), !t.due_date));
@@ -130,7 +130,7 @@ function openCreate(opts = {}) {
     createBtn.addEventListener('click', submit);
     createBtn.disabled = !st.title;
     body.append(types, title, aiRow, sentenceBox, hints, details);
-    sh.append(body, h('div', { class: 'sfoot' }, h('span', { class: 'sm mute', text: isPhone() ? 'Only the title is required' : 'Tip: @name  !high  #client · Enter to create' }), h('span', { class: 'sp' }), h('button', { class: 'btn ghost', onclick: () => closeSheet() }, 'Cancel'), createBtn));
+    sh.append(body, h('div', { class: 'sfoot' }, h('span', { class: 'sm mute', text: isPhone() ? 'Only the title is required' : 'Tip: type @ to assign someone · Enter to create' }), h('span', { class: 'sp' }), h('button', { class: 'btn ghost', onclick: () => closeSheet() }, 'Cancel'), createBtn));
     drawAll(); setTimeout(() => title.focus(), 60);
     if (opts.draft) { applyDraft(st, opts.draft, title); drawAll(); showAiNote(); createBtn.disabled = !parse().clean; }
   } });

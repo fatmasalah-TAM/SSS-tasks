@@ -163,7 +163,7 @@ function pageHead(title, sub, tools, extra) {
 /* ── task card + row ── */
 function cardFields(t) {
   const out = [];
-  const off = plainOnly();
+  const off = !techPerson();
   for (const f of S.fields.filter(f => f.show_on_card && fieldApplies(f, t) && !(off && OFFICE_HIDE_FIELDS.includes(f.key))).slice(0, 3)) {
     const v = fieldVal(t, f); if (!hasVal(v)) continue;
     if (f.kind === 'select') { const o = optOf(f, v); if (o) out.push(tag(o.label, o.color)); }
@@ -186,7 +186,7 @@ function taskCard(t, { draggable = true } = {}) {
     h('div', { class: 't', text: t.title || 'Untitled' }),
     (() => { const f = cardFields(t); return f.length ? h('div', { class: 'tags' }, f) : null; })(),
     h('div', { class: 'foot' },
-      h('span', { title: 'Developer: ' + dname(dev), style: { display: 'inline-flex', alignItems: 'center', gap: '6px' } }, avatar(dev, { size: 'xs', turn: devIsTurn }), h('span', { class: 'meta', text: dev ? first(dev) : 'No dev' })),
+      h('span', { title: devLabel() + ': ' + dname(dev), style: { display: 'inline-flex', alignItems: 'center', gap: '6px' } }, avatar(dev, { size: 'xs', turn: devIsTurn }), h('span', { class: 'meta', text: dev ? first(dev) : 'No dev' })),
       !devIsTurn && t.turn_owner ? h('span', { class: 'meta', title: 'Whose turn' }, '→', turnAvatar(t, 'xs')) : null,
       turnLine(t),
       h('span', { class: 'sp' }),
@@ -321,7 +321,7 @@ function boardView(tasks, cfg) {
     const col = h('section', { class: 'col', 'data-key': String(g.key), 'aria-label': g.label },
       h('div', { class: 'colhead' }, h('span', { class: 'no', text: String(i + 1).padStart(2, '0') }), g.icon || (g.color ? h('span', { class: 'swatch', style: { width: '10px', height: '10px', background: g.color } }) : null),
         h('span', { class: 'nm', text: g.label }), h('span', { class: 'ct', text: String(g.tasks.length) }),
-        (g.patch || g.fieldSet) ? h('button', { class: 'add', 'aria-label': `New task in ${g.label}`, onclick: () => openCreate({ preset: groupPatch({ fields: {} }, g) }) }, icon('plus', 16)) : null),
+        (g.patch || g.fieldSet) && !(g.patch?.status_id && ['done', 'canceled'].includes(stOf(g.patch.status_id)?.category)) ? h('button', { class: 'add', 'aria-label': `New task in ${g.label}`, onclick: () => openCreate({ preset: groupPatch({ fields: {} }, g) }) }, icon('plus', 16)) : null),
       h('div', { class: 'cards' }, g.tasks.length ? capped(g.tasks, t => taskCard(t), 'b' + g.key, 40) : h('div', { class: 'colempty', text: 'Empty' })));
     if (g.patch || g.fieldSet) {
       col.addEventListener('dragover', e => { e.preventDefault(); col.classList.add('drop'); });
@@ -368,7 +368,9 @@ function filterBar(cfg) {
   const chips = (cfg.filters || []).map((f, i) => {
     const ff = filterFields().find(x => x.k === f.f); if (!ff) return null;
     const opts = filterOptions(f.f); const labels = f.op === 'contains' ? [`“${f.v[0]}”`] : f.v.map(v => opts.find(o => o.v === v)?.label || String(v));
-    const label = f.f === 'kind' && f.v.length === 1 && f.v[0] === 'bug' ? (f.op === 'none' ? 'Hiding bugs' : 'Only bugs') : `${ff.n} ${f.op === 'none' ? 'is not' : f.op === 'contains' ? 'contains' : 'is'} ${labels.join(', ')}`;
+    const label = f.f === 'kind' && f.v.length === 1 && f.v[0] === 'bug' ? (f.op === 'none' ? 'Hiding bugs' : 'Only bugs')
+      : f.f === 'closed' && f.v.length === 1 ? ((f.op === 'none') === (f.v[0] === 'closed') ? 'Open only' : 'Closed only')
+      : f.f === 'sprint' && f.v.length === 1 && f.op !== 'none' && String(f.v[0]).toLowerCase() === 'current' ? 'This sprint' : `${ff.n} ${f.op === 'none' ? 'is not' : f.op === 'contains' ? 'contains' : 'is'} ${labels.join(', ')}`;
     return h('span', { class: 'fchip on' },
       h('button', { onclick: e => editFilter(e.currentTarget, i), text: label, style: { maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis' } }),
       h('button', { class: 'x', style: { width: '22px', height: '22px' }, 'aria-label': 'Remove filter', onclick: () => { cfg.filters.splice(i, 1); render(); } }, icon('x', 14)));
@@ -495,7 +497,7 @@ function viewMyTurn() {
   if (!S.tasks.length) return [h('div', { class: 'scroll turnpage' }, ...top, h('div', { 'data-tour': 'turn-now' }, emptyState('0 TASKS', 'Clear ground. Add the first task.', { label: 'New task', fn: () => openCreate() }, { label: 'Import from a file', fn: () => openImport() })))];
   return [h('div', { class: 'scroll turnpage' }, ...top,
     now.length ? sec('Your tasks', now, 'turn-now') : h('div', { 'data-tour': 'turn-now' }, emptyState('YOUR MOVE · 0', 'No tasks of yours right now.', { label: 'See the board', fn: () => go({ v: 'work' }) })),
-    sec('Waiting on others', waiting, 'turn-waiting', 'Nothing you’ve passed on', withWho),
+    sec('Waiting on others', waiting, 'turn-waiting', 'You haven’t handed anything to anyone', withWho),
     upcoming.length ? sec('Upcoming', upcoming, null) : null)];
 }
 

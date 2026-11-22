@@ -43,7 +43,7 @@ function taskMenu(anchor, t) {
 }
 const taskLink = t => location.origin + location.pathname + '#task-' + t.id;
 function shareTask(t) {
-  const txt = `*${taskKey(t)}* ${t.title}\n${stOf(t.status_id)?.name || ''} · Developer: ${dname(prof(t.assignee_id))}\n${taskLink(t)}`;
+  const txt = `*${taskKey(t)}* ${t.title}\n${stOf(t.status_id)?.name || ''} · ${devLabel()}: ${dname(prof(t.assignee_id))}\n${taskLink(t)}`;
   if (navigator.share && isPhone()) navigator.share({ text: txt }).catch(() => {});
   else window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank', 'noopener');
 }
@@ -108,7 +108,7 @@ function replaceIn(parent, cls, make) {
 /* the sentence: Type for Client in Area · developer X · priority · sprint · due */
 const KIND_RANK = { select: 0, multi: 1, person: 2, date: 3, text: 4, number: 5, checkbox: 6 };
 const OFFICE_HIDE_FIELDS = ['area', 'tier', 'phase'];
-function sentenceFields(t) { const off = plainOnly(); return S.fields.filter(f => f.show_on_card && fieldApplies(f, t) && !(off && (OFFICE_HIDE_FIELDS.includes(f.key) || (f.key === 'client' && myDepts().every(d => (d.hide || []).includes('clients')))))).sort((a, b) => (KIND_RANK[a.kind] - KIND_RANK[b.kind]) || a.position - b.position); }
+function sentenceFields(t) { const off = !techPerson(); return S.fields.filter(f => f.show_on_card && fieldApplies(f, t) && !(off && OFFICE_HIDE_FIELDS.includes(f.key)) && !(f.key === 'client' && !isAdmin() && !smallTeam() && myDepts().length && myDepts().every(d => (d.hide || []).includes('clients')))).sort((a, b) => (KIND_RANK[a.kind] - KIND_RANK[b.kind]) || a.position - b.position); }
 function sentence(t) {
   const ty = tyOf(t.type_id); const parts = [];
   const w = (label, onclick, empty, tourId) => h('button', { class: 'w' + (empty ? ' blank' : ''), onclick, 'data-tour': tourId || null }, label);
@@ -116,11 +116,11 @@ function sentence(t) {
   let usedFor = false, usedIn = false;
   for (const f of sentenceFields(t)) {
     const txt = fieldText(t, f); const word = f.kind === 'select' && !usedFor ? (usedFor = true, 'for') : f.kind === 'multi' && !usedIn ? (usedIn = true, 'in') : f.name.toLowerCase();
-    parts.push(' ' + word + ' ', w(txt || f.name.toLowerCase() + '?', e => pickField(e.currentTarget, t, f), !txt));
+    parts.push(txt ? ' ' + word + ' ' : ', ', w(txt || 'no ' + f.name.toLowerCase(), e => pickField(e.currentTarget, t, f), !txt));
   }
-  parts.push(devWord(), w(t.assignee_id ? dname(prof(t.assignee_id)) : 'nobody yet', e => pickPerson(e.currentTarget, t.assignee_id, v => patchTask(t.id, { assignee_id: v }, { toast: v ? `${first(prof(v))}’s on it` : 'Developer cleared' })), !t.assignee_id));
+  parts.push(devWord(), w(t.assignee_id ? dname(prof(t.assignee_id)) : 'no one yet', e => pickPerson(e.currentTarget, t.assignee_id, v => patchTask(t.id, { assignee_id: v }, { toast: v ? `${first(prof(v))}’s on it` : 'Developer cleared' })), !t.assignee_id));
   parts.push(', ', w(t.priority ? prioName(t.priority) + ' priority' : 'no priority', e => pickPriority(e.currentTarget, t), !t.priority));
-  if (usesSprints() || (t.sprint && !plainOnly())) parts.push(', ', w(t.sprint ? `Sprint ${t.sprint}` : 'no sprint', e => pickSprint(e.currentTarget, t), !t.sprint));
+  if (usesSprints() || (t.sprint && softwarePerson())) parts.push(', ', w(t.sprint ? `Sprint ${t.sprint}` : 'no sprint', e => pickSprint(e.currentTarget, t), !t.sprint));
   parts.push(', ', w(t.due_date ? 'due ' + fmtDate(t.due_date) : 'no due date', e => pickDate(e.currentTarget, t.due_date, v => patchTask(t.id, { due_date: v }, { toast: v ? 'Due date set' : 'Due date cleared' })), !t.due_date), '.');
   return h('p', { class: 'sentence', style: { margin: '0' } }, parts);
 }
@@ -271,16 +271,16 @@ function fieldsPanel(t) {
   const st = stOf(t.status_id);
   row('Status', pick(st?.name || '—', e => pickStatus(e.currentTarget, t), false, stIcon(st)));
   row('Type', pick(tyOf(t.type_id)?.name || '—', e => pickType(e.currentTarget, t)));
-  row(softwareTeam() && !plainOnly() ? 'Developer' : 'Assigned to', pick(t.assignee_id ? dname(prof(t.assignee_id)) : 'Unassigned', e => pickPerson(e.currentTarget, t.assignee_id, v => patchTask(t.id, { assignee_id: v }, { toast: v ? `${first(prof(v))}’s on it` : 'Developer cleared' })), !t.assignee_id, avatar(prof(t.assignee_id), { size: 'xs' })));
+  row(devLabel(), pick(t.assignee_id ? dname(prof(t.assignee_id)) : 'Unassigned', e => pickPerson(e.currentTarget, t.assignee_id, v => patchTask(t.id, { assignee_id: v }, { toast: v ? `${first(prof(v))}’s on it` : 'Developer cleared' })), !t.assignee_id, avatar(prof(t.assignee_id), { size: 'xs' })));
   row('Reviewer', pick(t.reviewer_id ? dname(prof(t.reviewer_id)) : 'Workspace default', e => pickPerson(e.currentTarget, t.reviewer_id, v => patchTask(t.id, { reviewer_id: v }, { toast: 'Reviewer updated' })), !t.reviewer_id, avatar(prof(t.reviewer_id), { size: 'xs' })));
   row('Priority', pick(prioName(t.priority || 0), e => pickPriority(e.currentTarget, t), !t.priority, prioGlyph(t.priority || 0)));
   row('Project', pick(pjOf(t.project_id)?.name || 'No project', e => picker(e.currentTarget, { options: [...S.projects.map(p => ({ v: p.id, label: p.name })), { v: null, label: 'No project' }], value: t.project_id, onPick: v => patchTask(t.id, { project_id: v }, { toast: 'Project updated' }) }), !t.project_id));
-  if (!plainOnly()) row('Sprint', pick(t.sprint ? `Sprint ${t.sprint}` : 'No sprint', e => pickSprint(e.currentTarget, t), !t.sprint));
+  if (usesSprints() || t.sprint && softwarePerson()) row('Sprint', pick(t.sprint ? `Sprint ${t.sprint}` : 'No sprint', e => pickSprint(e.currentTarget, t), !t.sprint));
   startRow(t, row, pick);
   row('Due', pick(t.due_date ? fmtDate(t.due_date) : 'No date', e => pickDate(e.currentTarget, t.due_date, v => { if (v && t.start_date && v < t.start_date) return toast('The due date can’t be before the start'); patchTask(t.id, { due_date: v }); }), !t.due_date));
   waitsRow(t, row);
-  row('Flags', pick((t.flags || []).map(k => FLAGS.find(f => f.k === k)?.n).filter(Boolean).join(', ') || 'None', e => picker(e.currentTarget, { options: FLAGS.map(f => ({ v: f.k, label: f.n, sub: '' })), value: t.flags || [], multi: true, search: false, onPick: v => patchTask(t.id, { flags: v }) }), !(t.flags || []).length));
-  const applicable = S.fields.filter(f => fieldApplies(f, t) && !(plainOnly() && OFFICE_HIDE_FIELDS.includes(f.key))); const empty = applicable.filter(f => f.hide_empty && !hasVal(fieldVal(t, f)) && f.kind !== 'checkbox');
+  row('Flags', pick((t.flags || []).map(k => FLAGS.find(f => f.k === k)?.n).filter(Boolean).join(', ') || 'No flags', e => picker(e.currentTarget, { options: FLAGS.map(f => ({ v: f.k, label: f.n, sub: '' })), value: t.flags || [], multi: true, search: false, onPick: v => patchTask(t.id, { flags: v }) }), !(t.flags || []).length));
+  const applicable = S.fields.filter(f => fieldApplies(f, t) && !(!techPerson() && OFFICE_HIDE_FIELDS.includes(f.key))); const empty = applicable.filter(f => f.hide_empty && !hasVal(fieldVal(t, f)) && f.kind !== 'checkbox');
   const shown = applicable.filter(f => !empty.includes(f) || detail?.showEmpty);
   for (const f of shown) row(f.name, fieldEditor(t, f), f.help);
   const box = h('div', {}, h('h4', { style: { margin: '0 0 8px', font: '600 12px/16px var(--display)', letterSpacing: '0', color: 'var(--fg2)' }, text: 'Fields' }), kv);
@@ -335,7 +335,7 @@ function drawThread() {
   const filt = detail.filter;
   box.replaceChildren(h('h4', {}, 'Activity', h('span', { class: 'act' }, h('div', { class: 'seg', role: 'group', 'aria-label': 'Show' },
     h('button', { 'aria-pressed': String(filt === 'comments'), onclick: () => { detail.filter = 'comments'; store.set('actFilter', 'comments'); drawThread(); } }, 'Comments'),
-    h('button', { 'aria-pressed': String(filt === 'all'), onclick: () => { detail.filter = 'all'; store.set('actFilter', 'all'); drawThread(); } }, 'Everything')))),
+    h('button', { 'aria-pressed': String(filt === 'all'), onclick: () => { detail.filter = 'all'; store.set('actFilter', 'all'); drawThread(); } }, 'All activity')))),
     timeline(), composer());
 }
 const FIELD_LABEL = { status: 'status', developer: 'developer', reviewer: 'reviewer', priority: 'priority', type: 'type', sprint: 'sprint', due: 'due date', project: 'project', flags: 'flags', fields: 'fields', title: 'title' };

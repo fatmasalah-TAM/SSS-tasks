@@ -78,6 +78,6 @@ function productParts() {
     sections: [
       ['Needs your decision', 'h-decide', decide, t => withBtn(turnCard(t, { sub: `Asked ${ago(ageOf(t))} ago` }), 'Decide', () => openTask(t.id)), 'No decisions waiting on you.'],
       ['Requests not planned yet', 'h-asks', asks, t => withBtn(turnCard(t), 'Plan', () => openTask(t.id)), 'Every request has an owner.'],
-      ['Projects at risk', 'h-risk', risk, projCard, 'No project has late or bouncing work.']] };
+      ['Projects at risk', 'h-risk', risk, projCard, 'No project has late or sent-back work.']] };
 }
 

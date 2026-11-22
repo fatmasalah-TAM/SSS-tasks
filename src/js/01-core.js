@@ -344,8 +344,9 @@ async function patchTask(id, patch, opts = {}) {
 }
 /* software teams talk about developers and sprints; agencies and other teams just have an owner */
 function softwareTeam() { return !['agency', 'general'].includes(S.ws?.template); }
-function devWord() { return softwareTeam() && !plainOnly() ? ', developer ' : ', assigned to '; }
-function usesSprints() { return softwareTeam() && !plainOnly(); }
+function devWord() { return softwareTeam() && softwarePerson() ? ', developer ' : ', assigned to '; }
+function usesSprints() { return softwareTeam() && softwarePerson() && !myDepts().every(d => (d.hide || []).includes('sprint')); }
+const devLabel = () => softwareTeam() && softwarePerson() ? 'Developer' : 'Assigned to';
 const BASIC_TYPES = [['task', 'Task', '#1F55B8', 'dot', ['Details']], ['followup', 'Follow-up', '#0E6A6E', 'arrow', ['Who and what']], ['issue', 'Problem', '#B42318', 'bug', ['What happened', 'Where']]];
 let typesEnsured = false;
 async function ensureDeptTypes() {

@@ -119,7 +119,7 @@ function waitsRow(t, row) {
   row('Waits on', h('div', { class: 'blockers' },
     bs.map(b => h('span', { class: 'blk' + (isClosed(b) ? ' done' : ''), 'data-blocker': b.id }, h('button', { class: 'lnk', onclick: () => openTask(b.id), text: taskKey(b), title: b.title }),
       h('button', { class: 'x', 'aria-label': `Stop waiting on ${taskKey(b)}`, onclick: () => patchTask(t.id, { blocked_by: (t.blocked_by || []).filter(id => id !== b.id) }) }, icon('x', 12)))),
-    h('button', { class: 'pick blank', 'data-add-blocker': '1', onclick: e => pickBlocker(e.currentTarget, t) }, h('span', { text: bs.length ? '+ Add' : 'Nothing' }))), 'Tasks that must finish before this one can start');
+    h('button', { class: 'pick blank', 'data-add-blocker': '1', onclick: e => pickBlocker(e.currentTarget, t) }, h('span', { text: bs.length ? '+ Add' : 'Not waiting on anything' }))), 'Tasks that must finish before this one can start');
 }
 /* the timeline tab */
 function projectTimeline(p) {
@@ -166,9 +166,9 @@ function projectTimeline(p) {
    answer deadline and a fix deadline from the workspace's SLA. All three hang off tasks, so the usual flow
    (whose turn, review, comments, time) still applies. */
 const FIELD_PAGES = {
-  devices: ['hardware', 'embedded', 'hwlead', 'field', 'support', 'presales', 'success', 'management', 'operations'],
-  visits: ['field', 'hwlead', 'hardware', 'support', 'presales', 'management'],
-  tickets: ['support', 'success', 'field', 'hwlead', 'management', 'product', 'pm'],
+  devices: ['hardware', 'embedded', 'hwlead', 'field', 'support', 'presales', 'success', 'operations'],
+  visits: ['field', 'hwlead', 'hardware', 'support', 'presales'],
+  tickets: ['support', 'success', 'hwlead', 'product', 'pm'],
 };
 const fieldPageHidden = v => { if (!FIELD_PAGES[v] || smallTeam() || showAllPages()) return false; const ds = myDepts(); return !!ds.length && !ds.some(d => FIELD_PAGES[v].includes(d.base || d.k)); };
 const DEV_STATES = [['active', 'Working'], ['faulty', 'Faulty'], ['retired', 'Retired']];
@@ -364,8 +364,8 @@ const ticketsBadge = () => (S.tickets || []).filter(k => !k.resolved_at && (hour
    attached to a task: severity, state (investigating → identified → monitoring → resolved), impact, then a
    postmortem with follow-up tasks. */
 Object.assign(FIELD_PAGES, {
-  tests: ['qa', 'product', 'pm', 'backend', 'frontend', 'mobile', 'devops'],
-  incidents: ['devops', 'backend', 'frontend', 'mobile', 'support', 'management', 'product', 'pm', 'hwlead', 'embedded', 'qa', 'data'],
+  tests: ['qa'],
+  incidents: ['devops', 'data'],
 });
 const RESULTS = [['pass', 'Pass'], ['fail', 'Fail'], ['blocked', 'Blocked'], ['skip', 'Skip']];
 const casesOf = pid => (S.testCases || []).filter(c => !c.archived && (c.project_id || null) === (pid || null)).sort((a, b) => a.position - b.position || a.created_at.localeCompare(b.created_at));
