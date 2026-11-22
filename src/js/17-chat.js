@@ -320,12 +320,12 @@ async function toggleReact(m, emoji) {
   const mine = S.reactions.find(r => r.message_id === m.id && r.user_id === uid() && r.emoji === emoji);
   if (mine) {
     S.reactions = S.reactions.filter(r => r !== mine); refreshChat();
-    const { error } = await sb.from('reactions').delete().eq('message_id', m.id).eq('user_id', uid()).eq('emoji', emoji);
+    const { error } = await write({ t: 'reactions', op: 'delete', match: { message_id: m.id, user_id: uid(), emoji } });
     if (error) { S.reactions.push(mine); refreshChat(); toast(errText(error)); }
   } else {
     const row = { message_id: m.id, user_id: uid(), emoji, workspace_id: S.ws.id, created_at: nowIso() };
     S.reactions.push(row); refreshChat();
-    const { error } = await sb.from('reactions').insert(row);
+    const { error } = await write({ t: 'reactions', op: 'insert', row, plain: true });
     if (error && !/duplicate/i.test(error.message)) { S.reactions = S.reactions.filter(r => r !== row); refreshChat(); toast(errText(error)); }
   }
 }
@@ -408,7 +408,7 @@ async function sendMessage(c, parentId, body, files) {
   const uploaded = [];
   for (const f of files) {
     const path = `${S.ws.id}/${uid()}/${uuid()}-${f.name.replace(/[^\w.\-]+/g, '_').slice(-80)}`;
-    const { error } = await sb.storage.from('chat').upload(path, f, { contentType: f.type || 'application/octet-stream' });
+    const { error } = await putFile('chat', path, f);
     if (error) { toast(`Couldn’t upload ${f.name}: ${errText(error)}`); return false; }
     uploaded.push(Object.assign({ name: f.name, path, type: f.type || '', size: f.size }, f.seconds ? { seconds: f.seconds } : {}));
   }

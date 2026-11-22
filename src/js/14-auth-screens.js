@@ -124,6 +124,6 @@ function pwEye(pw) {
 }
 async function signOut() { closeAllSheets(true); vaultLock(true); V.loaded = false; await Promise.race([disablePush(), new Promise(r => setTimeout(r, 2500))]);
   // changes saved while offline belong to this person: send them now if we can, never under the next account
-  if (S.outbox.length && navigator.onLine) await Promise.race([flushOutbox(), new Promise(r => setTimeout(r, 3000))]);
-  S.outbox = []; store.del('outbox'); stopRinging(); if (channel) { sb.removeChannel(channel); channel = null; } await sb.auth.signOut(); }
+  if ((S.outbox.length || waitingFiles.size) && navigator.onLine) await Promise.race([Promise.all([flushOutbox(), flushFiles()]), new Promise(r => setTimeout(r, 4000))]);
+  S.outbox = []; store.del('outbox'); await idb.clear('files'); waitingFiles.clear(); await forgetPhoneCopy(); /* nothing of this account stays on the phone */ stopRinging(); if (channel) { sb.removeChannel(channel); channel = null; } await sb.auth.signOut(); }
 

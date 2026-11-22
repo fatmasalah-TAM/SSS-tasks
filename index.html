@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-KzMwe8jvp2JuIli/BEPmIUhLpDVrzvw0YlPAtu/SBYg=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-6MmIksg025tkaxCI4e2qDmOBzguKfSZDAeSjMaoOXKs=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-KzMwe8jvp2JuIli/BEPmIUhLpDVrzvw0YlPAtu/SBYg=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-X46JEhdmCN8n+Bw3ga++kKEUx4driY9TOL3ZPxAMrAU=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<meta name="ovrto-build" content="acb627dc6772">
+<meta name="ovrto-build" content="898141681806">
 <title>Ovrto</title>
 <meta name="description" content="Over to you. Every task shows whose turn it is.">
 <meta name="theme-color" content="#0D0D0F">
@@ -1434,6 +1434,17 @@ const store = {
   set(k, v) { try { localStorage.setItem('baton.' + k, JSON.stringify(v)); } catch {} },
   del(k) { try { localStorage.removeItem('baton.' + k); } catch {} },
 };
+/* a small IndexedDB store: the phone's copy of the workspace and files waiting for internet (too big for localStorage) */
+const idb = (() => {
+  let p = null;
+  const open = () => p || (p = new Promise((res, rej) => { if (!('indexedDB' in window)) return rej(new Error('no idb'));
+    const r = indexedDB.open('ovrto', 1);
+    r.onupgradeneeded = () => { for (const s of ['snap', 'files']) if (!r.result.objectStoreNames.contains(s)) r.result.createObjectStore(s); };
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }));
+  const tx = async (s, mode, fn) => { const d = await open(); return new Promise((res, rej) => { const t = d.transaction(s, mode); const q = fn(t.objectStore(s)); t.oncomplete = () => res(q && q.result); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error); }); };
+  return { get: (s, k) => tx(s, 'readonly', o => o.get(k)).catch(() => undefined), set: (s, k, v) => tx(s, 'readwrite', o => o.put(v, k)).then(() => true).catch(() => false),
+    del: (s, k) => tx(s, 'readwrite', o => o.delete(k)).catch(() => {}), keys: s => tx(s, 'readonly', o => o.getAllKeys()).catch(() => []), clear: s => tx(s, 'readwrite', o => o.clear()).catch(() => {}) };
+})();
 const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); }));
 const clone = o => JSON.parse(JSON.stringify(o));
 const nowIso = () => new Date().toISOString();
@@ -1614,7 +1625,7 @@ function errText(e) {
   if (/already registered/i.test(m)) return 'This email already has an account. Sign in instead.';
   if (/row-level security|permission|violates/i.test(m)) return 'You don’t have permission to do that.';
   if (/at least one admin/i.test(m)) return 'The workspace needs at least one admin.';
-  if (/Failed to fetch|NetworkError|Load failed|network/i.test(m)) return 'Can’t reach the server. Check your connection.';
+  if (/Failed to fetch|NetworkError|Load failed|network/i.test(m)) return navigator.onLine ? 'Can’t reach the server. Check your connection.' : 'No internet. This one needs a connection; your other work is saved on this phone.';
   return m;
 }
 const isNetErr = e => /Failed to fetch|NetworkError|Load failed|network|fetch/i.test(e?.message || String(e)) || !navigator.onLine;
@@ -1669,23 +1680,70 @@ async function loadAll() {
   if (S.ws?.id !== ws) return;
   S.loaded = true; snapshot(); ensureDeptTypes();
 }
-const snapshot = debounce(() => {
-  if (!S.ws) return;
-  store.set('snap.' + S.ws.id, { members: S.members, profiles: S.profiles, statuses: S.statuses, types: S.types, fields: S.fields, rules: S.rules, views: S.views, projects: S.projects, tasks: S.tasks, notifs: S.notifs, invites: S.invites, channels: S.channels, messages: S.messages.slice(-800), reactions: S.reactions, reads: S.reads, huddles: S.huddles, workOrders: S.workOrders, devices: S.devices, tickets: S.tickets, stock: S.stock, approvals: S.approvals, leaves: S.leaves, deals: S.deals });
-}, 800);
-function restoreSnapshot(wsId) {
-  const s = store.get('snap.' + wsId, null); if (!s) return false;
-  Object.assign(S, s); S.loaded = true; return true;
+/* the phone's copy of the workspace: everything this person can see, so Ovrto opens and works with no internet.
+   Kept in IndexedDB (localStorage as a fallback), cleared on sign-out. */
+const threadCache = {}; // a task's comments and history, as last seen
+const snapData = () => {
+  const d = { members: S.members, profiles: S.profiles, notifs: S.notifs, channels: S.channels, messages: S.messages.slice(-1500), reactions: S.reactions, reads: S.reads, huddles: S.huddles, clientContacts: S.clientContacts, at: nowIso() };
+  for (const t of WS_TABLES) d[LOCAL[t]] = S[LOCAL[t]];
+  if (typeof M !== 'undefined' && M.loaded === S.ws.id) d.money = { rows: M.rows, settings: M.settings, salary: M.salary, hwSalary: M.hwSalary };
+  d.threads = Object.fromEntries(Object.entries(threadCache).sort((a, b) => (b[1].at || '').localeCompare(a[1].at || '')).slice(0, 200));
+  return d;
+};
+async function snapshotNow() {
+  if (!S.ws || !S.loaded) return; const id = S.ws.id; let d; try { d = snapData(); } catch { return; }
+  if (await idb.set('snap', id, d)) store.del('snap.' + id); else store.set('snap.' + id, d);
+}
+const snapshot = debounce(snapshotNow, 800);
+addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') snapshotNow(); }); // the app is being closed or put away
+async function restoreSnapshot(wsId) {
+  const s = (await idb.get('snap', wsId)) || store.get('snap.' + wsId, null); if (!s || S.ws?.id !== wsId) return false;
+  const { money, threads, at, ...rest } = s;
+  Object.assign(S, rest); Object.assign(threadCache, threads || {});
+  if (money && typeof M !== 'undefined') { Object.assign(M, money); M.cached = wsId; }
+  S.loaded = true; return true;
+}
+async function forgetPhoneCopy() { await idb.clear('snap'); try { for (const k of Object.keys(localStorage)) if (/^baton\.(snap\.|wsList|prefs\.)/.test(k)) localStorage.removeItem(k); } catch {} }
+
+/* files picked with no internet wait on the phone and go up when it's back; the task or message points at them already */
+const OFFLINE_FILE_MAX = 25 * 1024 * 1024;
+const waitingFiles = new Map(); // path → a link to the copy on this phone
+let filesFlushing = false;
+async function putFile(bucket, path, f) {
+  const type = f.type || 'application/octet-stream';
+  if (navigator.onLine) {
+    try { const { error } = await sb.storage.from(bucket).upload(path, f, { contentType: type }); if (!error) return {}; if (!isNetErr(error)) return { error }; }
+    catch (e) { if (!isNetErr(e)) return { error: e }; }
+  }
+  if (f.size > OFFLINE_FILE_MAX) return { error: { message: `No internet, and ${f.name} is over 25 MB. Send it when you’re back online.` } };
+  if (!(await idb.set('files', path, { bucket, path, blob: f, type, user: uid(), at: nowIso() }))) return { error: { message: 'No internet, and this phone can’t keep the file. Try again when you’re online.' } };
+  waitingFiles.set(path, URL.createObjectURL(f)); renderPill(); return { queued: true };
+}
+async function loadWaitingFiles() {
+  for (const k of await idb.keys('files')) { if (waitingFiles.has(k)) continue; const x = await idb.get('files', k); if (x && x.user === uid()) waitingFiles.set(k, URL.createObjectURL(x.blob)); }
+  renderPill();
+}
+async function flushFiles() {
+  if (filesFlushing || !navigator.onLine || !uid()) return; filesFlushing = true;
+  try {
+    for (const k of await idb.keys('files')) {
+      const x = await idb.get('files', k); if (!x || x.user !== uid()) continue;
+      const { error } = await sb.storage.from(x.bucket).upload(x.path, x.blob, { contentType: x.type, upsert: true });
+      if (error && isNetErr(error)) break;
+      await idb.del('files', k); const u = waitingFiles.get(k); waitingFiles.delete(k); if (u) setTimeout(() => URL.revokeObjectURL(u), 60000);
+    }
+  } catch {} finally { filesFlushing = false; renderPill(); }
 }
 
 /* ── writes with offline outbox ── */
-function persistOutbox() { store.set('outbox', S.outbox); renderPill(); snapshot(); } // keep this phone’s copy current, so work done offline is still there after the app is closed
+function persistOutbox() { store.set('outbox', S.outbox); renderPill(); setTimeout(snapshotNow, 0); } // after the caller has updated what's on screen // keep this phone’s copy current, so work done offline is still there after the app is closed
 async function exec(op) {
   let q = sb.from(op.t);
-  if (op.op === 'insert') q = q.insert(op.row).select().single();
-  else if (op.op === 'upsert') q = q.upsert(op.row).select();
-  else if (op.op === 'update') { q = q.update(op.patch).eq(op.key || 'id', op.id); if (op.extraEq) q = q.eq(op.extraEq[0], op.extraEq[1]); q = q.select(); }
-  else if (op.op === 'delete') q = q.delete().eq(op.key || 'id', op.id);
+  const match = q2 => { for (const [k, v] of Object.entries(op.match || { [op.key || 'id']: op.id })) q2 = q2.eq(k, v); if (op.extraEq) q2 = q2.eq(op.extraEq[0], op.extraEq[1]); return q2; };
+  if (op.op === 'insert') q = op.plain ? q.insert(op.row) : q.insert(op.row).select().single();
+  else if (op.op === 'upsert') q = op.plain ? q.upsert(op.row) : q.upsert(op.row).select();
+  else if (op.op === 'update') { q = match(q.update(op.patch)); if (!op.plain) q = q.select(); }
+  else if (op.op === 'delete') q = match(q.delete());
   return await q;
 }
 async function write(op) {
@@ -1706,6 +1764,7 @@ async function write(op) {
 }
 let flushing = false;
 async function flushOutbox() {
+  flushFiles();
   if (flushing || !S.outbox.length || !navigator.onLine) return;
   flushing = true; let failed = 0, saved = 0;
   while (S.outbox.length && navigator.onLine) {
@@ -1966,8 +2025,9 @@ function toast(msg, action, ms = 5000, keep = false) { // keep: stay next to the
 }
 function renderPill() {
   $('.pill')?.remove();
-  if (S.outbox.length || !navigator.onLine) {
-    document.body.append(h('div', { class: 'pill', role: 'status' }, navigator.onLine ? h('span', { class: 'ld-mark loop', 'aria-hidden': 'true', html: ICONS.markAnim }) : null, navigator.onLine ? `Saving ${S.outbox.length} change${S.outbox.length > 1 ? 's' : ''}…` : `Offline${S.outbox.length ? ` · ${S.outbox.length} change${S.outbox.length > 1 ? 's' : ''} waiting` : ''}`));
+  const n = S.outbox.length + (typeof waitingFiles !== 'undefined' ? waitingFiles.size : 0); // changes and files waiting on this phone
+  if (n || !navigator.onLine) {
+    document.body.append(h('div', { class: 'pill', role: 'status' }, navigator.onLine ? h('span', { class: 'ld-mark loop', 'aria-hidden': 'true', html: ICONS.markAnim }) : null, navigator.onLine ? `Saving ${n} change${n > 1 ? 's' : ''}…` : `Offline${n ? ` · ${n} change${n > 1 ? 's' : ''} waiting` : ' · your work is saved on this phone'}`));
   }
 }
 
@@ -3113,12 +3173,12 @@ async function toggleMute(kind, id) {
   S.mutes = S.mutes || [];
   if (isMuted(id)) {
     const was = S.mutes; S.mutes = S.mutes.filter(m => m.target_id !== id); render();
-    const { error } = await sb.from('notif_mutes').delete().eq('user_id', uid()).eq('target_id', id);
+    const { error } = await write({ t: 'notif_mutes', op: 'delete', match: { user_id: uid(), target_id: id } });
     if (error) { S.mutes = was; render(); return toast(errText(error)); }
     toast(kind === 'project' ? 'Project updates on again' : 'Task updates on again');
   } else {
     const row = { user_id: uid(), workspace_id: S.ws.id, target_id: id, target_kind: kind }; S.mutes = [...S.mutes, row]; render();
-    const { error } = await sb.from('notif_mutes').insert(row);
+    const { error } = await write({ t: 'notif_mutes', op: 'insert', row, plain: true });
     if (error) { S.mutes = S.mutes.filter(m => m !== row); render(); return toast(errText(error)); }
     toast('Muted. You still hear when it’s your turn or someone mentions you');
   }
@@ -3149,7 +3209,10 @@ async function loadThread(id) {
     sb.from('activity').select('*').eq('task_id', id).order('created_at', { ascending: true }),
   ]);
   if (!detail || detail.id !== id) return;
-  detail.loading = false; detail.comments = c.data || []; detail.activity = a.data || []; drawThread();
+  const off = (c.error && isNetErr(c.error)) || (a.error && isNetErr(a.error)); const had = threadCache[id];
+  if (off) { detail.comments = [...(had?.c || []), ...(detail.comments || []).filter(x => !(had?.c || []).some(y => y.id === x.id))]; detail.activity = had?.a || []; }
+  else { detail.comments = c.data || []; detail.activity = a.data || []; }
+  detail.loading = false; threadCache[id] = { c: detail.comments, a: detail.activity, at: nowIso() }; drawThread();
 }
 function refreshSheet() {
   if (detail) { if (!taskOf(detail.id)) { closeSheet(); toast('That task was deleted'); return; } drawDetail(false); }
@@ -3290,6 +3353,7 @@ function descBlock(t) {
 /* attachments: photos, videos and PDFs on a task, kept private in the team's file storage and opened by signed links */
 var TASK_FILE_MAX = 50 * 1024 * 1024;
 async function signedFile(path) {
+  if (waitingFiles.has(path)) return waitingFiles.get(path); // still on this phone
   const hit = fileLinks[path]; if (hit && hit.until > Date.now()) return hit.url;
   const { data, error } = await sb.storage.from('chat').createSignedUrl(path, 6 * 3600);
   if (error || !data?.signedUrl) return null;
@@ -3303,14 +3367,14 @@ async function attachFiles(t, list) {
   const added = [];
   for (const f of ok) {
     const path = `${S.ws.id}/${uid()}/task-${t.id}/${uuid()}-${f.name.replace(/[^\w.\-]+/g, '_').slice(-80)}`;
-    const { error } = await sb.storage.from('chat').upload(path, f, { contentType: f.type || 'application/octet-stream' });
+    const { error, queued } = await putFile('chat', path, f);
     if (error) { toast(`Couldn’t upload ${f.name}: ${errText(error)}`); continue; }
-    added.push({ name: f.name, path, type: f.type || '', size: f.size, by: uid(), at: nowIso() });
+    added.push({ name: f.name, path, type: f.type || '', size: f.size, by: uid(), at: nowIso() }); if (queued) added.waiting = true;
   }
   if (!added.length) return;
   const cur = taskOf(t.id); if (!cur) return;
   const ok2 = await patchTask(t.id, { files: [...(cur.files || []), ...added] });
-  if (ok2) { track('task_attach'); toast(added.length === 1 ? 'File attached' : `${added.length} files attached`); }
+  if (ok2) { track('task_attach'); toast((added.length === 1 ? 'File attached' : `${added.length} files attached`) + (added.waiting ? ' · saved on this phone, it goes up when you’re back online' : '')); }
 }
 async function removeFile(t, f) {
   const ok = await patchTask(t.id, { files: (t.files || []).filter(x => x.path !== f.path) }, { toast: 'Attachment removed', noUndo: true });
@@ -3426,7 +3490,9 @@ function pickDate(a, value, onPick) {
 }
 /* thread: comments + activity */
 function drawThread() {
-  if (!detail) return; const box = $('.d-thread', detail.sh); if (!box) return;
+  if (!detail) return;
+  if (!detail.loading && detail.comments) { threadCache[detail.id] = { c: detail.comments, a: detail.activity || [], at: nowIso() }; snapshot(); } // keep it for offline
+  const box = $('.d-thread', detail.sh); if (!box) return;
   if (box.contains(document.activeElement)) { const list = $('.timeline', box); if (list) list.replaceWith(timeline()); return; }
   const filt = detail.filter;
   box.replaceChildren(h('h4', {}, 'Activity', h('span', { class: 'act' }, h('div', { class: 'seg', role: 'group', 'aria-label': 'Show' },
@@ -4438,7 +4504,7 @@ addEventListener('online', () => { if (S.ws) { flushOutbox(); setupRealtime(); c
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { checkUpdate(); if (S.ws) { flushOutbox(); setupRealtime(); catchUp(); } } });
 
 /* a new version was uploaded: phones (and apps saved to the home screen) pick it up by themselves */
-const BUILD = 'acb627dc6772';
+const BUILD = '898141681806';
 let updLast = 0, updShown = false;
 async function checkUpdate(force) {
   if (!force && Date.now() - updLast < 60000) return; updLast = Date.now();
@@ -4580,8 +4646,8 @@ function pwEye(pw) {
 }
 async function signOut() { closeAllSheets(true); vaultLock(true); V.loaded = false; await Promise.race([disablePush(), new Promise(r => setTimeout(r, 2500))]);
   // changes saved while offline belong to this person: send them now if we can, never under the next account
-  if (S.outbox.length && navigator.onLine) await Promise.race([flushOutbox(), new Promise(r => setTimeout(r, 3000))]);
-  S.outbox = []; store.del('outbox'); stopRinging(); if (channel) { sb.removeChannel(channel); channel = null; } await sb.auth.signOut(); }
+  if ((S.outbox.length || waitingFiles.size) && navigator.onLine) await Promise.race([Promise.all([flushOutbox(), flushFiles()]), new Promise(r => setTimeout(r, 4000))]);
+  S.outbox = []; store.del('outbox'); await idb.clear('files'); waitingFiles.clear(); await forgetPhoneCopy(); /* nothing of this account stays on the phone */ stopRinging(); if (channel) { sb.removeChannel(channel); channel = null; } await sb.auth.signOut(); }
 
 /* ═════════════ boot ═════════════ */
 let recovering = false, booting = false;
@@ -4590,7 +4656,7 @@ async function switchWs(id) {
   closeAllSheets(true); vaultLock(true); V.loaded = false; M.loaded = null; S.ws = w; S.vc = null; S.loaded = false; S.route = { v: S.prefs?.default_view || 'myturn' };
   for (const k of ['members', 'statuses', 'types', 'fields', 'rules', 'views', 'projects', 'tasks', 'invites', 'notifs', 'channels', 'messages', 'reactions', 'huddles']) S[k] = [];
   S.reads = {}; huddleCfg = null;
-  restoreSnapshot(id); render();
+  await restoreSnapshot(id); render();
   savePrefs({ last_workspace: id }); store.set('appName', w.app_name);
   await loadAll(); S.route = { v: startView() }; render(); setupRealtime(); checkDept();
 }
@@ -4610,8 +4676,10 @@ async function boot() {
     if (!S.wsList.length) { await setupTeamScreen(); return; }
     const want = S.prefs.last_workspace && S.wsList.find(w => w.id === S.prefs.last_workspace);
     S.ws = want || S.wsList[0]; store.set('appName', S.ws.app_name);
-    if (restoreSnapshot(S.ws.id)) render();
+    if (await restoreSnapshot(S.ws.id)) render();
+    loadWaitingFiles();
     await loadAll();
+    if (canSeeSomeMoney() && navigator.onLine) loadMoney().then(() => { snapshot(); refresh(); }).catch(() => {}); // keep the money on the phone too
     const sv = startView(); if (!store.get('route', null)) S.route = { v: sv };
     if (!pageAllowed(S.route.v)) S.route = { v: 'myturn' };
     if (!S.profiles[uid()]?.tz) write({ t: 'profiles', op: 'update', id: uid(), patch: { tz: myTz() } }).then(() => { if (me()) me().tz = myTz(); });
@@ -5653,12 +5721,12 @@ async function toggleReact(m, emoji) {
   const mine = S.reactions.find(r => r.message_id === m.id && r.user_id === uid() && r.emoji === emoji);
   if (mine) {
     S.reactions = S.reactions.filter(r => r !== mine); refreshChat();
-    const { error } = await sb.from('reactions').delete().eq('message_id', m.id).eq('user_id', uid()).eq('emoji', emoji);
+    const { error } = await write({ t: 'reactions', op: 'delete', match: { message_id: m.id, user_id: uid(), emoji } });
     if (error) { S.reactions.push(mine); refreshChat(); toast(errText(error)); }
   } else {
     const row = { message_id: m.id, user_id: uid(), emoji, workspace_id: S.ws.id, created_at: nowIso() };
     S.reactions.push(row); refreshChat();
-    const { error } = await sb.from('reactions').insert(row);
+    const { error } = await write({ t: 'reactions', op: 'insert', row, plain: true });
     if (error && !/duplicate/i.test(error.message)) { S.reactions = S.reactions.filter(r => r !== row); refreshChat(); toast(errText(error)); }
   }
 }
@@ -5741,7 +5809,7 @@ async function sendMessage(c, parentId, body, files) {
   const uploaded = [];
   for (const f of files) {
     const path = `${S.ws.id}/${uid()}/${uuid()}-${f.name.replace(/[^\w.\-]+/g, '_').slice(-80)}`;
-    const { error } = await sb.storage.from('chat').upload(path, f, { contentType: f.type || 'application/octet-stream' });
+    const { error } = await putFile('chat', path, f);
     if (error) { toast(`Couldn’t upload ${f.name}: ${errText(error)}`); return false; }
     uploaded.push(Object.assign({ name: f.name, path, type: f.type || '', size: f.size }, f.seconds ? { seconds: f.seconds } : {}));
   }
@@ -7056,7 +7124,7 @@ function openDeploy(p) {
     const go_ = h('button', { class: 'btn pri' }, 'Log it');
     go_.addEventListener('click', async () => {
       const row = { id: uuid(), workspace_id: S.ws.id, project_id: p.id, env, note: note.value.trim(), task_ids: [...sel], by: uid(), at: nowIso() };
-      go_.disabled = true; const { error } = await sb.from('deploys').insert(row); if (error) { go_.disabled = false; return toast(errText(error)); }
+      go_.disabled = true; const { error } = await write({ t: 'deploys', op: 'insert', row, plain: true }); if (error) { go_.disabled = false; return toast(errText(error)); }
       (S.deploys ||= []).push(row); closeSheet(true); track('deploy');
       const testers = [...new Set(row.task_ids.map(id => first(prof(taskOf(id)?.reviewer_id || S.ws.default_reviewer))).filter(Boolean))];
       toast(testers.length ? `Logged. ${testers.join(', ')} will be asked to retest` : 'Deploy logged'); refresh();
@@ -7106,6 +7174,10 @@ async function loadMoney() {
   const [a, b, c] = await Promise.all([sb.from('project_money').select('*').eq('workspace_id', ws), sb.from('money_settings').select('*').eq('workspace_id', ws),
     canSeeSalaries() ? sb.from('team_salaries').select('*').eq('workspace_id', ws) : Promise.resolve({ data: [] })]);
   if (S.ws?.id !== ws) return;
+  if ([a, b, c].some(x => x.error && isNetErr(x.error))) { // offline: the copy on this phone, or nothing rather than wrong zeros
+    if (M.cached !== ws) { M.rows = {}; M.settings = { workspace_id: ws, currency: 'EGP' }; M.salary = null; M.hwSalary = null; if (!M.warned) { M.warned = true; toast('Money shows here after you open Ovrto once with internet'); } }
+    M.loaded = ws; return;
+  }
   M.rows = {}; for (const r of a.data || []) M.rows[r.project_id] = r; M.settings = (b.data || [])[0] || { workspace_id: ws, currency: 'EGP' }; M.salary = canSeeSalaries() ? ((c.data || [])[0]?.team_monthly ?? null) : null; M.hwSalary = canSeeSalaries() ? ((c.data || [])[0]?.hw_monthly ?? null) : null; M.loaded = ws;
 }
 const moneyOf = pid => M.rows[pid] || { project_id: pid, workspace_id: S.ws.id, contract: {}, payments: [], costs: [], share: null };
@@ -7134,8 +7206,8 @@ function suggestedShare(pid) {
 }
 async function saveMoney(pid, patch, msg) {
   const row = Object.assign({}, moneyOf(pid), patch, { workspace_id: S.ws.id, project_id: pid, updated_by: uid(), updated_at: nowIso() });
-  const { error } = await sb.from('project_money').upsert(row); if (error) { toast(errText(error)); return false; }
-  M.rows[pid] = row; if (msg) toast(msg); refresh(); return true;
+  const { error, queued } = await write({ t: 'project_money', op: 'upsert', row, plain: true }); if (error) { toast(errText(error)); return false; }
+  M.rows[pid] = row; M.cached = S.ws.id; snapshot(); if (msg) toast(queued ? msg + ' · saved on this phone' : msg); refresh(); return true;
 }
 function projectMoney(p) {
   if (M.loaded !== S.ws.id) { loadMoney().then(() => refresh()); return [h('p', { class: 'note', text: 'Loading…' })]; }
@@ -8756,7 +8828,7 @@ async function openLeave() {
       save.disabled = true;
       const items = vaultUnlocked() ? myItems.filter(i => iSel.has(i.id)) : [];
       const row = { id: uuid(), workspace_id: S.ws.id, user_id: uid(), cover_id: cover, start_date: from.value, end_date: to.value, note: note.value.trim(), handover: { tasks: [...tSel], items: (vaultUnlocked() ? myItems.filter(i => iSel.has(i.id)) : myItems).map(i => i.id), names: Object.fromEntries(myItems.map(i => [i.id, { name: i.name, kind: i.kind }])), got: [] }, created_at: nowIso() };
-      const { error } = await sb.from('leaves').insert(row); if (error) { save.disabled = false; return toast(errText(error)); }
+      const { error } = await write({ t: 'leaves', op: 'insert', row, plain: true }); if (error) { save.disabled = false; return toast(errText(error)); }
       (S.leaves ||= []).push(row);
       for (const id of tSel) await patchTask(id, { assignee_id: cover }, { noUndo: true });
       let miss = []; for (const i of items) miss = await shareItem(i, [cover], to.value);
@@ -8780,7 +8852,7 @@ function openHandover(l) {
     const got = new Set(l.handover?.got || []);
     const tick = id => mineL ? h('span', { class: 'gotmark', text: got.has(id) ? '✓' : '' }) : h('input', { type: 'checkbox', checked: got.has(id), 'aria-label': 'Got it', onchange: async e => {
       e.target.checked ? got.add(id) : got.delete(id); const ho = Object.assign({}, l.handover, { got: [...got] });
-      const { error } = await sb.from('leaves').update({ handover: ho }).eq('id', l.id); if (error) return toast(errText(error)); l.handover = ho; } });
+      const { error } = await write({ t: 'leaves', op: 'update', id: l.id, patch: { handover: ho }, plain: true }); if (error) return toast(errText(error)); l.handover = ho; } });
     const ts = (l.handover?.tasks || []).map(taskOf).filter(Boolean); const its = (l.handover?.items || []).map(id => V.items.find(i => i.id === id) || { id, name: l.handover?.names?.[id]?.name || 'A login', kind: l.handover?.names?.[id]?.kind || '' });
     const giver = first(prof(l.user_id)) || 'They';
     /* tasks still with the cover (and not finished) come back; logins shared only for the leave stop */
@@ -8792,7 +8864,7 @@ function openHandover(l) {
     };
     const back = mineL && st === 'over' && !l.handover?.returned ? h('button', { class: 'btn pri', onclick: async () => {
       closeSheet(true);
-      const n = await withWait(async () => { const n = await takeBack(); const ho = Object.assign({}, l.handover, { returned: true }); await sb.from('leaves').update({ handover: ho }).eq('id', l.id); l.handover = ho; return n; });
+      const n = await withWait(async () => { const n = await takeBack(); const ho = Object.assign({}, l.handover, { returned: true }); await write({ t: 'leaves', op: 'update', id: l.id, patch: { handover: ho }, plain: true }); l.handover = ho; return n; });
       toast(`${plural(n, 'task')} back with you`); refresh(); } }, 'Take my tasks back') : null;
     sh.append(h('div', { class: 'sbody' },
       h('p', { class: 'note', text: `${fmtDate(l.start_date)} – ${fmtDate(l.end_date)} · ${mineL ? (first(prof(l.cover_id)) || 'Nobody') + ' covers you' : first(prof(l.user_id)) + ' is away'}` }),
@@ -8808,7 +8880,7 @@ function openHandover(l) {
         h('span', { class: 'sm mute', text: `${taskKey(t)} · ${stOf(t.status_id)?.name || ''} · with ${first(prof(t.assignee_id)) || 'nobody'}` }), t.stopped?.text ? h('span', { class: 'sm stopline', text: '↳ ' + t.stopped.text }) : null))))
         : h('p', { class: 'note', text: 'No tasks handed over.' }),
       mineL && st !== 'over' ? h('button', { class: 'btn ghost danger', style: { marginTop: '16px' }, onclick: e => confirmIn(sh, { text: 'Cancel this leave? Your tasks and the logins you shared come back to you.', yes: 'Cancel leave', danger: true, onYes: async () => { closeSheet(true);
-        const r = await withWait(async () => { const n = await takeBack(); const { error } = await sb.from('leaves').delete().eq('id', l.id); return { n, error }; });
+        const r = await withWait(async () => { const n = await takeBack(); const { error } = await write({ t: 'leaves', op: 'delete', id: l.id }); return { n, error }; });
         if (r.error) { refresh(); return toast(errText(r.error)); }
         S.leaves = S.leaves.filter(x => x.id !== l.id); toast(r.n ? `Leave canceled · ${plural(r.n, 'task')} back with you` : 'Leave canceled'); refresh(); } }) }, 'Cancel leave') : null));
   } });
@@ -9119,19 +9191,19 @@ async function startTimer(t) {
   if (was) { if (was.task_id === t.id) return; await stopTimer(true); toast(`Stopped the timer on ${taskKey(taskOf(was.task_id) || {})}`); }
   const row = { id: uuid(), workspace_id: S.ws.id, task_id: t.id, user_id: uid(), started_at: nowIso(), ended_at: null, minutes: null, note: null };
   S.time = [row, ...(S.time || [])]; refresh(); syncTimerPill();
-  const { error } = await sb.from('task_time').insert(row);
+  const { error } = await write({ t: 'task_time', op: 'insert', row, plain: true });
   if (error) { S.time = S.time.filter(e => e !== row); refresh(); syncTimerPill(); return toast(errText(error)); }
 }
 async function stopTimer(quiet) {
   const e = myTimer(); if (!e) return;
   const end = nowIso(); e.ended_at = end; refresh(); syncTimerPill();
-  const { error } = await sb.from('task_time').update({ ended_at: end }).eq('id', e.id);
+  const { error } = await write({ t: 'task_time', op: 'update', id: e.id, patch: { ended_at: end }, plain: true });
   if (error) { e.ended_at = null; refresh(); syncTimerPill(); return toast(errText(error)); }
   if (!quiet) toast(`${fmtDur(timeMin(e))} added to ${taskKey(taskOf(e.task_id) || {})}`);
 }
 async function removeTime(e) {
   S.time = S.time.filter(x => x !== e); refresh(); syncTimerPill();
-  const { error } = await sb.from('task_time').delete().eq('id', e.id);
+  const { error } = await write({ t: 'task_time', op: 'delete', id: e.id });
   if (error) { S.time = [e, ...S.time]; refresh(); syncTimerPill(); return toast(errText(error)); }
   toast('Time removed');
 }
@@ -9148,7 +9220,7 @@ function openAddTime(t) {
       if (m > 10080) return toast('That’s more than a week. Add it in parts');
       if (!day.value || day.value > todayIso()) return toast('Pick a day up to today');
       const row = { id: uuid(), workspace_id: S.ws.id, task_id: t.id, user_id: uid(), started_at: new Date(day.value + 'T09:00:00').toISOString(), ended_at: null, minutes: m, note: note.value.trim() || null };
-      const done = busy(save, 'Saving…'); const { error } = await sb.from('task_time').insert(row); done();
+      const done = busy(save, 'Saving…'); const { error } = await write({ t: 'task_time', op: 'insert', row, plain: true }); done();
       if (error) return toast(errText(error));
       S.time = [row, ...(S.time || [])]; closeSheet(true); refresh(); toast(`${fmtDur(m)} added to ${taskKey(t)}`);
     });
@@ -9893,6 +9965,8 @@ Object.assign(AR.exact, {
 AR.patterns.unshift(["^Your (.+) agent$", "مساعدك الذكي في $1"]);
 /* "بدون" reads formal next to the app's Egyptian; same meaning */
 for (const k in AR.exact) if (typeof AR.exact[k] === 'string' && AR.exact[k].startsWith('بدون ')) AR.exact[k] = 'من غير ' + AR.exact[k].slice(5);
+Object.assign(AR.exact, {"Offline · your work is saved on this phone": "غير متصل · شغلك محفوظ على الموبايل", "No internet. This one needs a connection; your other work is saved on this phone.": "مفيش نت. الحاجة دي محتاجة اتصال، وباقي شغلك محفوظ على الموبايل.", "Money shows here after you open Ovrto once with internet": "الفلوس هتظهر هنا بعد ما تفتح Ovrto مرة وإنت على النت", "No internet, and this phone can’t keep the file. Try again when you’re online.": "مفيش نت، والموبايل مش قادر يحتفظ بالملف. جرّب تاني لما النت يرجع."});
+AR.patterns.push(["^(.+) · saved on this phone$", "$1 · اتحفظت على الموبايل"], ["^No internet, and (.+) is over 25 MB\\. Send it when you’re back online\\.$", "مفيش نت، و$1 أكبر من ٢٥ ميجا. ابعته لما النت يرجع."]);
 var LANG = (() => { try { return JSON.parse(localStorage.getItem('baton.lang') || '"en"') === 'ar' ? 'ar' : 'en'; } catch { return 'en'; } })();
 const isAr = () => LANG === 'ar';
 var I18N_SKIP = '.row .t,.tc:not(.waitrow) .tt>b,.card>.t,.inrow .t,.stuck-row .t,.rv-item .t,.md,.mdbox,.mbody,.ev .txt,.ttl,textarea,input,select,[contenteditable],code,pre,kbd,.notr,.wordmark,.wm-anim,.mark-anim,.plate,.cp-t b,.cp-in>h1,.mhead b,.cv-name b,.chip-task,.mention,.toast .notr,.cl-row .nm>div:first-child,.prow .nm>div:first-child';

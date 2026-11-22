@@ -12,19 +12,19 @@ async function startTimer(t) {
   if (was) { if (was.task_id === t.id) return; await stopTimer(true); toast(`Stopped the timer on ${taskKey(taskOf(was.task_id) || {})}`); }
   const row = { id: uuid(), workspace_id: S.ws.id, task_id: t.id, user_id: uid(), started_at: nowIso(), ended_at: null, minutes: null, note: null };
   S.time = [row, ...(S.time || [])]; refresh(); syncTimerPill();
-  const { error } = await sb.from('task_time').insert(row);
+  const { error } = await write({ t: 'task_time', op: 'insert', row, plain: true });
   if (error) { S.time = S.time.filter(e => e !== row); refresh(); syncTimerPill(); return toast(errText(error)); }
 }
 async function stopTimer(quiet) {
   const e = myTimer(); if (!e) return;
   const end = nowIso(); e.ended_at = end; refresh(); syncTimerPill();
-  const { error } = await sb.from('task_time').update({ ended_at: end }).eq('id', e.id);
+  const { error } = await write({ t: 'task_time', op: 'update', id: e.id, patch: { ended_at: end }, plain: true });
   if (error) { e.ended_at = null; refresh(); syncTimerPill(); return toast(errText(error)); }
   if (!quiet) toast(`${fmtDur(timeMin(e))} added to ${taskKey(taskOf(e.task_id) || {})}`);
 }
 async function removeTime(e) {
   S.time = S.time.filter(x => x !== e); refresh(); syncTimerPill();
-  const { error } = await sb.from('task_time').delete().eq('id', e.id);
+  const { error } = await write({ t: 'task_time', op: 'delete', id: e.id });
   if (error) { S.time = [e, ...S.time]; refresh(); syncTimerPill(); return toast(errText(error)); }
   toast('Time removed');
 }
@@ -41,7 +41,7 @@ function openAddTime(t) {
       if (m > 10080) return toast('That’s more than a week. Add it in parts');
       if (!day.value || day.value > todayIso()) return toast('Pick a day up to today');
       const row = { id: uuid(), workspace_id: S.ws.id, task_id: t.id, user_id: uid(), started_at: new Date(day.value + 'T09:00:00').toISOString(), ended_at: null, minutes: m, note: note.value.trim() || null };
-      const done = busy(save, 'Saving…'); const { error } = await sb.from('task_time').insert(row); done();
+      const done = busy(save, 'Saving…'); const { error } = await write({ t: 'task_time', op: 'insert', row, plain: true }); done();
       if (error) return toast(errText(error));
       S.time = [row, ...(S.time || [])]; closeSheet(true); refresh(); toast(`${fmtDur(m)} added to ${taskKey(t)}`);
     });

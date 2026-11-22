@@ -50,7 +50,7 @@ async function openLeave() {
       save.disabled = true;
       const items = vaultUnlocked() ? myItems.filter(i => iSel.has(i.id)) : [];
       const row = { id: uuid(), workspace_id: S.ws.id, user_id: uid(), cover_id: cover, start_date: from.value, end_date: to.value, note: note.value.trim(), handover: { tasks: [...tSel], items: (vaultUnlocked() ? myItems.filter(i => iSel.has(i.id)) : myItems).map(i => i.id), names: Object.fromEntries(myItems.map(i => [i.id, { name: i.name, kind: i.kind }])), got: [] }, created_at: nowIso() };
-      const { error } = await sb.from('leaves').insert(row); if (error) { save.disabled = false; return toast(errText(error)); }
+      const { error } = await write({ t: 'leaves', op: 'insert', row, plain: true }); if (error) { save.disabled = false; return toast(errText(error)); }
       (S.leaves ||= []).push(row);
       for (const id of tSel) await patchTask(id, { assignee_id: cover }, { noUndo: true });
       let miss = []; for (const i of items) miss = await shareItem(i, [cover], to.value);
@@ -74,7 +74,7 @@ function openHandover(l) {
     const got = new Set(l.handover?.got || []);
     const tick = id => mineL ? h('span', { class: 'gotmark', text: got.has(id) ? '✓' : '' }) : h('input', { type: 'checkbox', checked: got.has(id), 'aria-label': 'Got it', onchange: async e => {
       e.target.checked ? got.add(id) : got.delete(id); const ho = Object.assign({}, l.handover, { got: [...got] });
-      const { error } = await sb.from('leaves').update({ handover: ho }).eq('id', l.id); if (error) return toast(errText(error)); l.handover = ho; } });
+      const { error } = await write({ t: 'leaves', op: 'update', id: l.id, patch: { handover: ho }, plain: true }); if (error) return toast(errText(error)); l.handover = ho; } });
     const ts = (l.handover?.tasks || []).map(taskOf).filter(Boolean); const its = (l.handover?.items || []).map(id => V.items.find(i => i.id === id) || { id, name: l.handover?.names?.[id]?.name || 'A login', kind: l.handover?.names?.[id]?.kind || '' });
     const giver = first(prof(l.user_id)) || 'They';
     /* tasks still with the cover (and not finished) come back; logins shared only for the leave stop */
@@ -86,7 +86,7 @@ function openHandover(l) {
     };
     const back = mineL && st === 'over' && !l.handover?.returned ? h('button', { class: 'btn pri', onclick: async () => {
       closeSheet(true);
-      const n = await withWait(async () => { const n = await takeBack(); const ho = Object.assign({}, l.handover, { returned: true }); await sb.from('leaves').update({ handover: ho }).eq('id', l.id); l.handover = ho; return n; });
+      const n = await withWait(async () => { const n = await takeBack(); const ho = Object.assign({}, l.handover, { returned: true }); await write({ t: 'leaves', op: 'update', id: l.id, patch: { handover: ho }, plain: true }); l.handover = ho; return n; });
       toast(`${plural(n, 'task')} back with you`); refresh(); } }, 'Take my tasks back') : null;
     sh.append(h('div', { class: 'sbody' },
       h('p', { class: 'note', text: `${fmtDate(l.start_date)} – ${fmtDate(l.end_date)} · ${mineL ? (first(prof(l.cover_id)) || 'Nobody') + ' covers you' : first(prof(l.user_id)) + ' is away'}` }),
@@ -102,7 +102,7 @@ function openHandover(l) {
         h('span', { class: 'sm mute', text: `${taskKey(t)} · ${stOf(t.status_id)?.name || ''} · with ${first(prof(t.assignee_id)) || 'nobody'}` }), t.stopped?.text ? h('span', { class: 'sm stopline', text: '↳ ' + t.stopped.text }) : null))))
         : h('p', { class: 'note', text: 'No tasks handed over.' }),
       mineL && st !== 'over' ? h('button', { class: 'btn ghost danger', style: { marginTop: '16px' }, onclick: e => confirmIn(sh, { text: 'Cancel this leave? Your tasks and the logins you shared come back to you.', yes: 'Cancel leave', danger: true, onYes: async () => { closeSheet(true);
-        const r = await withWait(async () => { const n = await takeBack(); const { error } = await sb.from('leaves').delete().eq('id', l.id); return { n, error }; });
+        const r = await withWait(async () => { const n = await takeBack(); const { error } = await write({ t: 'leaves', op: 'delete', id: l.id }); return { n, error }; });
         if (r.error) { refresh(); return toast(errText(r.error)); }
         S.leaves = S.leaves.filter(x => x.id !== l.id); toast(r.n ? `Leave canceled · ${plural(r.n, 'task')} back with you` : 'Leave canceled'); refresh(); } }) }, 'Cancel leave') : null));
   } });

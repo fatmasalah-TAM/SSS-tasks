@@ -25,7 +25,7 @@ function openDeploy(p) {
     const go_ = h('button', { class: 'btn pri' }, 'Log it');
     go_.addEventListener('click', async () => {
       const row = { id: uuid(), workspace_id: S.ws.id, project_id: p.id, env, note: note.value.trim(), task_ids: [...sel], by: uid(), at: nowIso() };
-      go_.disabled = true; const { error } = await sb.from('deploys').insert(row); if (error) { go_.disabled = false; return toast(errText(error)); }
+      go_.disabled = true; const { error } = await write({ t: 'deploys', op: 'insert', row, plain: true }); if (error) { go_.disabled = false; return toast(errText(error)); }
       (S.deploys ||= []).push(row); closeSheet(true); track('deploy');
       const testers = [...new Set(row.task_ids.map(id => first(prof(taskOf(id)?.reviewer_id || S.ws.default_reviewer))).filter(Boolean))];
       toast(testers.length ? `Logged. ${testers.join(', ')} will be asked to retest` : 'Deploy logged'); refresh();

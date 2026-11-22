@@ -24,6 +24,17 @@ const store = {
   set(k, v) { try { localStorage.setItem('baton.' + k, JSON.stringify(v)); } catch {} },
   del(k) { try { localStorage.removeItem('baton.' + k); } catch {} },
 };
+/* a small IndexedDB store: the phone's copy of the workspace and files waiting for internet (too big for localStorage) */
+const idb = (() => {
+  let p = null;
+  const open = () => p || (p = new Promise((res, rej) => { if (!('indexedDB' in window)) return rej(new Error('no idb'));
+    const r = indexedDB.open('ovrto', 1);
+    r.onupgradeneeded = () => { for (const s of ['snap', 'files']) if (!r.result.objectStoreNames.contains(s)) r.result.createObjectStore(s); };
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }));
+  const tx = async (s, mode, fn) => { const d = await open(); return new Promise((res, rej) => { const t = d.transaction(s, mode); const q = fn(t.objectStore(s)); t.oncomplete = () => res(q && q.result); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error); }); };
+  return { get: (s, k) => tx(s, 'readonly', o => o.get(k)).catch(() => undefined), set: (s, k, v) => tx(s, 'readwrite', o => o.put(v, k)).then(() => true).catch(() => false),
+    del: (s, k) => tx(s, 'readwrite', o => o.delete(k)).catch(() => {}), keys: s => tx(s, 'readonly', o => o.getAllKeys()).catch(() => []), clear: s => tx(s, 'readwrite', o => o.clear()).catch(() => {}) };
+})();
 const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); }));
 const clone = o => JSON.parse(JSON.stringify(o));
 const nowIso = () => new Date().toISOString();
@@ -204,7 +215,7 @@ function errText(e) {
   if (/already registered/i.test(m)) return 'This email already has an account. Sign in instead.';
   if (/row-level security|permission|violates/i.test(m)) return 'You don’t have permission to do that.';
   if (/at least one admin/i.test(m)) return 'The workspace needs at least one admin.';
-  if (/Failed to fetch|NetworkError|Load failed|network/i.test(m)) return 'Can’t reach the server. Check your connection.';
+  if (/Failed to fetch|NetworkError|Load failed|network/i.test(m)) return navigator.onLine ? 'Can’t reach the server. Check your connection.' : 'No internet. This one needs a connection; your other work is saved on this phone.';
   return m;
 }
 const isNetErr = e => /Failed to fetch|NetworkError|Load failed|network|fetch/i.test(e?.message || String(e)) || !navigator.onLine;
@@ -259,23 +270,70 @@ async function loadAll() {
   if (S.ws?.id !== ws) return;
   S.loaded = true; snapshot(); ensureDeptTypes();
 }
-const snapshot = debounce(() => {
-  if (!S.ws) return;
-  store.set('snap.' + S.ws.id, { members: S.members, profiles: S.profiles, statuses: S.statuses, types: S.types, fields: S.fields, rules: S.rules, views: S.views, projects: S.projects, tasks: S.tasks, notifs: S.notifs, invites: S.invites, channels: S.channels, messages: S.messages.slice(-800), reactions: S.reactions, reads: S.reads, huddles: S.huddles, workOrders: S.workOrders, devices: S.devices, tickets: S.tickets, stock: S.stock, approvals: S.approvals, leaves: S.leaves, deals: S.deals });
-}, 800);
-function restoreSnapshot(wsId) {
-  const s = store.get('snap.' + wsId, null); if (!s) return false;
-  Object.assign(S, s); S.loaded = true; return true;
+/* the phone's copy of the workspace: everything this person can see, so Ovrto opens and works with no internet.
+   Kept in IndexedDB (localStorage as a fallback), cleared on sign-out. */
+const threadCache = {}; // a task's comments and history, as last seen
+const snapData = () => {
+  const d = { members: S.members, profiles: S.profiles, notifs: S.notifs, channels: S.channels, messages: S.messages.slice(-1500), reactions: S.reactions, reads: S.reads, huddles: S.huddles, clientContacts: S.clientContacts, at: nowIso() };
+  for (const t of WS_TABLES) d[LOCAL[t]] = S[LOCAL[t]];
+  if (typeof M !== 'undefined' && M.loaded === S.ws.id) d.money = { rows: M.rows, settings: M.settings, salary: M.salary, hwSalary: M.hwSalary };
+  d.threads = Object.fromEntries(Object.entries(threadCache).sort((a, b) => (b[1].at || '').localeCompare(a[1].at || '')).slice(0, 200));
+  return d;
+};
+async function snapshotNow() {
+  if (!S.ws || !S.loaded) return; const id = S.ws.id; let d; try { d = snapData(); } catch { return; }
+  if (await idb.set('snap', id, d)) store.del('snap.' + id); else store.set('snap.' + id, d);
+}
+const snapshot = debounce(snapshotNow, 800);
+addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') snapshotNow(); }); // the app is being closed or put away
+async function restoreSnapshot(wsId) {
+  const s = (await idb.get('snap', wsId)) || store.get('snap.' + wsId, null); if (!s || S.ws?.id !== wsId) return false;
+  const { money, threads, at, ...rest } = s;
+  Object.assign(S, rest); Object.assign(threadCache, threads || {});
+  if (money && typeof M !== 'undefined') { Object.assign(M, money); M.cached = wsId; }
+  S.loaded = true; return true;
+}
+async function forgetPhoneCopy() { await idb.clear('snap'); try { for (const k of Object.keys(localStorage)) if (/^baton\.(snap\.|wsList|prefs\.)/.test(k)) localStorage.removeItem(k); } catch {} }
+
+/* files picked with no internet wait on the phone and go up when it's back; the task or message points at them already */
+const OFFLINE_FILE_MAX = 25 * 1024 * 1024;
+const waitingFiles = new Map(); // path → a link to the copy on this phone
+let filesFlushing = false;
+async function putFile(bucket, path, f) {
+  const type = f.type || 'application/octet-stream';
+  if (navigator.onLine) {
+    try { const { error } = await sb.storage.from(bucket).upload(path, f, { contentType: type }); if (!error) return {}; if (!isNetErr(error)) return { error }; }
+    catch (e) { if (!isNetErr(e)) return { error: e }; }
+  }
+  if (f.size > OFFLINE_FILE_MAX) return { error: { message: `No internet, and ${f.name} is over 25 MB. Send it when you’re back online.` } };
+  if (!(await idb.set('files', path, { bucket, path, blob: f, type, user: uid(), at: nowIso() }))) return { error: { message: 'No internet, and this phone can’t keep the file. Try again when you’re online.' } };
+  waitingFiles.set(path, URL.createObjectURL(f)); renderPill(); return { queued: true };
+}
+async function loadWaitingFiles() {
+  for (const k of await idb.keys('files')) { if (waitingFiles.has(k)) continue; const x = await idb.get('files', k); if (x && x.user === uid()) waitingFiles.set(k, URL.createObjectURL(x.blob)); }
+  renderPill();
+}
+async function flushFiles() {
+  if (filesFlushing || !navigator.onLine || !uid()) return; filesFlushing = true;
+  try {
+    for (const k of await idb.keys('files')) {
+      const x = await idb.get('files', k); if (!x || x.user !== uid()) continue;
+      const { error } = await sb.storage.from(x.bucket).upload(x.path, x.blob, { contentType: x.type, upsert: true });
+      if (error && isNetErr(error)) break;
+      await idb.del('files', k); const u = waitingFiles.get(k); waitingFiles.delete(k); if (u) setTimeout(() => URL.revokeObjectURL(u), 60000);
+    }
+  } catch {} finally { filesFlushing = false; renderPill(); }
 }
 
 /* ── writes with offline outbox ── */
-function persistOutbox() { store.set('outbox', S.outbox); renderPill(); snapshot(); } // keep this phone’s copy current, so work done offline is still there after the app is closed
+function persistOutbox() { store.set('outbox', S.outbox); renderPill(); setTimeout(snapshotNow, 0); } // after the caller has updated what's on screen // keep this phone’s copy current, so work done offline is still there after the app is closed
 async function exec(op) {
   let q = sb.from(op.t);
-  if (op.op === 'insert') q = q.insert(op.row).select().single();
-  else if (op.op === 'upsert') q = q.upsert(op.row).select();
-  else if (op.op === 'update') { q = q.update(op.patch).eq(op.key || 'id', op.id); if (op.extraEq) q = q.eq(op.extraEq[0], op.extraEq[1]); q = q.select(); }
-  else if (op.op === 'delete') q = q.delete().eq(op.key || 'id', op.id);
+  const match = q2 => { for (const [k, v] of Object.entries(op.match || { [op.key || 'id']: op.id })) q2 = q2.eq(k, v); if (op.extraEq) q2 = q2.eq(op.extraEq[0], op.extraEq[1]); return q2; };
+  if (op.op === 'insert') q = op.plain ? q.insert(op.row) : q.insert(op.row).select().single();
+  else if (op.op === 'upsert') q = op.plain ? q.upsert(op.row) : q.upsert(op.row).select();
+  else if (op.op === 'update') { q = match(q.update(op.patch)); if (!op.plain) q = q.select(); }
+  else if (op.op === 'delete') q = match(q.delete());
   return await q;
 }
 async function write(op) {
@@ -296,6 +354,7 @@ async function write(op) {
 }
 let flushing = false;
 async function flushOutbox() {
+  flushFiles();
   if (flushing || !S.outbox.length || !navigator.onLine) return;
   flushing = true; let failed = 0, saved = 0;
   while (S.outbox.length && navigator.onLine) {

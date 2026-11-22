@@ -46,3 +46,5 @@ Object.assign(AR.exact, {
 AR.patterns.unshift(["^Your (.+) agent$", "مساعدك الذكي في $1"]);
 /* "بدون" reads formal next to the app's Egyptian; same meaning */
 for (const k in AR.exact) if (typeof AR.exact[k] === 'string' && AR.exact[k].startsWith('بدون ')) AR.exact[k] = 'من غير ' + AR.exact[k].slice(5);
+Object.assign(AR.exact, {"Offline · your work is saved on this phone": "غير متصل · شغلك محفوظ على الموبايل", "No internet. This one needs a connection; your other work is saved on this phone.": "مفيش نت. الحاجة دي محتاجة اتصال، وباقي شغلك محفوظ على الموبايل.", "Money shows here after you open Ovrto once with internet": "الفلوس هتظهر هنا بعد ما تفتح Ovrto مرة وإنت على النت", "No internet, and this phone can’t keep the file. Try again when you’re online.": "مفيش نت، والموبايل مش قادر يحتفظ بالملف. جرّب تاني لما النت يرجع."});
+AR.patterns.push(["^(.+) · saved on this phone$", "$1 · اتحفظت على الموبايل"], ["^No internet, and (.+) is over 25 MB\\. Send it when you’re back online\\.$", "مفيش نت، و$1 أكبر من ٢٥ ميجا. ابعته لما النت يرجع."]);

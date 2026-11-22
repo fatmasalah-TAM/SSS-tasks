@@ -137,8 +137,9 @@ function toast(msg, action, ms = 5000, keep = false) { // keep: stay next to the
 }
 function renderPill() {
   $('.pill')?.remove();
-  if (S.outbox.length || !navigator.onLine) {
-    document.body.append(h('div', { class: 'pill', role: 'status' }, navigator.onLine ? h('span', { class: 'ld-mark loop', 'aria-hidden': 'true', html: ICONS.markAnim }) : null, navigator.onLine ? `Saving ${S.outbox.length} change${S.outbox.length > 1 ? 's' : ''}…` : `Offline${S.outbox.length ? ` · ${S.outbox.length} change${S.outbox.length > 1 ? 's' : ''} waiting` : ''}`));
+  const n = S.outbox.length + (typeof waitingFiles !== 'undefined' ? waitingFiles.size : 0); // changes and files waiting on this phone
+  if (n || !navigator.onLine) {
+    document.body.append(h('div', { class: 'pill', role: 'status' }, navigator.onLine ? h('span', { class: 'ld-mark loop', 'aria-hidden': 'true', html: ICONS.markAnim }) : null, navigator.onLine ? `Saving ${n} change${n > 1 ? 's' : ''}…` : `Offline${n ? ` · ${n} change${n > 1 ? 's' : ''} waiting` : ' · your work is saved on this phone'}`));
   }
 }
 

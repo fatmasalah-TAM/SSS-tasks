@@ -29,6 +29,10 @@ async function loadMoney() {
   const [a, b, c] = await Promise.all([sb.from('project_money').select('*').eq('workspace_id', ws), sb.from('money_settings').select('*').eq('workspace_id', ws),
     canSeeSalaries() ? sb.from('team_salaries').select('*').eq('workspace_id', ws) : Promise.resolve({ data: [] })]);
   if (S.ws?.id !== ws) return;
+  if ([a, b, c].some(x => x.error && isNetErr(x.error))) { // offline: the copy on this phone, or nothing rather than wrong zeros
+    if (M.cached !== ws) { M.rows = {}; M.settings = { workspace_id: ws, currency: 'EGP' }; M.salary = null; M.hwSalary = null; if (!M.warned) { M.warned = true; toast('Money shows here after you open Ovrto once with internet'); } }
+    M.loaded = ws; return;
+  }
   M.rows = {}; for (const r of a.data || []) M.rows[r.project_id] = r; M.settings = (b.data || [])[0] || { workspace_id: ws, currency: 'EGP' }; M.salary = canSeeSalaries() ? ((c.data || [])[0]?.team_monthly ?? null) : null; M.hwSalary = canSeeSalaries() ? ((c.data || [])[0]?.hw_monthly ?? null) : null; M.loaded = ws;
 }
 const moneyOf = pid => M.rows[pid] || { project_id: pid, workspace_id: S.ws.id, contract: {}, payments: [], costs: [], share: null };
@@ -57,8 +61,8 @@ function suggestedShare(pid) {
 }
 async function saveMoney(pid, patch, msg) {
   const row = Object.assign({}, moneyOf(pid), patch, { workspace_id: S.ws.id, project_id: pid, updated_by: uid(), updated_at: nowIso() });
-  const { error } = await sb.from('project_money').upsert(row); if (error) { toast(errText(error)); return false; }
-  M.rows[pid] = row; if (msg) toast(msg); refresh(); return true;
+  const { error, queued } = await write({ t: 'project_money', op: 'upsert', row, plain: true }); if (error) { toast(errText(error)); return false; }
+  M.rows[pid] = row; M.cached = S.ws.id; snapshot(); if (msg) toast(queued ? msg + ' · saved on this phone' : msg); refresh(); return true;
 }
 function projectMoney(p) {
   if (M.loaded !== S.ws.id) { loadMoney().then(() => refresh()); return [h('p', { class: 'note', text: 'Loading…' })]; }

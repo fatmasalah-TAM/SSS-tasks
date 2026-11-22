@@ -5,7 +5,7 @@ async function switchWs(id) {
   closeAllSheets(true); vaultLock(true); V.loaded = false; M.loaded = null; S.ws = w; S.vc = null; S.loaded = false; S.route = { v: S.prefs?.default_view || 'myturn' };
   for (const k of ['members', 'statuses', 'types', 'fields', 'rules', 'views', 'projects', 'tasks', 'invites', 'notifs', 'channels', 'messages', 'reactions', 'huddles']) S[k] = [];
   S.reads = {}; huddleCfg = null;
-  restoreSnapshot(id); render();
+  await restoreSnapshot(id); render();
   savePrefs({ last_workspace: id }); store.set('appName', w.app_name);
   await loadAll(); S.route = { v: startView() }; render(); setupRealtime(); checkDept();
 }
@@ -25,8 +25,10 @@ async function boot() {
     if (!S.wsList.length) { await setupTeamScreen(); return; }
     const want = S.prefs.last_workspace && S.wsList.find(w => w.id === S.prefs.last_workspace);
     S.ws = want || S.wsList[0]; store.set('appName', S.ws.app_name);
-    if (restoreSnapshot(S.ws.id)) render();
+    if (await restoreSnapshot(S.ws.id)) render();
+    loadWaitingFiles();
     await loadAll();
+    if (canSeeSomeMoney() && navigator.onLine) loadMoney().then(() => { snapshot(); refresh(); }).catch(() => {}); // keep the money on the phone too
     const sv = startView(); if (!store.get('route', null)) S.route = { v: sv };
     if (!pageAllowed(S.route.v)) S.route = { v: 'myturn' };
     if (!S.profiles[uid()]?.tz) write({ t: 'profiles', op: 'update', id: uid(), patch: { tz: myTz() } }).then(() => { if (me()) me().tz = myTz(); });

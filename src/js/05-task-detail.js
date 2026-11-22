@@ -17,12 +17,12 @@ async function toggleMute(kind, id) {
   S.mutes = S.mutes || [];
   if (isMuted(id)) {
     const was = S.mutes; S.mutes = S.mutes.filter(m => m.target_id !== id); render();
-    const { error } = await sb.from('notif_mutes').delete().eq('user_id', uid()).eq('target_id', id);
+    const { error } = await write({ t: 'notif_mutes', op: 'delete', match: { user_id: uid(), target_id: id } });
     if (error) { S.mutes = was; render(); return toast(errText(error)); }
     toast(kind === 'project' ? 'Project updates on again' : 'Task updates on again');
   } else {
     const row = { user_id: uid(), workspace_id: S.ws.id, target_id: id, target_kind: kind }; S.mutes = [...S.mutes, row]; render();
-    const { error } = await sb.from('notif_mutes').insert(row);
+    const { error } = await write({ t: 'notif_mutes', op: 'insert', row, plain: true });
     if (error) { S.mutes = S.mutes.filter(m => m !== row); render(); return toast(errText(error)); }
     toast('Muted. You still hear when it’s your turn or someone mentions you');
   }
@@ -53,7 +53,10 @@ async function loadThread(id) {
     sb.from('activity').select('*').eq('task_id', id).order('created_at', { ascending: true }),
   ]);
   if (!detail || detail.id !== id) return;
-  detail.loading = false; detail.comments = c.data || []; detail.activity = a.data || []; drawThread();
+  const off = (c.error && isNetErr(c.error)) || (a.error && isNetErr(a.error)); const had = threadCache[id];
+  if (off) { detail.comments = [...(had?.c || []), ...(detail.comments || []).filter(x => !(had?.c || []).some(y => y.id === x.id))]; detail.activity = had?.a || []; }
+  else { detail.comments = c.data || []; detail.activity = a.data || []; }
+  detail.loading = false; threadCache[id] = { c: detail.comments, a: detail.activity, at: nowIso() }; drawThread();
 }
 function refreshSheet() {
   if (detail) { if (!taskOf(detail.id)) { closeSheet(); toast('That task was deleted'); return; } drawDetail(false); }
@@ -194,6 +197,7 @@ function descBlock(t) {
 /* attachments: photos, videos and PDFs on a task, kept private in the team's file storage and opened by signed links */
 var TASK_FILE_MAX = 50 * 1024 * 1024;
 async function signedFile(path) {
+  if (waitingFiles.has(path)) return waitingFiles.get(path); // still on this phone
   const hit = fileLinks[path]; if (hit && hit.until > Date.now()) return hit.url;
   const { data, error } = await sb.storage.from('chat').createSignedUrl(path, 6 * 3600);
   if (error || !data?.signedUrl) return null;
@@ -207,14 +211,14 @@ async function attachFiles(t, list) {
   const added = [];
   for (const f of ok) {
     const path = `${S.ws.id}/${uid()}/task-${t.id}/${uuid()}-${f.name.replace(/[^\w.\-]+/g, '_').slice(-80)}`;
-    const { error } = await sb.storage.from('chat').upload(path, f, { contentType: f.type || 'application/octet-stream' });
+    const { error, queued } = await putFile('chat', path, f);
     if (error) { toast(`Couldn’t upload ${f.name}: ${errText(error)}`); continue; }
-    added.push({ name: f.name, path, type: f.type || '', size: f.size, by: uid(), at: nowIso() });
+    added.push({ name: f.name, path, type: f.type || '', size: f.size, by: uid(), at: nowIso() }); if (queued) added.waiting = true;
   }
   if (!added.length) return;
   const cur = taskOf(t.id); if (!cur) return;
   const ok2 = await patchTask(t.id, { files: [...(cur.files || []), ...added] });
-  if (ok2) { track('task_attach'); toast(added.length === 1 ? 'File attached' : `${added.length} files attached`); }
+  if (ok2) { track('task_attach'); toast((added.length === 1 ? 'File attached' : `${added.length} files attached`) + (added.waiting ? ' · saved on this phone, it goes up when you’re back online' : '')); }
 }
 async function removeFile(t, f) {
   const ok = await patchTask(t.id, { files: (t.files || []).filter(x => x.path !== f.path) }, { toast: 'Attachment removed', noUndo: true });
@@ -330,7 +334,9 @@ function pickDate(a, value, onPick) {
 }
 /* thread: comments + activity */
 function drawThread() {
-  if (!detail) return; const box = $('.d-thread', detail.sh); if (!box) return;
+  if (!detail) return;
+  if (!detail.loading && detail.comments) { threadCache[detail.id] = { c: detail.comments, a: detail.activity || [], at: nowIso() }; snapshot(); } // keep it for offline
+  const box = $('.d-thread', detail.sh); if (!box) return;
   if (box.contains(document.activeElement)) { const list = $('.timeline', box); if (list) list.replaceWith(timeline()); return; }
   const filt = detail.filter;
   box.replaceChildren(h('h4', {}, 'Activity', h('span', { class: 'act' }, h('div', { class: 'seg', role: 'group', 'aria-label': 'Show' },
