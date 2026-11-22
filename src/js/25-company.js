@@ -6,7 +6,7 @@ const HW_DEPTS = ['hardware', 'embedded', 'field', 'support', 'hwlead'];
 /* All / Software / Hardware: the hardware head always sees Hardware */
 const coSplit = () => canSeeMoney() ? store.get('coSplit.' + S.ws.id, 'all') : 'hardware';
 function companyData(split = coSplit()) {
-  const today = todayIso(); const month = today.slice(0, 7); const in30 = new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10);
+  const today = todayIso(); const month = today.slice(0, 7); const in30 = addDays(today, 30);
   const week = Date.now() - 7 * 864e5;
   const d = { value: 0, received: 0, monthIn: 0, profit: 0, teamSet: true, late: [], lateAmt: 0, coming: [], projects: [] };
   for (const p of S.projects.filter(p => canSeeProjMoney(p) && (split === 'all' || pDept(p) === split))) {

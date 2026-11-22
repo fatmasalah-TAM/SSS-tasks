@@ -1,7 +1,7 @@
 /* ═════════════ The CEO's weekly brief (Company page) ═════════════ */
 function briefFacts() {
   let r = null; try { r = reportData('this'); } catch (e) { r = null; }
-  const d = companyData(); const cur = M.settings?.currency || 'EGP';
+  const d = companyData(); const cur = M.settings?.currency || localCurrency();
   const facts = { company: S.ws.name, week: r ? `${r.b.label}: ${rangeText(r.b)}` : '',
     delivered: r ? r.done.length : 0, bugsFixed: r?.bugsFixed || 0, started: r?.started || 0, waitingForReview: r ? r.review.length : 0,
     pastDue: r ? r.overdue.slice(0, 5).map(t => `${taskKey(t)} ${t.title}`) : [],
@@ -55,7 +55,7 @@ const SECTION_HINTS = {
   'goal': ['Residents can invite guests without calling security', 'The problem this solves, in one or two sentences.'],
   'requirements': ['1. Owner creates a QR for a guest\n2. QR works once, for one day\n3. Security sees who invited the guest', 'Numbered. What it must do, not how to build it.'],
   'acceptance criteria': ['Done when a guest QR opens the gate once and then expires', 'How the tester will know it is finished.'],
-  'ref / source': ['MG feedback doc, point 14 · meeting on Nov 12', 'Where this came from: client, document, meeting or chat.'],
+  'link or source': ['MG feedback doc, point 14 · meeting on Nov 12', 'Where this came from: client, document, meeting or chat.'],
   'why': ['MG asked for it; 3 residents complained this month', 'The reason. Who asked and what happens if we don’t.'],
   'scope': ['Owner app only. Not the dashboard yet.', 'What is in, and what is out.'],
   'what to show': ['Owner app: visitors, payments, facilities booking', 'The screens the client must see. Ask sales what they care about.'],

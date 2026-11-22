@@ -40,7 +40,7 @@ async function loadVault() {
 }
 /* access given only until a date (leave cover) is taken away once the date has passed, by whichever side opens Ovrto first */
 async function cleanExpiredGrants() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayIso();
   const old = V.grants.filter(g => g.until && g.until < today && (g.user_id === uid() || g.granted_by === uid()));
   for (const g of old) { const { error } = await sb.from('vault_grants').delete().eq('item_id', g.item_id).eq('user_id', g.user_id); if (!error) V.grants = V.grants.filter(x => x !== g); }
   if (old.length) { V.items = V.items.filter(i => V.grants.some(g => g.item_id === i.id && g.user_id === uid()) || i.created_by === uid()); refresh(); }

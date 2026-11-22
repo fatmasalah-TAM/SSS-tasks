@@ -325,7 +325,7 @@ function pickDate(a, value, onPick) {
   popover(a, pop => {
     const today = new Date(); const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; // local date, not UTC
     const add = n => { const d = new Date(); d.setDate(d.getDate() + n); return iso(d); };
-    const fri = (() => { const d = new Date(); d.setDate(d.getDate() + ((4 - d.getDay() + 7) % 7 || 7)); return iso(d); })();
+    const fri = (() => { const d = new Date(); d.setDate(d.getDate() + ((lastWorkDay() - d.getDay() + 7) % 7 || 7)); return iso(d); })(); // the last working day of the week where the person is
     const inp = h('input', { type: 'date', value: value || '', 'aria-label': 'Date', style: { margin: '10px', width: 'calc(100% - 20px)' } });
     inp.addEventListener('change', () => { closePop(); onPick(inp.value || null); });
     const q = (label, v) => h('button', { class: 'opt', onclick: () => { closePop(); onPick(v); } }, h('span', { text: label, style: { flex: '1' } }), v ? h('span', { class: 'sub', text: fmtDate(v) }) : null);

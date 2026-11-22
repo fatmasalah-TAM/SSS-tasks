@@ -584,7 +584,7 @@ function openApproval(a) {
       const title = h('input', { type: 'text', id: 'apTitle', maxlength: '200', placeholder: 'e.g. 4 barrier motors for Marassi' });
       const details = h('textarea', { id: 'apDetails', rows: 3, maxlength: '4000', placeholder: 'Why, from where, any link' });
       const amount = h('input', { type: 'number', id: 'apAmount', min: '0', step: '0.01', inputmode: 'decimal', placeholder: 'Optional' });
-      const cur = h('input', { type: 'text', id: 'apCur', maxlength: '8', value: M.settings?.currency || 'EGP' });
+      const cur = h('input', { type: 'text', id: 'apCur', maxlength: '8', value: M.settings?.currency || localCurrency() });
       const item = h('select', { id: 'apItem' }, h('option', { value: '' }, 'Not a stock item'), (S.stock || []).map(s => h('option', { value: s.id }, s.name)));
       const qty = h('input', { type: 'number', id: 'apQty', min: '1', step: '1', placeholder: 'How many' });
       const who = h('select', { id: 'apWho' }, approvers().map(u => h('option', { value: u }, dname(prof(u)))));
@@ -723,7 +723,7 @@ function onboardingPanel() {
 function printInvoice(p, y) {
   const tr = x => (isAr() ? I18N.tr(x) : x);
   const n = `${S.ws.prefix || 'INV'}-${(y.due || todayIso()).slice(0, 4)}-${String(((moneyOf(p.id).payments || []).findIndex(z => z.id === y.id) + 1) || 1).padStart(3, '0')}`;
-  const cur = M.settings?.currency || 'EGP'; const client = '';
+  const cur = M.settings?.currency || localCurrency(); const client = '';
   const w = window.open('', '_blank'); if (!w) return toast('Allow pop-ups to print the invoice');
   const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   w.document.write(`<!doctype html><html dir="${isAr() ? 'rtl' : 'ltr'}"><head><meta charset="utf-8"><title>${esc(n)}</title><style>body{font-family:system-ui,sans-serif;max-width:720px;margin:40px auto;color:#161B33}h1{margin:0 0 4px}table{width:100%;border-collapse:collapse;margin:24px 0}td,th{padding:10px;border-bottom:1px solid #ddd;text-align:start}.tot{font-size:22px;font-weight:700}.mute{color:#5A6082}@media print{button{display:none}}</style></head><body>

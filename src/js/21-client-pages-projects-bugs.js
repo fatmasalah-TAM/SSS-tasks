@@ -290,7 +290,7 @@ function projectWork(p) {
   ].map(([c, n]) => [n, ts.filter(t => catOf(t) === c).sort(SORTS.priority)]);
   const done = ts.filter(t => catOf(t) === 'done' && (!t.completed_at || new Date(t.completed_at) > week2)).sort((a, b) => (b.completed_at || '').localeCompare(a.completed_at || ''));
   if (!ts.filter(t => !isClosed(t)).length && !done.length) return emptyState('0 TASKS', 'No tasks in this project yet.', { label: 'New task', fn: () => openCreate({ preset: { project_id: p.id } }) });
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayIso();
   const row = t => { const who = prof(t.assignee_id); const late = t.due_date && t.due_date < today && !isClosed(t);
     return h('button', { class: 'pjrow pjtask', 'data-task': t.id, onclick: () => openTask(t.id) }, stIcon(stOf(t.status_id)),
       h('span', { class: 'grow' }, h('b', { text: shortTitle(t.title, p.name) }),
@@ -315,7 +315,7 @@ function projectOverview(p) {
   const week = Date.now() - 7 * 864e5; const done = ts.filter(t => t.completed_at && new Date(t.completed_at) > week).length;
   const num = (n, l, tab) => h('button', { class: 'pjnum', onclick: () => go({ v: 'project', id: p.id, tab }) }, h('b', { text: String(n) }), h('span', { text: l }));
   // what needs someone now: bugs that came back, late work, things waiting for review, work nobody has
-  const today = new Date().toISOString().slice(0, 10); const attn = [];
+  const today = todayIso(); const attn = [];
   for (const t of open) {
     if ((t.flags || []).includes('regression')) attn.push({ t, lvl: 'now', why: 'Came back after it was fixed' });
     else if (t.due_date && t.due_date < today) attn.push({ t, lvl: 'now', why: `Late · was due ${fmtDate(t.due_date)}` });

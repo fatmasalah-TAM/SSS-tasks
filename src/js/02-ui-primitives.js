@@ -293,11 +293,15 @@ function md(src) {
   return out.join('');
 }
 /* description ⇄ sections ("## Heading" blocks) */
+/* section names renamed in plain words; old tasks and company templates keep working */
+const SECTION_RENAMES = { 'Ref / Source': 'Link or source' };
+const secName = x => SECTION_RENAMES[x] || x;
+function renameOldSections() { for (const ty of S.types || []) if (Array.isArray(ty.template)) ty.template = ty.template.map(secName); }
 function parseSections(desc) {
   const secs = []; let cur = { h: '', body: [] };
   for (const line of String(desc || '').split('\n')) {
     const m = line.match(/^##\s+(.+?)\s*$/);
-    if (m) { secs.push(cur); cur = { h: m[1], body: [] }; } else cur.body.push(line);
+    if (m) { secs.push(cur); cur = { h: secName(m[1]), body: [] }; } else cur.body.push(line);
   }
   secs.push(cur);
   return secs.map(s => ({ h: s.h, body: s.body.join('\n').trim() })).filter((s, i) => i > 0 || s.body);

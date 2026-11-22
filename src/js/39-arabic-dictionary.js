@@ -41,7 +41,7 @@ Object.assign(AR.exact, {
   "Tip: type @ to assign someone · Enter to create": "نصيحة: اكتب @ عشان تحدد حد · Enter للإنشاء", "who and what": "مين وإيه", "Who and what": "مين وإيه",
   "Waiting for an API, a design, an answer? Say who, and it lands in their My turn.": "مستني API أو تصميم أو رد؟ قول مين، وهتظهرله في دوره.",
   "Waiting for a document, a signature or an answer? Say who, and it lands in their My turn.": "مستني ورقة أو إمضاء أو رد؟ قول مين، وهتظهرله في دوره.",
-  "Assigned to": "مسؤول عنها", "Edit description": "عدّل الوصف"
+  "Assigned to": "مسؤول عنها", "Edit description": "عدّل الوصف", "Link or source": "اللينك أو المصدر", "link or source": "اللينك أو المصدر"
 });
 AR.patterns.unshift(["^Your (.+) agent$", "مساعدك الذكي في $1"]);
 /* "بدون" reads formal next to the app's Egyptian; same meaning */

@@ -3,7 +3,7 @@
 var reportState = { week: 'this' };
 const R = (en, ar) => (typeof LANG !== 'undefined' && LANG === 'ar' ? ar : en); // sentences built from numbers are written in both languages here
 function weekBounds(which) {
-  const now = new Date(); const start = new Date(now); start.setHours(0, 0, 0, 0); start.setDate(start.getDate() - start.getDay()); // weeks start on Sunday
+  const now = new Date(); const start = new Date(now); start.setHours(0, 0, 0, 0); start.setDate(start.getDate() - ((start.getDay() - WEEK.first + 7) % 7)); // the week starts on the local first day (Sunday in Egypt, Monday in most places)
   if (which === 'last') { const end = new Date(start); start.setDate(start.getDate() - 7); return { from: start, to: end, label: 'Last week' }; }
   return { from: start, to: now, label: 'This week' };
 }

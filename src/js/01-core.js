@@ -176,6 +176,19 @@ function dueInfo(t) {
 }
 function localTime(tz) { try { return new Date().toLocaleTimeString(UI_LOC, { hour: '2-digit', minute: '2-digit', timeZone: tz }); } catch { return ''; } }
 const myTz = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
+/* the working week where the person is: which day it starts and which days are the weekend (0 = Sunday … 6 = Saturday).
+   Egypt and most of the Gulf work Sunday to Thursday; the UAE and most of the world work Monday to Friday. */
+const WEEK = (() => {
+  const SUN_THU = ['Africa/Cairo', 'Asia/Riyadh', 'Asia/Kuwait', 'Asia/Qatar', 'Asia/Bahrain', 'Asia/Muscat', 'Asia/Amman', 'Asia/Baghdad', 'Africa/Tripoli', 'Asia/Aden', 'Africa/Khartoum'];
+  try { if (SUN_THU.includes(myTz())) return { first: 0, weekend: [5, 6] }; } catch {}
+  try { const loc = new Intl.Locale(navigator.language || 'en'); const w = (loc.getWeekInfo && loc.getWeekInfo()) || loc.weekInfo; if (w && w.firstDay) return { first: w.firstDay % 7, weekend: (w.weekend || [6, 7]).map(x => x % 7) }; } catch {}
+  return { first: 1, weekend: [6, 0] };
+})();
+/* the money currency until the company picks one: where the person is */
+const localCurrency = () => { let tz = ''; try { tz = myTz() || ''; } catch {}
+  const BY_TZ = { 'Africa/Cairo': 'EGP', 'Asia/Riyadh': 'SAR', 'Asia/Dubai': 'AED', 'Asia/Kuwait': 'KWD', 'Asia/Qatar': 'QAR', 'Asia/Bahrain': 'BHD', 'Asia/Muscat': 'OMR', 'Asia/Amman': 'JOD', 'Africa/Casablanca': 'MAD', 'Europe/London': 'GBP', 'Asia/Kolkata': 'INR', 'Asia/Karachi': 'PKR', 'Europe/Istanbul': 'TRY' };
+  return BY_TZ[tz] || (tz.startsWith('Europe/') ? 'EUR' : 'USD'); };
+const lastWorkDay = () => (WEEK.weekend[0] + 6) % 7;
 
 /* ── turn (mirrors the database rule so the screen updates instantly) ── */
 function computeTurn(t) {
@@ -268,7 +281,7 @@ async function loadAll() {
   const ws = S.ws?.id;
   await Promise.all([loadMembers(), ...WS_TABLES.map(loadTable), loadNotifs(), loadChat()]);
   if (S.ws?.id !== ws) return;
-  S.loaded = true; snapshot(); ensureDeptTypes();
+  S.loaded = true; renameOldSections(); snapshot(); ensureDeptTypes();
 }
 /* the phone's copy of the workspace: everything this person can see, so Ovrto opens and works with no internet.
    Kept in IndexedDB (localStorage as a fallback), cleared on sign-out. */
@@ -291,7 +304,7 @@ async function restoreSnapshot(wsId) {
   const { money, threads, at, ...rest } = s;
   Object.assign(S, rest); Object.assign(threadCache, threads || {});
   if (money && typeof M !== 'undefined') { Object.assign(M, money); M.cached = wsId; }
-  S.loaded = true; return true;
+  S.loaded = true; renameOldSections(); return true;
 }
 async function forgetPhoneCopy() { await idb.clear('snap'); try { for (const k of Object.keys(localStorage)) if (/^baton\.(snap\.|wsList|prefs\.)/.test(k)) localStorage.removeItem(k); } catch {} }
 

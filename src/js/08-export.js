@@ -36,7 +36,7 @@ function openExport() {
       const pickd = st.scope === 'view' ? visibleTasks() : st.scope === 'mine' ? S.tasks.filter(involvedIn) : S.tasks; if (!isAdmin()) st.email = false;
       const tasks = exportable(pickd).slice().sort((a, b) => (a.number || 0) - (b.number || 0));
       if (!tasks.length) { toast('Nothing of yours to export here'); return; }
-      const stamp = new Date().toISOString().slice(0, 10); const base = `${S.ws.prefix.toLowerCase()}-tasks-${stamp}`;
+      const stamp = todayIso(); const base = `${S.ws.prefix.toLowerCase()}-tasks-${stamp}`;
       if (st.fmt === 'json') {
         const ids = tasks.map(t => t.id); const { data: comments } = await sb.from('comments').select('*').in('task_id', ids);
         download(base + '.json', JSON.stringify({ workspace: S.ws.name, exported_at: nowIso(), statuses: S.statuses, types: S.types, fields: S.fields, projects: S.projects, people: S.members.map(m => Object.assign({ id: m.user_id, name: dname(prof(m.user_id)), role: m.role }, isAdmin() ? { email: prof(m.user_id)?.email } : {})), tasks: tasks.map(t => Object.assign({ key: taskKey(t), link: taskLink(t), status: stOf(t.status_id)?.name, type: tyOf(t.type_id)?.name, developer: dname(prof(t.assignee_id)) }, t, { comments: (comments || []).filter(c => c.task_id === t.id) })) }, null, 2), 'application/json');
@@ -87,6 +87,6 @@ async function fullBackup() {
   toast('Preparing backup…');
   const ids = S.tasks.map(t => t.id);
   const [{ data: comments }, { data: activity }] = await Promise.all([sb.from('comments').select('*').in('task_id', ids), sb.from('activity').select('*').in('task_id', ids)]);
-  download(`${S.ws.prefix.toLowerCase()}-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify({ workspace: S.ws, members: S.members, profiles: S.members.map(m => prof(m.user_id)), statuses: S.statuses, types: S.types, fields: S.fields, rules: S.rules, views: S.views.filter(v => v.shared || v.owner_id === uid()), projects: S.projects, tasks: S.tasks, comments, activity }, null, 2), 'application/json');
+  download(`${S.ws.prefix.toLowerCase()}-backup-${todayIso()}.json`, JSON.stringify({ workspace: S.ws, members: S.members, profiles: S.members.map(m => prof(m.user_id)), statuses: S.statuses, types: S.types, fields: S.fields, rules: S.rules, views: S.views.filter(v => v.shared || v.owner_id === uid()), projects: S.projects, tasks: S.tasks, comments, activity }, null, 2), 'application/json');
 }
 

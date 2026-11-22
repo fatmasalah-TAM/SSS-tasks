@@ -1,5 +1,7 @@
 /* ═════════════ Leave and cover: Ovrto asks who covers you, and hands over your work and logins ═════════════ */
-const todayIso = () => new Date().toISOString().slice(0, 10);
+/* today in the person's own time zone (not UTC), so "late" and "today" are right in Cairo, London or New York */
+const localIso = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const todayIso = () => localIso();
 const leaveState = l => (todayIso() < l.start_date ? 'soon' : todayIso() > l.end_date ? 'over' : 'now');
 const coveringFor = () => (S.leaves || []).filter(l => l.cover_id === uid() && leaveState(l) !== 'over');
 function leaveBanners() {

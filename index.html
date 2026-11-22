@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-KzMwe8jvp2JuIli/BEPmIUhLpDVrzvw0YlPAtu/SBYg=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-iKCgSl7zAnh1th4SgK55uR1Sq4hcSy+qYxvO9QOOMEY=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-KzMwe8jvp2JuIli/BEPmIUhLpDVrzvw0YlPAtu/SBYg=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-Qz3Oms9p7jjMdUzJCKd8lzlaXxonwJuLXDFKh1j/vPA=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<meta name="ovrto-build" content="e3fdbe6a8f65">
+<meta name="ovrto-build" content="d8e3e78e9785">
 <title>Ovrto</title>
 <meta name="description" content="Over to you. Every task shows whose turn it is.">
 <meta name="theme-color" content="#0D0D0F">
@@ -1586,6 +1586,19 @@ function dueInfo(t) {
 }
 function localTime(tz) { try { return new Date().toLocaleTimeString(UI_LOC, { hour: '2-digit', minute: '2-digit', timeZone: tz }); } catch { return ''; } }
 const myTz = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
+/* the working week where the person is: which day it starts and which days are the weekend (0 = Sunday … 6 = Saturday).
+   Egypt and most of the Gulf work Sunday to Thursday; the UAE and most of the world work Monday to Friday. */
+const WEEK = (() => {
+  const SUN_THU = ['Africa/Cairo', 'Asia/Riyadh', 'Asia/Kuwait', 'Asia/Qatar', 'Asia/Bahrain', 'Asia/Muscat', 'Asia/Amman', 'Asia/Baghdad', 'Africa/Tripoli', 'Asia/Aden', 'Africa/Khartoum'];
+  try { if (SUN_THU.includes(myTz())) return { first: 0, weekend: [5, 6] }; } catch {}
+  try { const loc = new Intl.Locale(navigator.language || 'en'); const w = (loc.getWeekInfo && loc.getWeekInfo()) || loc.weekInfo; if (w && w.firstDay) return { first: w.firstDay % 7, weekend: (w.weekend || [6, 7]).map(x => x % 7) }; } catch {}
+  return { first: 1, weekend: [6, 0] };
+})();
+/* the money currency until the company picks one: where the person is */
+const localCurrency = () => { let tz = ''; try { tz = myTz() || ''; } catch {}
+  const BY_TZ = { 'Africa/Cairo': 'EGP', 'Asia/Riyadh': 'SAR', 'Asia/Dubai': 'AED', 'Asia/Kuwait': 'KWD', 'Asia/Qatar': 'QAR', 'Asia/Bahrain': 'BHD', 'Asia/Muscat': 'OMR', 'Asia/Amman': 'JOD', 'Africa/Casablanca': 'MAD', 'Europe/London': 'GBP', 'Asia/Kolkata': 'INR', 'Asia/Karachi': 'PKR', 'Europe/Istanbul': 'TRY' };
+  return BY_TZ[tz] || (tz.startsWith('Europe/') ? 'EUR' : 'USD'); };
+const lastWorkDay = () => (WEEK.weekend[0] + 6) % 7;
 
 /* ── turn (mirrors the database rule so the screen updates instantly) ── */
 function computeTurn(t) {
@@ -1678,7 +1691,7 @@ async function loadAll() {
   const ws = S.ws?.id;
   await Promise.all([loadMembers(), ...WS_TABLES.map(loadTable), loadNotifs(), loadChat()]);
   if (S.ws?.id !== ws) return;
-  S.loaded = true; snapshot(); ensureDeptTypes();
+  S.loaded = true; renameOldSections(); snapshot(); ensureDeptTypes();
 }
 /* the phone's copy of the workspace: everything this person can see, so Ovrto opens and works with no internet.
    Kept in IndexedDB (localStorage as a fallback), cleared on sign-out. */
@@ -1701,7 +1714,7 @@ async function restoreSnapshot(wsId) {
   const { money, threads, at, ...rest } = s;
   Object.assign(S, rest); Object.assign(threadCache, threads || {});
   if (money && typeof M !== 'undefined') { Object.assign(M, money); M.cached = wsId; }
-  S.loaded = true; return true;
+  S.loaded = true; renameOldSections(); return true;
 }
 async function forgetPhoneCopy() { await idb.clear('snap'); try { for (const k of Object.keys(localStorage)) if (/^baton\.(snap\.|wsList|prefs\.)/.test(k)) localStorage.removeItem(k); } catch {} }
 
@@ -2181,11 +2194,15 @@ function md(src) {
   return out.join('');
 }
 /* description ⇄ sections ("## Heading" blocks) */
+/* section names renamed in plain words; old tasks and company templates keep working */
+const SECTION_RENAMES = { 'Ref / Source': 'Link or source' };
+const secName = x => SECTION_RENAMES[x] || x;
+function renameOldSections() { for (const ty of S.types || []) if (Array.isArray(ty.template)) ty.template = ty.template.map(secName); }
 function parseSections(desc) {
   const secs = []; let cur = { h: '', body: [] };
   for (const line of String(desc || '').split('\n')) {
     const m = line.match(/^##\s+(.+?)\s*$/);
-    if (m) { secs.push(cur); cur = { h: m[1], body: [] }; } else cur.body.push(line);
+    if (m) { secs.push(cur); cur = { h: secName(m[1]), body: [] }; } else cur.body.push(line);
   }
   secs.push(cur);
   return secs.map(s => ({ h: s.h, body: s.body.join('\n').trim() })).filter((s, i) => i > 0 || s.body);
@@ -3481,7 +3498,7 @@ function pickDate(a, value, onPick) {
   popover(a, pop => {
     const today = new Date(); const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; // local date, not UTC
     const add = n => { const d = new Date(); d.setDate(d.getDate() + n); return iso(d); };
-    const fri = (() => { const d = new Date(); d.setDate(d.getDate() + ((4 - d.getDay() + 7) % 7 || 7)); return iso(d); })();
+    const fri = (() => { const d = new Date(); d.setDate(d.getDate() + ((lastWorkDay() - d.getDay() + 7) % 7 || 7)); return iso(d); })(); // the last working day of the week where the person is
     const inp = h('input', { type: 'date', value: value || '', 'aria-label': 'Date', style: { margin: '10px', width: 'calc(100% - 20px)' } });
     inp.addEventListener('change', () => { closePop(); onPick(inp.value || null); });
     const q = (label, v) => h('button', { class: 'opt', onclick: () => { closePop(); onPick(v); } }, h('span', { text: label, style: { flex: '1' } }), v ? h('span', { class: 'sub', text: fmtDate(v) }) : null);
@@ -4186,7 +4203,7 @@ function openExport() {
       const pickd = st.scope === 'view' ? visibleTasks() : st.scope === 'mine' ? S.tasks.filter(involvedIn) : S.tasks; if (!isAdmin()) st.email = false;
       const tasks = exportable(pickd).slice().sort((a, b) => (a.number || 0) - (b.number || 0));
       if (!tasks.length) { toast('Nothing of yours to export here'); return; }
-      const stamp = new Date().toISOString().slice(0, 10); const base = `${S.ws.prefix.toLowerCase()}-tasks-${stamp}`;
+      const stamp = todayIso(); const base = `${S.ws.prefix.toLowerCase()}-tasks-${stamp}`;
       if (st.fmt === 'json') {
         const ids = tasks.map(t => t.id); const { data: comments } = await sb.from('comments').select('*').in('task_id', ids);
         download(base + '.json', JSON.stringify({ workspace: S.ws.name, exported_at: nowIso(), statuses: S.statuses, types: S.types, fields: S.fields, projects: S.projects, people: S.members.map(m => Object.assign({ id: m.user_id, name: dname(prof(m.user_id)), role: m.role }, isAdmin() ? { email: prof(m.user_id)?.email } : {})), tasks: tasks.map(t => Object.assign({ key: taskKey(t), link: taskLink(t), status: stOf(t.status_id)?.name, type: tyOf(t.type_id)?.name, developer: dname(prof(t.assignee_id)) }, t, { comments: (comments || []).filter(c => c.task_id === t.id) })) }, null, 2), 'application/json');
@@ -4237,7 +4254,7 @@ async function fullBackup() {
   toast('Preparing backup…');
   const ids = S.tasks.map(t => t.id);
   const [{ data: comments }, { data: activity }] = await Promise.all([sb.from('comments').select('*').in('task_id', ids), sb.from('activity').select('*').in('task_id', ids)]);
-  download(`${S.ws.prefix.toLowerCase()}-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify({ workspace: S.ws, members: S.members, profiles: S.members.map(m => prof(m.user_id)), statuses: S.statuses, types: S.types, fields: S.fields, rules: S.rules, views: S.views.filter(v => v.shared || v.owner_id === uid()), projects: S.projects, tasks: S.tasks, comments, activity }, null, 2), 'application/json');
+  download(`${S.ws.prefix.toLowerCase()}-backup-${todayIso()}.json`, JSON.stringify({ workspace: S.ws, members: S.members, profiles: S.members.map(m => prof(m.user_id)), statuses: S.statuses, types: S.types, fields: S.fields, rules: S.rules, views: S.views.filter(v => v.shared || v.owner_id === uid()), projects: S.projects, tasks: S.tasks, comments, activity }, null, 2), 'application/json');
 }
 
 /* ═════════════ tours ═════════════ */
@@ -4504,7 +4521,7 @@ addEventListener('online', () => { if (S.ws) { flushOutbox(); setupRealtime(); c
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { checkUpdate(); if (S.ws) { flushOutbox(); setupRealtime(); catchUp(); } } });
 
 /* a new version was uploaded: phones (and apps saved to the home screen) pick it up by themselves */
-const BUILD = 'e3fdbe6a8f65';
+const BUILD = 'd8e3e78e9785';
 let updLast = 0, updShown = false;
 async function checkUpdate(force) {
   if (!force && Date.now() - updLast < 60000) return; updLast = Date.now();
@@ -6779,7 +6796,7 @@ function projectWork(p) {
   ].map(([c, n]) => [n, ts.filter(t => catOf(t) === c).sort(SORTS.priority)]);
   const done = ts.filter(t => catOf(t) === 'done' && (!t.completed_at || new Date(t.completed_at) > week2)).sort((a, b) => (b.completed_at || '').localeCompare(a.completed_at || ''));
   if (!ts.filter(t => !isClosed(t)).length && !done.length) return emptyState('0 TASKS', 'No tasks in this project yet.', { label: 'New task', fn: () => openCreate({ preset: { project_id: p.id } }) });
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayIso();
   const row = t => { const who = prof(t.assignee_id); const late = t.due_date && t.due_date < today && !isClosed(t);
     return h('button', { class: 'pjrow pjtask', 'data-task': t.id, onclick: () => openTask(t.id) }, stIcon(stOf(t.status_id)),
       h('span', { class: 'grow' }, h('b', { text: shortTitle(t.title, p.name) }),
@@ -6804,7 +6821,7 @@ function projectOverview(p) {
   const week = Date.now() - 7 * 864e5; const done = ts.filter(t => t.completed_at && new Date(t.completed_at) > week).length;
   const num = (n, l, tab) => h('button', { class: 'pjnum', onclick: () => go({ v: 'project', id: p.id, tab }) }, h('b', { text: String(n) }), h('span', { text: l }));
   // what needs someone now: bugs that came back, late work, things waiting for review, work nobody has
-  const today = new Date().toISOString().slice(0, 10); const attn = [];
+  const today = todayIso(); const attn = [];
   for (const t of open) {
     if ((t.flags || []).includes('regression')) attn.push({ t, lvl: 'now', why: 'Came back after it was fixed' });
     else if (t.due_date && t.due_date < today) attn.push({ t, lvl: 'now', why: `Late · was due ${fmtDate(t.due_date)}` });
@@ -7187,13 +7204,13 @@ async function loadMoney() {
     canSeeSalaries() ? sb.from('team_salaries').select('*').eq('workspace_id', ws) : Promise.resolve({ data: [] })]);
   if (S.ws?.id !== ws) return;
   if ([a, b, c].some(x => x.error && isNetErr(x.error))) { // offline: the copy on this phone, or nothing rather than wrong zeros
-    if (M.cached !== ws) { M.rows = {}; M.settings = { workspace_id: ws, currency: 'EGP' }; M.salary = null; M.hwSalary = null; if (!M.warned) { M.warned = true; toast('Money shows here after you open Ovrto once with internet'); } }
+    if (M.cached !== ws) { M.rows = {}; M.settings = { workspace_id: ws, currency: localCurrency() }; M.salary = null; M.hwSalary = null; if (!M.warned) { M.warned = true; toast('Money shows here after you open Ovrto once with internet'); } }
     M.loaded = ws; return;
   }
-  M.rows = {}; for (const r of a.data || []) M.rows[r.project_id] = r; M.settings = (b.data || [])[0] || { workspace_id: ws, currency: 'EGP' }; M.salary = canSeeSalaries() ? ((c.data || [])[0]?.team_monthly ?? null) : null; M.hwSalary = canSeeSalaries() ? ((c.data || [])[0]?.hw_monthly ?? null) : null; M.loaded = ws;
+  M.rows = {}; for (const r of a.data || []) M.rows[r.project_id] = r; M.settings = (b.data || [])[0] || { workspace_id: ws, currency: localCurrency() }; M.salary = canSeeSalaries() ? ((c.data || [])[0]?.team_monthly ?? null) : null; M.hwSalary = canSeeSalaries() ? ((c.data || [])[0]?.hw_monthly ?? null) : null; M.loaded = ws;
 }
 const moneyOf = pid => M.rows[pid] || { project_id: pid, workspace_id: S.ws.id, contract: {}, payments: [], costs: [], share: null };
-const cur = () => M.settings?.currency || 'EGP';
+const cur = () => M.settings?.currency || localCurrency();
 const fmtMoney = n => (n == null || isNaN(n) ? '—' : Math.round(n).toLocaleString('en-US') + ' ' + cur());
 const monthsBetween = (a, b) => { if (!a) return 0; const s = new Date(a), e = b ? new Date(b) : new Date(); return Math.max(0, (e - s) / (30.44 * 864e5)); };
 /* the numbers for one project */
@@ -7567,7 +7584,7 @@ const HW_DEPTS = ['hardware', 'embedded', 'field', 'support', 'hwlead'];
 /* All / Software / Hardware: the hardware head always sees Hardware */
 const coSplit = () => canSeeMoney() ? store.get('coSplit.' + S.ws.id, 'all') : 'hardware';
 function companyData(split = coSplit()) {
-  const today = todayIso(); const month = today.slice(0, 7); const in30 = new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10);
+  const today = todayIso(); const month = today.slice(0, 7); const in30 = addDays(today, 30);
   const week = Date.now() - 7 * 864e5;
   const d = { value: 0, received: 0, monthIn: 0, profit: 0, teamSet: true, late: [], lateAmt: 0, coming: [], projects: [] };
   for (const p of S.projects.filter(p => canSeeProjMoney(p) && (split === 'all' || pDept(p) === split))) {
@@ -7951,7 +7968,7 @@ function showTell(a, said) {
 /* ═════════════ The CEO's weekly brief (Company page) ═════════════ */
 function briefFacts() {
   let r = null; try { r = reportData('this'); } catch (e) { r = null; }
-  const d = companyData(); const cur = M.settings?.currency || 'EGP';
+  const d = companyData(); const cur = M.settings?.currency || localCurrency();
   const facts = { company: S.ws.name, week: r ? `${r.b.label}: ${rangeText(r.b)}` : '',
     delivered: r ? r.done.length : 0, bugsFixed: r?.bugsFixed || 0, started: r?.started || 0, waitingForReview: r ? r.review.length : 0,
     pastDue: r ? r.overdue.slice(0, 5).map(t => `${taskKey(t)} ${t.title}`) : [],
@@ -8005,7 +8022,7 @@ const SECTION_HINTS = {
   'goal': ['Residents can invite guests without calling security', 'The problem this solves, in one or two sentences.'],
   'requirements': ['1. Owner creates a QR for a guest\n2. QR works once, for one day\n3. Security sees who invited the guest', 'Numbered. What it must do, not how to build it.'],
   'acceptance criteria': ['Done when a guest QR opens the gate once and then expires', 'How the tester will know it is finished.'],
-  'ref / source': ['MG feedback doc, point 14 · meeting on Nov 12', 'Where this came from: client, document, meeting or chat.'],
+  'link or source': ['MG feedback doc, point 14 · meeting on Nov 12', 'Where this came from: client, document, meeting or chat.'],
   'why': ['MG asked for it; 3 residents complained this month', 'The reason. Who asked and what happens if we don’t.'],
   'scope': ['Owner app only. Not the dashboard yet.', 'What is in, and what is out.'],
   'what to show': ['Owner app: visitors, payments, facilities booking', 'The screens the client must see. Ask sales what they care about.'],
@@ -8481,7 +8498,7 @@ async function loadVault() {
 }
 /* access given only until a date (leave cover) is taken away once the date has passed, by whichever side opens Ovrto first */
 async function cleanExpiredGrants() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayIso();
   const old = V.grants.filter(g => g.until && g.until < today && (g.user_id === uid() || g.granted_by === uid()));
   for (const g of old) { const { error } = await sb.from('vault_grants').delete().eq('item_id', g.item_id).eq('user_id', g.user_id); if (!error) V.grants = V.grants.filter(x => x !== g); }
   if (old.length) { V.items = V.items.filter(i => V.grants.some(g => g.item_id === i.id && g.user_id === uid()) || i.created_by === uid()); refresh(); }
@@ -8789,7 +8806,9 @@ function openKeepers() {
 }
 
 /* ═════════════ Leave and cover: Ovrto asks who covers you, and hands over your work and logins ═════════════ */
-const todayIso = () => new Date().toISOString().slice(0, 10);
+/* today in the person's own time zone (not UTC), so "late" and "today" are right in Cairo, London or New York */
+const localIso = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const todayIso = () => localIso();
 const leaveState = l => (todayIso() < l.start_date ? 'soon' : todayIso() > l.end_date ? 'over' : 'now');
 const coveringFor = () => (S.leaves || []).filter(l => l.cover_id === uid() && leaveState(l) !== 'over');
 function leaveBanners() {
@@ -9040,7 +9059,7 @@ function viewOwner() {
 var reportState = { week: 'this' };
 const R = (en, ar) => (typeof LANG !== 'undefined' && LANG === 'ar' ? ar : en); // sentences built from numbers are written in both languages here
 function weekBounds(which) {
-  const now = new Date(); const start = new Date(now); start.setHours(0, 0, 0, 0); start.setDate(start.getDate() - start.getDay()); // weeks start on Sunday
+  const now = new Date(); const start = new Date(now); start.setHours(0, 0, 0, 0); start.setDate(start.getDate() - ((start.getDay() - WEEK.first + 7) % 7)); // the week starts on the local first day (Sunday in Egypt, Monday in most places)
   if (which === 'last') { const end = new Date(start); start.setDate(start.getDate() - 7); return { from: start, to: end, label: 'Last week' }; }
   return { from: start, to: now, label: 'This week' };
 }
@@ -9775,7 +9794,7 @@ function openApproval(a) {
       const title = h('input', { type: 'text', id: 'apTitle', maxlength: '200', placeholder: 'e.g. 4 barrier motors for Marassi' });
       const details = h('textarea', { id: 'apDetails', rows: 3, maxlength: '4000', placeholder: 'Why, from where, any link' });
       const amount = h('input', { type: 'number', id: 'apAmount', min: '0', step: '0.01', inputmode: 'decimal', placeholder: 'Optional' });
-      const cur = h('input', { type: 'text', id: 'apCur', maxlength: '8', value: M.settings?.currency || 'EGP' });
+      const cur = h('input', { type: 'text', id: 'apCur', maxlength: '8', value: M.settings?.currency || localCurrency() });
       const item = h('select', { id: 'apItem' }, h('option', { value: '' }, 'Not a stock item'), (S.stock || []).map(s => h('option', { value: s.id }, s.name)));
       const qty = h('input', { type: 'number', id: 'apQty', min: '1', step: '1', placeholder: 'How many' });
       const who = h('select', { id: 'apWho' }, approvers().map(u => h('option', { value: u }, dname(prof(u)))));
@@ -9914,7 +9933,7 @@ function onboardingPanel() {
 function printInvoice(p, y) {
   const tr = x => (isAr() ? I18N.tr(x) : x);
   const n = `${S.ws.prefix || 'INV'}-${(y.due || todayIso()).slice(0, 4)}-${String(((moneyOf(p.id).payments || []).findIndex(z => z.id === y.id) + 1) || 1).padStart(3, '0')}`;
-  const cur = M.settings?.currency || 'EGP'; const client = '';
+  const cur = M.settings?.currency || localCurrency(); const client = '';
   const w = window.open('', '_blank'); if (!w) return toast('Allow pop-ups to print the invoice');
   const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   w.document.write(`<!doctype html><html dir="${isAr() ? 'rtl' : 'ltr'}"><head><meta charset="utf-8"><title>${esc(n)}</title><style>body{font-family:system-ui,sans-serif;max-width:720px;margin:40px auto;color:#161B33}h1{margin:0 0 4px}table{width:100%;border-collapse:collapse;margin:24px 0}td,th{padding:10px;border-bottom:1px solid #ddd;text-align:start}.tot{font-size:22px;font-weight:700}.mute{color:#5A6082}@media print{button{display:none}}</style></head><body>
@@ -9972,7 +9991,7 @@ Object.assign(AR.exact, {
   "Tip: type @ to assign someone · Enter to create": "نصيحة: اكتب @ عشان تحدد حد · Enter للإنشاء", "who and what": "مين وإيه", "Who and what": "مين وإيه",
   "Waiting for an API, a design, an answer? Say who, and it lands in their My turn.": "مستني API أو تصميم أو رد؟ قول مين، وهتظهرله في دوره.",
   "Waiting for a document, a signature or an answer? Say who, and it lands in their My turn.": "مستني ورقة أو إمضاء أو رد؟ قول مين، وهتظهرله في دوره.",
-  "Assigned to": "مسؤول عنها", "Edit description": "عدّل الوصف"
+  "Assigned to": "مسؤول عنها", "Edit description": "عدّل الوصف", "Link or source": "اللينك أو المصدر", "link or source": "اللينك أو المصدر"
 });
 AR.patterns.unshift(["^Your (.+) agent$", "مساعدك الذكي في $1"]);
 /* "بدون" reads formal next to the app's Egyptian; same meaning */

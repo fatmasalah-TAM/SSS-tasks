@@ -30,13 +30,13 @@ async function loadMoney() {
     canSeeSalaries() ? sb.from('team_salaries').select('*').eq('workspace_id', ws) : Promise.resolve({ data: [] })]);
   if (S.ws?.id !== ws) return;
   if ([a, b, c].some(x => x.error && isNetErr(x.error))) { // offline: the copy on this phone, or nothing rather than wrong zeros
-    if (M.cached !== ws) { M.rows = {}; M.settings = { workspace_id: ws, currency: 'EGP' }; M.salary = null; M.hwSalary = null; if (!M.warned) { M.warned = true; toast('Money shows here after you open Ovrto once with internet'); } }
+    if (M.cached !== ws) { M.rows = {}; M.settings = { workspace_id: ws, currency: localCurrency() }; M.salary = null; M.hwSalary = null; if (!M.warned) { M.warned = true; toast('Money shows here after you open Ovrto once with internet'); } }
     M.loaded = ws; return;
   }
-  M.rows = {}; for (const r of a.data || []) M.rows[r.project_id] = r; M.settings = (b.data || [])[0] || { workspace_id: ws, currency: 'EGP' }; M.salary = canSeeSalaries() ? ((c.data || [])[0]?.team_monthly ?? null) : null; M.hwSalary = canSeeSalaries() ? ((c.data || [])[0]?.hw_monthly ?? null) : null; M.loaded = ws;
+  M.rows = {}; for (const r of a.data || []) M.rows[r.project_id] = r; M.settings = (b.data || [])[0] || { workspace_id: ws, currency: localCurrency() }; M.salary = canSeeSalaries() ? ((c.data || [])[0]?.team_monthly ?? null) : null; M.hwSalary = canSeeSalaries() ? ((c.data || [])[0]?.hw_monthly ?? null) : null; M.loaded = ws;
 }
 const moneyOf = pid => M.rows[pid] || { project_id: pid, workspace_id: S.ws.id, contract: {}, payments: [], costs: [], share: null };
-const cur = () => M.settings?.currency || 'EGP';
+const cur = () => M.settings?.currency || localCurrency();
 const fmtMoney = n => (n == null || isNaN(n) ? '—' : Math.round(n).toLocaleString('en-US') + ' ' + cur());
 const monthsBetween = (a, b) => { if (!a) return 0; const s = new Date(a), e = b ? new Date(b) : new Date(); return Math.max(0, (e - s) / (30.44 * 864e5)); };
 /* the numbers for one project */
