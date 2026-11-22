@@ -15,10 +15,12 @@ function splashOut(now) {
 }
 const bootLoader = () => `<div class="boot" role="status"><div class="boot-mark loop">${ICONS.markAnim}</div><div class="boot-cap">Loading your tasks…</div></div>`;
 const appNameSaved = () => store.get('appName', CFG.brand);
+var choseSignIn = false; // an invited person who taps "I already have an account" stays on Sign in
 var signupOpen = null; // can new teams create an account? (asked once, the sign-in screen updates when it knows)
 function authScreen(mode = 'in', msg) {
   const params = new URLSearchParams(location.search); const invEmail = params.get('invite'); const invName = params.get('name');
-  if (invEmail && mode === 'in' && !msg) mode = 'up';
+  if (invEmail && mode === 'in' && !msg && !choseSignIn) mode = 'up';
+  if (mode === 'up') choseSignIn = false;
   if (params.has('start')) { if (mode === 'in' && !msg) mode = 'up'; params.delete('start'); history.replaceState(null, '', location.pathname + (params.toString() ? '?' + params : '') + location.hash); } // "Start free" on the website, once
   if (signupOpen === null) { signupOpen = false; sb.rpc('signup_is_open').then(r => { signupOpen = !!r.data; if (signupOpen && $('.auth form') && ![...$$('.auth form input')].some(i => i.value && i.defaultValue !== i.value)) authScreen(mode, msg); }).catch(() => {}); }
   const newTeam = mode === 'up' && !invEmail && signupOpen;
@@ -35,7 +37,7 @@ function authScreen(mode = 'in', msg) {
     mode !== 'reset' ? h('label', { class: 'field' }, 'Password', pwEye(pw)) : null,
     err, info, btn,
     h('div', { class: 'links' },
-      mode !== 'in' ? h('button', { type: 'button', class: 'link', onclick: () => authScreen('in') }, 'I already have an account') : h('button', { type: 'button', class: 'link', onclick: () => authScreen('up') }, signupOpen ? 'New to Ovrto? Start free' : 'First time here? Create an account'),
+      mode !== 'in' ? h('button', { type: 'button', class: 'link', onclick: () => { choseSignIn = true; authScreen('in'); } }, 'I already have an account') : h('button', { type: 'button', class: 'link', onclick: () => authScreen('up') }, signupOpen ? 'New to Ovrto? Start free' : 'First time here? Create an account'),
       mode === 'in' ? h('button', { type: 'button', class: 'link', onclick: () => authScreen('reset') }, 'Forgot password') : null,
       h('button', { type: 'button', class: 'link notr', lang: isAr() ? 'en' : 'ar', onclick: () => setLang(isAr() ? 'en' : 'ar') }, isAr() ? 'English' : 'العربية')));
   form.addEventListener('submit', async e => {
