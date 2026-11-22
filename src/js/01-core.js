@@ -219,7 +219,7 @@ async function loadTable(t) {
   const ws = S.ws.id;
   const { data, error } = await sb.from(t).select('*').eq('workspace_id', ws).order(ORDER[t], { ascending: true });
   if (S.ws?.id !== ws) return; // switched workspace while this was loading
-  if (error) { if (['invites', 'leaves', 'deploys', 'deals', 'notif_mutes', 'task_time', 'devices', 'work_orders', 'tickets', 'test_cases', 'test_results', 'incidents', 'approvals', 'stock_items', 'stock_moves'].includes(t)) S[LOCAL[t]] = []; return; }
+  if (error) { if (!isNetErr(error) && ['invites', 'leaves', 'deploys', 'deals', 'notif_mutes', 'task_time', 'devices', 'work_orders', 'tickets', 'test_cases', 'test_results', 'incidents', 'approvals', 'stock_items', 'stock_moves'].includes(t)) S[LOCAL[t]] = []; return; } // offline: keep what this phone already has
   S[LOCAL[t]] = data || [];
 }
 async function loadMembers() {
@@ -239,12 +239,15 @@ async function loadNotifs() {
   if (!error && data) S.notifs = data.filter(n => n.kind !== 'digest' && (!n.workspace_id || n.workspace_id === S.ws?.id)); // the quiet-hours summary is only an alert
 }
 async function loadWorkspaces() {
-  const { data } = await sb.from('workspaces').select('*').order('created_at', { ascending: true });
-  S.wsList = data || [];
+  const { data, error } = await sb.from('workspaces').select('*').order('created_at', { ascending: true });
+  /* offline: open the workspaces this phone saw last time, so field work still opens without internet */
+  if (error && isNetErr(error)) { S.wsList = store.get('wsList', []); return; }
+  S.wsList = data || []; store.set('wsList', S.wsList);
 }
 async function loadPrefs() {
-  const { data } = await sb.from('prefs').select('*').eq('user_id', uid()).maybeSingle();
-  if (data) S.prefs = data;
+  const { data, error } = await sb.from('prefs').select('*').eq('user_id', uid()).maybeSingle();
+  if (data) { S.prefs = data; store.set('prefs.' + uid(), data); }
+  else if (error && isNetErr(error)) S.prefs = store.get('prefs.' + uid(), null) || { user_id: uid(), theme: 'system', density: 'comfortable', default_view: 'myturn', layout: 'board', tours: {}, tours_off: true, push: true, data_saver: false, last_workspace: null }; // offline: never overwrite the saved settings
   else {
     S.prefs = { user_id: uid(), theme: 'system', density: 'comfortable', default_view: 'myturn', layout: 'board', tours: {}, tours_off: false, push: true, data_saver: false, last_workspace: null };
     await sb.from('prefs').upsert(S.prefs);
@@ -258,7 +261,7 @@ async function loadAll() {
 }
 const snapshot = debounce(() => {
   if (!S.ws) return;
-  store.set('snap.' + S.ws.id, { members: S.members, profiles: S.profiles, statuses: S.statuses, types: S.types, fields: S.fields, rules: S.rules, views: S.views, projects: S.projects, tasks: S.tasks, notifs: S.notifs, invites: S.invites, channels: S.channels, messages: S.messages.slice(-800), reactions: S.reactions, reads: S.reads, huddles: S.huddles });
+  store.set('snap.' + S.ws.id, { members: S.members, profiles: S.profiles, statuses: S.statuses, types: S.types, fields: S.fields, rules: S.rules, views: S.views, projects: S.projects, tasks: S.tasks, notifs: S.notifs, invites: S.invites, channels: S.channels, messages: S.messages.slice(-800), reactions: S.reactions, reads: S.reads, huddles: S.huddles, workOrders: S.workOrders, devices: S.devices, tickets: S.tickets, stock: S.stock, approvals: S.approvals, leaves: S.leaves, deals: S.deals });
 }, 800);
 function restoreSnapshot(wsId) {
   const s = store.get('snap.' + wsId, null); if (!s) return false;
@@ -266,7 +269,7 @@ function restoreSnapshot(wsId) {
 }
 
 /* ── writes with offline outbox ── */
-function persistOutbox() { store.set('outbox', S.outbox); renderPill(); }
+function persistOutbox() { store.set('outbox', S.outbox); renderPill(); snapshot(); } // keep this phone’s copy current, so work done offline is still there after the app is closed
 async function exec(op) {
   let q = sb.from(op.t);
   if (op.op === 'insert') q = q.insert(op.row).select().single();
