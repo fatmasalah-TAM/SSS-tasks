@@ -80,6 +80,7 @@ function agentCard() {
   const d = myDept(); if (!d || S.route.v !== agentHome()) return null;
   const jobs = agentJobs(); if (!jobs.length) return null;
   const on = aiKnown();
+  if (!on && !isAdmin()) return null; /* a member can't turn AI on, so the card waits until an admin does */
   const ad = agentDept() || d; const others = myDepts().filter(x => (AGENTS[x.base || x.k] || []).length);
   return h('section', { class: 'tsec agentsec', 'data-agent': ad.k },
     h('h3', {}, h('span', { class: 'tellspark', 'aria-hidden': 'true', text: '✦' }), ` Your ${deptShort(ad)} agent`),
