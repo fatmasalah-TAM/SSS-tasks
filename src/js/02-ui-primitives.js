@@ -227,6 +227,19 @@ function menu(anchor, items) {
 
 /* ── sheets: a page-level sheet, plus small dialogs that may sit on top of it ── */
 let sheetStack = [];
+/* the phone's back button (Android) and the browser's Back: each page and each open sheet is one step back */
+let backHandling = false;
+const histPush = (st, force) => { if (backHandling && !force) return; try { history.pushState(Object.assign({ ovrto: 1 }, st), '', location.pathname + location.search + location.hash); } catch {} };
+addEventListener('popstate', e => {
+  if (!S.ws || !S.session) return;
+  backHandling = true;
+  try {
+    if (document.querySelector('.pop')) { closePop(); histPush({ route: S.route }, true); return; }
+    if (sheetStack.length) { closeSheet(); histPush({ route: S.route }, true); return; } // back closes the sheet on top, and the page stays one step back
+    const r = e.state?.route;
+    if (r && JSON.stringify(r) !== JSON.stringify(S.route)) go(r);
+  } finally { backHandling = false; }
+});
 function openSheet({ title, kind = 'right', full, build, onClose, key, headExtra, stack }) {
   closePop();
   if (!stack) closeAllSheets(true);

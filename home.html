@@ -129,6 +129,9 @@ footer{padding-block:32px calc(32px + env(safe-area-inset-bottom,0px));color:var
 footer .in{display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-content:space-between}
 @media (prefers-reduced-motion:no-preference){.phones .front{animation:rise .7s ease both}.phones .back{animation:rise .7s .15s ease both}@keyframes rise{from{opacity:0;translate:0 24px}}}
 </style>
+<style>/* Android: menu buttons big enough to tap (at least 40px) */
+nav .btn,nav .lang{min-height:40px;display:inline-flex;align-items:center}
+</style>
 </head>
 <body>
 <nav>

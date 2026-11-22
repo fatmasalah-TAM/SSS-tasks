@@ -75,9 +75,9 @@ kbd{font:500 10.5px var(--mono);border:1px solid var(--line-strong);border-botto
 .main{min-width:0;min-height:0;display:flex;flex-direction:column}
 .tabs{display:none}
 @media (max-width:820px){
-  .app{grid-template-columns:1fr;grid-template-rows:1fr auto}
+  .app{grid-template-columns:minmax(0,1fr);grid-template-rows:1fr auto}
   .side{display:none}
-  .tabs{display:grid;grid-template-columns:repeat(6,1fr);background:var(--surface);border-top:1px solid var(--line);padding:4px var(--gr) calc(4px + var(--sab)) var(--gl);z-index:6}
+  .tabs{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));background:var(--surface);border-top:1px solid var(--line);padding:4px var(--gr) calc(4px + var(--sab)) var(--gl);z-index:6}
 }
 .brand{display:flex;align-items:center;gap:9px;padding:6px 8px 14px}
 .brand svg{color:var(--fg)}
@@ -97,7 +97,7 @@ kbd{font:500 10.5px var(--mono);border:1px solid var(--line-strong);border-botto
 .navi .badge{min-width:18px;height:18px;border-radius:9px;padding:0 5px;background:var(--red);color:#fff;font:600 10px/18px var(--mono);text-align:center}
 .sidefoot{display:flex;align-items:center;gap:8px;padding:10px 8px 0;border-top:1px solid var(--line);margin-top:8px}
 .sidefoot .who{flex:1;min-width:0;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:50px;color:var(--mute);font:600 10.5px var(--ui);position:relative}
+.tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:50px;min-width:0;overflow:hidden;color:var(--mute);font:600 10.5px var(--ui);position:relative}
 .tab[aria-current="page"]{color:var(--fg)}
 .tab .ico{display:grid;place-items:center;padding:3px 14px;border-radius:14px;transition:background .2s}
 .tab[aria-current="page"] .ico{background:var(--pill)}
@@ -1361,3 +1361,7 @@ input[type=date]::-webkit-date-and-time-value{text-align:start}
 .cd-del{display:flex;flex-direction:column;gap:6px;align-items:flex-start}.cd-del-b{display:flex;flex-wrap:wrap;gap:8px}
 .cd-file{display:flex;gap:8px;align-items:flex-start;background:none;border:0;padding:0;text-align:start;color:inherit;font:inherit;cursor:pointer;min-width:0}
 .tcproj{max-width:420px;margin:4px 0 16px}
+
+/* narrow Android phones (320–360px): tab labels shrink instead of widening the page */
+.tab>span:last-child{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:340px){.tab{font-size:9.5px}}

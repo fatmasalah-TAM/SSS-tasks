@@ -35,7 +35,7 @@ async function boot() {
     if (store.get('newcomer', false)) return welcomeScreen();
     if (store.get('teamJustMade', false)) { store.del('teamJustMade'); setTimeout(() => toast(`${S.ws.name} is ready`), 600); }
     else if (new URLSearchParams(location.search).has('start')) setTimeout(() => toast(`You’re already signed in as ${S.session.user?.email || first(me())}. To start a new team, sign out first.`, { label: 'Sign out', fn: () => signOut() }, 10000), 700); // "Start free" on the website while signed in
-    history.replaceState(null, '', location.pathname + location.hash);
+    history.replaceState({ ovrto: 1, route: S.route }, '', location.pathname + location.hash); history.pushState({ ovrto: 1, route: S.route }, '', location.pathname + location.hash); // one step to catch Back on the first page
     render(); setupRealtime(); flushOutbox(); renderPill(); checkOwner(); checkVaultReset(); checkDept();
     if (isAr() && store.get('arTracked', '') !== new Date().toDateString()) { store.set('arTracked', new Date().toDateString()); track('arabic'); }
     if ('Notification' in window && Notification.permission === 'granted' && S.prefs.push !== false) enablePush(false);

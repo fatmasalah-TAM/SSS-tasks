@@ -41,6 +41,7 @@ function routeTitle(r = S.route) {
   return 'Tasks';
 }
 function go(route, keepVc) {
+  if (JSON.stringify(route) !== JSON.stringify(S.route)) histPush({ route });
   S.route = route; store.set('route', route); S.selected = null;
   $$('.toasts .toast').forEach(t => { if (!t.querySelector('button') && Date.now() - Number(t.dataset.at || 0) > 1500) t.remove(); }); // older plain messages don't follow you to the next screen
   if (!keepVc) S.vc = null;
