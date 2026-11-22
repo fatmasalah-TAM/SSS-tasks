@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-KzMwe8jvp2JuIli/BEPmIUhLpDVrzvw0YlPAtu/SBYg=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-X46JEhdmCN8n+Bw3ga++kKEUx4driY9TOL3ZPxAMrAU=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-KzMwe8jvp2JuIli/BEPmIUhLpDVrzvw0YlPAtu/SBYg=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-iKCgSl7zAnh1th4SgK55uR1Sq4hcSy+qYxvO9QOOMEY=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<meta name="ovrto-build" content="898141681806">
+<meta name="ovrto-build" content="e3fdbe6a8f65">
 <title>Ovrto</title>
 <meta name="description" content="Over to you. Every task shows whose turn it is.">
 <meta name="theme-color" content="#0D0D0F">
@@ -4504,7 +4504,7 @@ addEventListener('online', () => { if (S.ws) { flushOutbox(); setupRealtime(); c
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { checkUpdate(); if (S.ws) { flushOutbox(); setupRealtime(); catchUp(); } } });
 
 /* a new version was uploaded: phones (and apps saved to the home screen) pick it up by themselves */
-const BUILD = '898141681806';
+const BUILD = 'e3fdbe6a8f65';
 let updLast = 0, updShown = false;
 async function checkUpdate(force) {
   if (!force && Date.now() - updLast < 60000) return; updLast = Date.now();
@@ -4644,10 +4644,22 @@ function pwEye(pw) {
   b.addEventListener('click', () => { const show = pw.type === 'password'; pw.type = show ? 'text' : 'password'; b.innerHTML = show ? eyeOff : eyeOpen; b.setAttribute('aria-label', show ? 'Hide password' : 'Show password'); b.setAttribute('aria-pressed', String(show)); pw.focus(); });
   return h('span', { class: 'pw-wrap' }, pw, b);
 }
-async function signOut() { closeAllSheets(true); vaultLock(true); V.loaded = false; await Promise.race([disablePush(), new Promise(r => setTimeout(r, 2500))]);
-  // changes saved while offline belong to this person: send them now if we can, never under the next account
-  if ((S.outbox.length || waitingFiles.size) && navigator.onLine) await Promise.race([Promise.all([flushOutbox(), flushFiles()]), new Promise(r => setTimeout(r, 4000))]);
+async function signOut(force) {
+  /* changes saved while offline belong to this person: send them now if we can, never under the next account,
+     and never throw them away without asking */
+  const pending = () => S.outbox.length + waitingFiles.size;
+  if (pending() && navigator.onLine) await Promise.race([Promise.all([flushOutbox(), flushFiles()]), new Promise(r => setTimeout(r, 4000))]);
+  if (pending() && !force) return unsentSheet(pending());
+  closeAllSheets(true); vaultLock(true); V.loaded = false; await Promise.race([disablePush(), new Promise(r => setTimeout(r, 2500))]);
   S.outbox = []; store.del('outbox'); await idb.clear('files'); waitingFiles.clear(); await forgetPhoneCopy(); /* nothing of this account stays on the phone */ stopRinging(); if (channel) { sb.removeChannel(channel); channel = null; } await sb.auth.signOut(); }
+function unsentSheet(n) {
+  openSheet({ title: 'Not sent yet', kind: 'center', key: 'unsent', build: sh => {
+    sh.append(h('div', { class: 'sbody' }, h('p', { 'data-unsent': String(n), text: `${n === 1 ? '1 change you made offline hasn’t' : n + ' changes you made offline haven’t'} gone up yet. Signing out now deletes ${n === 1 ? 'it' : 'them'} from this phone.` }),
+      h('p', { class: 'note', text: 'Connect to the internet and wait a moment: they go up by themselves. Then sign out.' })),
+      h('div', { class: 'sfoot' }, h('button', { class: 'btn ghost danger', 'data-unsent-lose': '1', onclick: () => { closeSheet(true); signOut(true); } }, 'Sign out and lose them'), h('span', { class: 'sp' }),
+        h('button', { class: 'btn pri', 'data-unsent-stay': '1', onclick: () => closeSheet() }, 'Stay signed in')));
+  } });
+}
 
 /* ═════════════ boot ═════════════ */
 let recovering = false, booting = false;
@@ -9967,6 +9979,8 @@ AR.patterns.unshift(["^Your (.+) agent$", "مساعدك الذكي في $1"]);
 for (const k in AR.exact) if (typeof AR.exact[k] === 'string' && AR.exact[k].startsWith('بدون ')) AR.exact[k] = 'من غير ' + AR.exact[k].slice(5);
 Object.assign(AR.exact, {"Offline · your work is saved on this phone": "غير متصل · شغلك محفوظ على الموبايل", "No internet. This one needs a connection; your other work is saved on this phone.": "مفيش نت. الحاجة دي محتاجة اتصال، وباقي شغلك محفوظ على الموبايل.", "Money shows here after you open Ovrto once with internet": "الفلوس هتظهر هنا بعد ما تفتح Ovrto مرة وإنت على النت", "No internet, and this phone can’t keep the file. Try again when you’re online.": "مفيش نت، والموبايل مش قادر يحتفظ بالملف. جرّب تاني لما النت يرجع."});
 AR.patterns.push(["^(.+) · saved on this phone$", "$1 · اتحفظت على الموبايل"], ["^No internet, and (.+) is over 25 MB\\. Send it when you’re back online\\.$", "مفيش نت، و$1 أكبر من ٢٥ ميجا. ابعته لما النت يرجع."]);
+Object.assign(AR.exact, {"Not sent yet": "لسه ما اتبعتش", "Connect to the internet and wait a moment: they go up by themselves. Then sign out.": "وصّل النت واستنى شوية: هيترفعوا لوحدهم. بعدين اعمل تسجيل خروج.", "Sign out and lose them": "اخرج وامسحهم", "Stay signed in": "خليك داخل"});
+AR.patterns.push(["^1 change you made offline hasn’t gone up yet\\. Signing out now deletes it from this phone\\.$", "فيه تغيير واحد عملته من غير نت لسه ما اترفعش. لو عملت تسجيل خروج دلوقتي هيتمسح من الموبايل."], ["^(\\d+) changes you made offline haven’t gone up yet\\. Signing out now deletes them from this phone\\.$", "فيه $1 تغييرات عملتها من غير نت لسه ما اترفعتش. لو عملت تسجيل خروج دلوقتي هيتمسحوا من الموبايل."]);
 var LANG = (() => { try { return JSON.parse(localStorage.getItem('baton.lang') || '"en"') === 'ar' ? 'ar' : 'en'; } catch { return 'en'; } })();
 const isAr = () => LANG === 'ar';
 var I18N_SKIP = '.row .t,.tc:not(.waitrow) .tt>b,.card>.t,.inrow .t,.stuck-row .t,.rv-item .t,.md,.mdbox,.mbody,.ev .txt,.ttl,textarea,input,select,[contenteditable],code,pre,kbd,.notr,.wordmark,.wm-anim,.mark-anim,.plate,.cp-t b,.cp-in>h1,.mhead b,.cv-name b,.chip-task,.mention,.toast .notr,.cl-row .nm>div:first-child,.prow .nm>div:first-child';

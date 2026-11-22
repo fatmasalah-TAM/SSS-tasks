@@ -122,8 +122,20 @@ function pwEye(pw) {
   b.addEventListener('click', () => { const show = pw.type === 'password'; pw.type = show ? 'text' : 'password'; b.innerHTML = show ? eyeOff : eyeOpen; b.setAttribute('aria-label', show ? 'Hide password' : 'Show password'); b.setAttribute('aria-pressed', String(show)); pw.focus(); });
   return h('span', { class: 'pw-wrap' }, pw, b);
 }
-async function signOut() { closeAllSheets(true); vaultLock(true); V.loaded = false; await Promise.race([disablePush(), new Promise(r => setTimeout(r, 2500))]);
-  // changes saved while offline belong to this person: send them now if we can, never under the next account
-  if ((S.outbox.length || waitingFiles.size) && navigator.onLine) await Promise.race([Promise.all([flushOutbox(), flushFiles()]), new Promise(r => setTimeout(r, 4000))]);
+async function signOut(force) {
+  /* changes saved while offline belong to this person: send them now if we can, never under the next account,
+     and never throw them away without asking */
+  const pending = () => S.outbox.length + waitingFiles.size;
+  if (pending() && navigator.onLine) await Promise.race([Promise.all([flushOutbox(), flushFiles()]), new Promise(r => setTimeout(r, 4000))]);
+  if (pending() && !force) return unsentSheet(pending());
+  closeAllSheets(true); vaultLock(true); V.loaded = false; await Promise.race([disablePush(), new Promise(r => setTimeout(r, 2500))]);
   S.outbox = []; store.del('outbox'); await idb.clear('files'); waitingFiles.clear(); await forgetPhoneCopy(); /* nothing of this account stays on the phone */ stopRinging(); if (channel) { sb.removeChannel(channel); channel = null; } await sb.auth.signOut(); }
+function unsentSheet(n) {
+  openSheet({ title: 'Not sent yet', kind: 'center', key: 'unsent', build: sh => {
+    sh.append(h('div', { class: 'sbody' }, h('p', { 'data-unsent': String(n), text: `${n === 1 ? '1 change you made offline hasn’t' : n + ' changes you made offline haven’t'} gone up yet. Signing out now deletes ${n === 1 ? 'it' : 'them'} from this phone.` }),
+      h('p', { class: 'note', text: 'Connect to the internet and wait a moment: they go up by themselves. Then sign out.' })),
+      h('div', { class: 'sfoot' }, h('button', { class: 'btn ghost danger', 'data-unsent-lose': '1', onclick: () => { closeSheet(true); signOut(true); } }, 'Sign out and lose them'), h('span', { class: 'sp' }),
+        h('button', { class: 'btn pri', 'data-unsent-stay': '1', onclick: () => closeSheet() }, 'Stay signed in')));
+  } });
+}
 
