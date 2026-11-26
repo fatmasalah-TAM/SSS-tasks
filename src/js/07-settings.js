@@ -124,7 +124,82 @@ function invitePanel(redraw) {
       h('button', { class: 'btn sm', onclick: () => (Date.now() - new Date(i.created_at)) > 7 * 864e5 ? (async () => { const row = Object.assign({}, i, { created_at: nowIso() }); await write({ t: 'invites', op: 'upsert', row }); Object.assign(i, row); redraw(); shareInvite(i); })() : shareInvite(i) }, icon('whatsapp', 14), 'Send'),
       h('button', { class: 'btn sm ghost danger', onclick: async () => { const { error } = await sb.from('invites').delete().eq('email', i.email).eq('workspace_id', S.ws.id); if (error) return toast(errText(error)); S.invites = S.invites.filter(x => x.email !== i.email); redraw(); toast('Invite cancelled'); } }, 'Cancel'))),
     h('div', { class: 'pbody' }, h('div', { class: 'grid2' }, nameI, emailI), h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } }, deptI, roleI, h('span', { class: 'sp' }), sendBtn),
-      h('p', { class: 'note', text: 'Any email works. You’ll get a personal link to send on WhatsApp; it works once and expires in 7 days.' })));
+      h('p', { class: 'note', text: 'Any email works. You’ll get a personal link to send on WhatsApp; it works once and expires in 7 days.' }),
+      manyInvites(deptI, redraw)),
+    joinLinkBox(), isAdmin() ? companyEmailBox() : null);
+}
+/* "Add many at once": paste a list, one person per line: "Name, email" or just the email */
+function manyInvites(deptI, redraw) {
+  const ta = h('textarea', { id: 'inviteMany', rows: '4', placeholder: 'Sara Ali, sara@company.com\nomar@company.com', 'aria-label': 'One person per line' });
+  const go_ = h('button', { class: 'btn', 'data-invite-many': '1', onclick: async () => {
+    const rows = []; const bad = [];
+    for (const line of ta.value.split(/\n+/).map(l => l.trim()).filter(Boolean)) {
+      const em = (line.match(/[^\s,;<>]+@[^\s,;<>]+\.[^\s,;<>]+/) || [])[0];
+      if (!em) { bad.push(line); continue; }
+      const nm = line.replace(em, '').replace(/[<>,;\t]+/g, ' ').trim();
+      const email = em.toLowerCase();
+      if (S.members.some(m => prof(m.user_id)?.email === email) || rows.some(r => r.email === email)) continue;
+      rows.push({ email, full_name: nm || null, role: 'member', department: deptI.value || null, workspace_id: S.ws.id, invited_by: uid(), created_at: nowIso() });
+    }
+    if (!rows.length) return toast(bad.length ? 'No email found on those lines' : 'Paste one person per line');
+    const done = busy(go_, 'Creating…'); const r = await write({ t: 'invites', op: 'upsert', row: rows }); done(); if (r.error) return toast(errText(r.error));
+    S.invites = S.invites.filter(i => !rows.some(x => x.email === i.email)).concat(rows); ta.value = ''; redraw();
+    toast(rows.length === 1 ? '1 invite created. Tap Send next to it.' : `${rows.length} invites created. Tap Send next to each.`);
+  } }, 'Create invites');
+  return h('details', { class: 'many' }, h('summary', { text: 'Add many at once' }),
+    h('p', { class: 'note', text: 'Paste a list from Excel or WhatsApp, one person per line: a name and an email. The department above applies to everyone.' }), ta, h('div', {}, go_));
+}
+/* one link for the whole team: share it in the company WhatsApp group */
+function joinLinkUrl(tok) { return `${location.origin}${location.pathname}?join=${tok}`; }
+function joinLinkMessage(tok) { return `*Join ${S.ws.name} on ${appName()}*\nTap the link, create your account, and you’re in:\n${joinLinkUrl(tok)}`; }
+function joinLinkBox() {
+  const box = h('div', { class: 'pbody joinlink', 'data-joinlink': '1' }, h('p', { class: 'note', text: 'Loading…' }));
+  const draw = link => {
+    if (!link) return box.replaceChildren(h('b', { text: 'Invite link' }),
+      h('p', { class: 'note', text: 'One link for everyone. Send it in your company’s WhatsApp group: whoever opens it creates an account and joins this team as a member.' }),
+      h('div', {}, h('button', { class: 'btn', 'data-joinlink-make': '1', onclick: async e => { const done = busy(e.currentTarget, 'Creating…'); const r = await sb.from('join_links').insert({ workspace_id: S.ws.id, created_by: uid() }).select().single(); done(); if (r.error) return toast(errText(r.error)); draw(r.data); shareJoinLink(r.data.token); } }, icon('share', 16), 'Create invite link')));
+    const off = async () => { const { error } = await sb.from('join_links').update({ revoked_at: nowIso() }).eq('token', link.token); if (error) return toast(errText(error)); draw(null); toast('Invite link turned off. It no longer works.'); };
+    box.replaceChildren(h('b', { text: 'Invite link' }),
+      h('div', { class: 'linkline' }, h('code', { 'data-joinlink-url': '1', class: 'notr', dir: 'ltr', text: joinLinkUrl(link.token) })),
+      h('p', { class: 'note', text: `Works until ${fmtDate(link.expires_at)}. Anyone who has it can join as a member.` }),
+      h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } },
+        h('button', { class: 'btn sm', onclick: () => shareJoinLink(link.token) }, icon('whatsapp', 14), 'Send'),
+        h('button', { class: 'btn sm', onclick: () => copyText(joinLinkUrl(link.token), 'Link copied') }, 'Copy link'),
+        h('span', { class: 'sp' }),
+        h('button', { class: 'btn sm ghost danger', 'data-joinlink-off': '1', onclick: off }, 'Turn off link')));
+  };
+  sb.from('join_links').select('*').eq('workspace_id', S.ws.id).is('revoked_at', null).gt('expires_at', nowIso()).order('created_at', { ascending: false }).limit(1)
+    .then(r => draw(r.error ? null : (r.data || [])[0] || null)).catch(() => draw(null));
+  return box;
+}
+function shareJoinLink(tok) {
+  const msg = joinLinkMessage(tok);
+  openSheet({ title: 'Send the invite link', kind: 'center', stack: !!currentSheet(), build: sh => {
+    sh.append(h('div', { class: 'sbody' }, h('p', { class: 'note', text: 'Send this to your team, for example in your company’s WhatsApp group:' }),
+      h('div', { class: 'md', style: { whiteSpace: 'pre-wrap', background: 'var(--bg)', border: '1px solid var(--line)', padding: '12px', borderRadius: '2px', fontSize: '14px', overflowWrap: 'anywhere' }, text: msg.replace(/\*/g, '') })),
+      h('div', { class: 'sfoot' },
+        navigator.share ? h('button', { class: 'btn', onclick: () => navigator.share({ text: msg }).catch(() => {}) }, icon('share', 16), 'Share…') : null,
+        h('button', { class: 'btn', onclick: () => copyText(msg, 'Copied') }, 'Copy'), h('span', { class: 'sp' }),
+        h('a', { class: 'btn pri', href: 'https://wa.me/?text=' + encodeURIComponent(msg), target: '_blank', rel: 'noopener' }, icon('whatsapp', 16), 'WhatsApp')));
+  } });
+}
+/* the company email: people who sign up with it join by themselves */
+function companyEmailBox() {
+  const dom = (S.session?.user?.email || '').split('@')[1]?.toLowerCase() || '';
+  const personal = !dom || /^(gmail|googlemail|yahoo|ymail|hotmail|outlook|live|msn|icloud|me|mac|aol|proton|protonmail|pm|gmx|yandex|mail|zoho|hey|tutanota|fastmail|qq|163|126)\./.test(dom);
+  const on = !!S.ws.join_domain;
+  const box = h('div', { class: 'pbody', 'data-company-email': '1' }, h('b', { text: 'Company email' }));
+  if (personal && !on) { box.append(h('p', { class: 'note', text: 'Sign in with your company email (not Gmail or Yahoo) to let your team join by themselves.' })); return box; }
+  const shown = on ? S.ws.join_domain : dom;
+  const cb = h('input', { type: 'checkbox', id: 'joinDomain', checked: on, onchange: async e => {
+    const v = e.target.checked; const r = await sb.rpc('set_join_domain', { ws: S.ws.id, on_: v });
+    if (r.error) { e.target.checked = !v; return toast(errText(r.error)); }
+    S.ws.join_domain = r.data || null; const w = S.wsList.find(x => x.id === S.ws.id); if (w) w.join_domain = S.ws.join_domain;
+    toast(v ? `Anyone with an @${r.data} email can now join by themselves` : 'Turned off. People need an invite to join.');
+  } });
+  box.append(h('label', { class: 'check' }, cb, h('span', {}, h('span', { text: 'People who sign up with this email join this team by themselves:' }), ' ', h('b', { class: 'notr', dir: 'ltr', text: '@' + shown }))),
+    h('p', { class: 'note', text: 'They join as members after confirming their email, so only real company inboxes get in. Gmail and other personal emails still need an invite.' }));
+  return box;
 }
 function openInviteSheet() {
   if (!canInvite()) return toast('Ask an admin to add people');

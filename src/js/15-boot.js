@@ -9,10 +9,19 @@ async function switchWs(id) {
   savePrefs({ last_workspace: id }); store.set('appName', w.app_name);
   await loadAll(); S.route = { v: startView() }; render(); setupRealtime(); checkDept();
 }
+/* join the company: from a team invite link, or by the company email (only after the email is confirmed) */
+async function joinCompany() {
+  const out = { ws: null, err: null }; const jt = store.get('joinTok', null);
+  if (jt) { try { const r = await sb.rpc('join_with_link', { tok: jt }); if (r.data) { out.ws = r.data; store.del('joinTok'); } else if (r.error && !isNetErr(r.error)) { out.err = errText(r.error); store.del('joinTok'); } } catch {} }
+  try { const r = await sb.rpc('join_my_company'); if (r.data && !out.ws) out.ws = r.data; } catch {}
+  return out;
+}
 async function boot() {
   if (clientTok || personTok) return clientPage(); // a client's status link or a person's own link: no sign-in
   if (booting) return; booting = true;
   try {
+    { const q = new URLSearchParams(location.search); const jt = q.get('join'); // an invite link for the whole team: remember it until they're signed in
+      if (jt && /^[0-9a-f]{40}$/i.test(jt)) { store.set('joinTok', jt); q.delete('join'); history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : '') + location.hash); } }
     if (!S.session) {
       // a client's home-screen app that opened the start page: go back to their own link instead of the sign-in page
       try { const pt = localStorage.getItem('baton.ptok'); if (pt && /^[0-9a-f]{40}$/i.test(pt) && (matchMedia('(display-mode: standalone)').matches || navigator.standalone)) { location.replace(location.pathname + '?p=' + pt); return; } } catch {}
@@ -22,7 +31,10 @@ async function boot() {
     if (recovering) return recoveryScreen();
     S.loaded = false; $('#app').innerHTML = bootLoader();
     try { await sb.rpc('accept_invites'); } catch {} // invited to another workspace with an account you already have
+    const joined = await joinCompany();
     await Promise.all([loadPrefs(), loadWorkspaces()]); applyTheme();
+    if (joined.ws && S.wsList.some(w => w.id === joined.ws)) { S.prefs.last_workspace = joined.ws; savePrefs({ last_workspace: joined.ws }); setTimeout(() => toast(`You joined ${S.ws?.name || 'the team'}`), 900); }
+    else if (joined.err) setTimeout(() => toast(joined.err, null, 8000), 900);
     if (!S.wsList.length) { await setupTeamScreen(); return; }
     const want = S.prefs.last_workspace && S.wsList.find(w => w.id === S.prefs.last_workspace);
     S.ws = want || S.wsList[0]; store.set('appName', S.ws.app_name);

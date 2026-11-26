@@ -16,23 +16,27 @@ function splashOut(now) {
 const bootLoader = () => `<div class="boot" role="status"><div class="boot-mark loop">${ICONS.markAnim}</div><div class="boot-cap">Loading your tasks…</div></div>`;
 const appNameSaved = () => store.get('appName', CFG.brand);
 var choseSignIn = false; // an invited person who taps "I already have an account" stays on Sign in
+var joinInfo; // the team a join link belongs to (asked once)
 var signupOpen = null; // can new teams create an account? (asked once, the sign-in screen updates when it knows)
 function authScreen(mode = 'in', msg) {
   const params = new URLSearchParams(location.search); const invEmail = params.get('invite'); const invName = params.get('name');
-  if (invEmail && mode === 'in' && !msg && !choseSignIn) mode = 'up';
+  const joinTok = store.get('joinTok', null);
+  if ((invEmail || joinTok) && mode === 'in' && !msg && !choseSignIn) mode = 'up';
+  if (joinTok && joinInfo === undefined) { joinInfo = null; sb.rpc('join_link_info', { tok: joinTok }).then(r => { joinInfo = r.data || false; if (!r.data) store.del('joinTok'); if ($('.auth form') && ![...$$('.auth form input')].some(i => i.value && i.defaultValue !== i.value)) authScreen(mode, msg); }).catch(() => {}); }
+  const joinWs = joinTok && joinInfo ? joinInfo.workspace : null;
   if (mode === 'up') choseSignIn = false;
   if (params.has('start')) { if (mode === 'in' && !msg) mode = 'up'; params.delete('start'); history.replaceState(null, '', location.pathname + (params.toString() ? '?' + params : '') + location.hash); } // "Start free" on the website, once
   if (signupOpen === null) { signupOpen = false; sb.rpc('signup_is_open').then(r => { signupOpen = !!r.data; if (signupOpen && $('.auth form') && ![...$$('.auth form input')].some(i => i.value && i.defaultValue !== i.value)) authScreen(mode, msg); }).catch(() => {}); }
-  const newTeam = mode === 'up' && !invEmail && signupOpen;
+  const newTeam = mode === 'up' && !invEmail && !joinTok && signupOpen;
   const name = h('input', { type: 'text', id: 'name', autocomplete: 'name', required: true, placeholder: 'Your full name', value: invName || '' });
   const email = h('input', { type: 'email', id: 'email', autocomplete: 'email', required: true, placeholder: 'you@company.com', value: invEmail || '' });
   const pw = h('input', { type: 'password', id: 'password', minlength: '6', required: true, autocomplete: mode === 'up' ? 'new-password' : 'current-password', placeholder: mode === 'up' ? 'Choose a password (8+ characters)' : 'Password' });
   const err = h('div', { class: 'err', hidden: true }); const info = h('div', { class: 'info', hidden: !msg, text: msg || '' });
   const keep = h('input', { type: 'checkbox', id: 'keepSignedIn', checked: !store.get('noKeep', false) });
-  const btn = h('button', { class: 'btn pri lg wide', type: 'submit' }, mode === 'in' ? 'Sign in' : mode === 'up' ? (invEmail ? 'Join the team' : 'Create my account') : 'Send reset link');
+  const btn = h('button', { class: 'btn pri lg wide', type: 'submit' }, mode === 'in' ? 'Sign in' : mode === 'up' ? (invEmail || joinWs ? 'Join the team' : 'Create my account') : 'Send reset link');
   const form = h('form', { novalidate: true },
-    h('h1', { text: mode === 'in' ? 'Sign in' : mode === 'up' ? (invEmail ? 'Welcome to the team' : newTeam ? 'Start free' : 'Create your account') : 'Reset password' }),
-    h('p', { class: 'sub', text: mode === 'in' ? 'Sign in to see whose turn it is.' : mode === 'up' ? (invEmail ? 'Your name and email are filled in. Just set a password.' : newTeam ? 'Free while Ovrto is in early access. You’ll name your team next.' : 'Use the email your admin invited.') : 'We’ll email you a link to set a new password.' }),
+    h('h1', { text: mode === 'in' ? (joinWs ? `Join ${joinWs}` : 'Sign in') : mode === 'up' ? (joinWs ? `Join ${joinWs}` : invEmail ? 'Welcome to the team' : newTeam ? 'Start free' : 'Create your account') : 'Reset password' }),
+    h('p', { class: 'sub', text: mode === 'in' ? (joinWs ? 'Sign in and you’ll join the team.' : 'Sign in to see whose turn it is.') : mode === 'up' ? (joinWs ? 'Create your account and you’re in.' : invEmail ? 'Your name and email are filled in. Just set a password.' : newTeam ? 'Free while Ovrto is in early access. You’ll name your team next.' : 'Use the email your admin invited.') : 'We’ll email you a link to set a new password.' }),
     mode === 'up' ? h('label', { class: 'field' }, 'Name', name) : null,
     h('label', { class: 'field' }, 'Email', email),
     mode !== 'reset' ? h('label', { class: 'field' }, 'Password', pwEye(pw)) : null,
@@ -51,10 +55,10 @@ function authScreen(mode = 'in', msg) {
     if (mode === 'up' && !name.value.trim()) { err.textContent = 'Add your name so teammates know who you are.'; err.hidden = false; return name.focus(); }
     const done = busy(btn, 'One moment…');
     try {
-      const redirect = location.origin + location.pathname;
+      const redirect = location.origin + location.pathname + (mode === 'up' && joinTok ? '?join=' + joinTok : '');
       if (mode === 'in') { keepSignedIn(keep.checked); const { error } = await sb.auth.signInWithPassword({ email: email.value.trim(), password: pw.value }); if (error) throw error; }
       else if (mode === 'up') {
-        const { data, error } = await sb.auth.signUp({ email: email.value.trim(), password: pw.value, options: { data: { full_name: name.value.trim() }, emailRedirectTo: redirect } }); if (error) throw error;
+        const { data, error } = await sb.auth.signUp({ email: email.value.trim(), password: pw.value, options: { data: Object.assign({ full_name: name.value.trim() }, joinTok ? { join: joinTok } : {}), emailRedirectTo: redirect } }); if (error) throw error;
         store.set('newcomer', true);
         if (!data.session) { history.replaceState(null, '', location.pathname); return authScreen('in', 'Account created. Check your email for a confirmation link, then sign in.'); }
       } else { const { error } = await sb.auth.resetPasswordForEmail(email.value.trim(), { redirectTo: redirect }); if (error) throw error; info.textContent = 'If this email has an account, a reset link is on its way.'; info.hidden = false; }

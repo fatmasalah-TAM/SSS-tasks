@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-KzMwe8jvp2JuIli/BEPmIUhLpDVrzvw0YlPAtu/SBYg=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-6prsCz8SLG1SPYetFqJh1bOMQoHwB5T9KKrujaoWJVM=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-KzMwe8jvp2JuIli/BEPmIUhLpDVrzvw0YlPAtu/SBYg=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-++nZvR3SFrWKIV4rydDKuhuHrfFRyB1a97jJEMoiaGE=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<meta name="ovrto-build" content="08d02ab2eb4b">
+<meta name="ovrto-build" content="d9ab50a62010">
 <title>Ovrto</title>
 <meta name="description" content="Over to you. Every task shows whose turn it is.">
 <meta name="theme-color" content="#0D0D0F">
@@ -1394,6 +1394,10 @@ input[type=date]::-webkit-date-and-time-value{text-align:start}
 /* narrow Android phones (320–360px): tab labels shrink instead of widening the page */
 .tab>span:last-child{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media (max-width:340px){.tab{font-size:9.5px}}
+.joinlink .linkline code{display:block;font-size:13px;overflow-wrap:anywhere;word-break:break-all;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;text-align:left}
+.panel details.many summary{cursor:pointer;font-weight:600;font-size:14px;padding:4px 0}
+.panel details.many[open]{display:flex;flex-direction:column;gap:8px}
+.panel details.many textarea{width:100%;box-sizing:border-box;font:inherit;font-size:15px}
 </style>
 </head>
 <body>
@@ -3855,7 +3859,82 @@ function invitePanel(redraw) {
       h('button', { class: 'btn sm', onclick: () => (Date.now() - new Date(i.created_at)) > 7 * 864e5 ? (async () => { const row = Object.assign({}, i, { created_at: nowIso() }); await write({ t: 'invites', op: 'upsert', row }); Object.assign(i, row); redraw(); shareInvite(i); })() : shareInvite(i) }, icon('whatsapp', 14), 'Send'),
       h('button', { class: 'btn sm ghost danger', onclick: async () => { const { error } = await sb.from('invites').delete().eq('email', i.email).eq('workspace_id', S.ws.id); if (error) return toast(errText(error)); S.invites = S.invites.filter(x => x.email !== i.email); redraw(); toast('Invite cancelled'); } }, 'Cancel'))),
     h('div', { class: 'pbody' }, h('div', { class: 'grid2' }, nameI, emailI), h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } }, deptI, roleI, h('span', { class: 'sp' }), sendBtn),
-      h('p', { class: 'note', text: 'Any email works. You’ll get a personal link to send on WhatsApp; it works once and expires in 7 days.' })));
+      h('p', { class: 'note', text: 'Any email works. You’ll get a personal link to send on WhatsApp; it works once and expires in 7 days.' }),
+      manyInvites(deptI, redraw)),
+    joinLinkBox(), isAdmin() ? companyEmailBox() : null);
+}
+/* "Add many at once": paste a list, one person per line: "Name, email" or just the email */
+function manyInvites(deptI, redraw) {
+  const ta = h('textarea', { id: 'inviteMany', rows: '4', placeholder: 'Sara Ali, sara@company.com\nomar@company.com', 'aria-label': 'One person per line' });
+  const go_ = h('button', { class: 'btn', 'data-invite-many': '1', onclick: async () => {
+    const rows = []; const bad = [];
+    for (const line of ta.value.split(/\n+/).map(l => l.trim()).filter(Boolean)) {
+      const em = (line.match(/[^\s,;<>]+@[^\s,;<>]+\.[^\s,;<>]+/) || [])[0];
+      if (!em) { bad.push(line); continue; }
+      const nm = line.replace(em, '').replace(/[<>,;\t]+/g, ' ').trim();
+      const email = em.toLowerCase();
+      if (S.members.some(m => prof(m.user_id)?.email === email) || rows.some(r => r.email === email)) continue;
+      rows.push({ email, full_name: nm || null, role: 'member', department: deptI.value || null, workspace_id: S.ws.id, invited_by: uid(), created_at: nowIso() });
+    }
+    if (!rows.length) return toast(bad.length ? 'No email found on those lines' : 'Paste one person per line');
+    const done = busy(go_, 'Creating…'); const r = await write({ t: 'invites', op: 'upsert', row: rows }); done(); if (r.error) return toast(errText(r.error));
+    S.invites = S.invites.filter(i => !rows.some(x => x.email === i.email)).concat(rows); ta.value = ''; redraw();
+    toast(rows.length === 1 ? '1 invite created. Tap Send next to it.' : `${rows.length} invites created. Tap Send next to each.`);
+  } }, 'Create invites');
+  return h('details', { class: 'many' }, h('summary', { text: 'Add many at once' }),
+    h('p', { class: 'note', text: 'Paste a list from Excel or WhatsApp, one person per line: a name and an email. The department above applies to everyone.' }), ta, h('div', {}, go_));
+}
+/* one link for the whole team: share it in the company WhatsApp group */
+function joinLinkUrl(tok) { return `${location.origin}${location.pathname}?join=${tok}`; }
+function joinLinkMessage(tok) { return `*Join ${S.ws.name} on ${appName()}*\nTap the link, create your account, and you’re in:\n${joinLinkUrl(tok)}`; }
+function joinLinkBox() {
+  const box = h('div', { class: 'pbody joinlink', 'data-joinlink': '1' }, h('p', { class: 'note', text: 'Loading…' }));
+  const draw = link => {
+    if (!link) return box.replaceChildren(h('b', { text: 'Invite link' }),
+      h('p', { class: 'note', text: 'One link for everyone. Send it in your company’s WhatsApp group: whoever opens it creates an account and joins this team as a member.' }),
+      h('div', {}, h('button', { class: 'btn', 'data-joinlink-make': '1', onclick: async e => { const done = busy(e.currentTarget, 'Creating…'); const r = await sb.from('join_links').insert({ workspace_id: S.ws.id, created_by: uid() }).select().single(); done(); if (r.error) return toast(errText(r.error)); draw(r.data); shareJoinLink(r.data.token); } }, icon('share', 16), 'Create invite link')));
+    const off = async () => { const { error } = await sb.from('join_links').update({ revoked_at: nowIso() }).eq('token', link.token); if (error) return toast(errText(error)); draw(null); toast('Invite link turned off. It no longer works.'); };
+    box.replaceChildren(h('b', { text: 'Invite link' }),
+      h('div', { class: 'linkline' }, h('code', { 'data-joinlink-url': '1', class: 'notr', dir: 'ltr', text: joinLinkUrl(link.token) })),
+      h('p', { class: 'note', text: `Works until ${fmtDate(link.expires_at)}. Anyone who has it can join as a member.` }),
+      h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } },
+        h('button', { class: 'btn sm', onclick: () => shareJoinLink(link.token) }, icon('whatsapp', 14), 'Send'),
+        h('button', { class: 'btn sm', onclick: () => copyText(joinLinkUrl(link.token), 'Link copied') }, 'Copy link'),
+        h('span', { class: 'sp' }),
+        h('button', { class: 'btn sm ghost danger', 'data-joinlink-off': '1', onclick: off }, 'Turn off link')));
+  };
+  sb.from('join_links').select('*').eq('workspace_id', S.ws.id).is('revoked_at', null).gt('expires_at', nowIso()).order('created_at', { ascending: false }).limit(1)
+    .then(r => draw(r.error ? null : (r.data || [])[0] || null)).catch(() => draw(null));
+  return box;
+}
+function shareJoinLink(tok) {
+  const msg = joinLinkMessage(tok);
+  openSheet({ title: 'Send the invite link', kind: 'center', stack: !!currentSheet(), build: sh => {
+    sh.append(h('div', { class: 'sbody' }, h('p', { class: 'note', text: 'Send this to your team, for example in your company’s WhatsApp group:' }),
+      h('div', { class: 'md', style: { whiteSpace: 'pre-wrap', background: 'var(--bg)', border: '1px solid var(--line)', padding: '12px', borderRadius: '2px', fontSize: '14px', overflowWrap: 'anywhere' }, text: msg.replace(/\*/g, '') })),
+      h('div', { class: 'sfoot' },
+        navigator.share ? h('button', { class: 'btn', onclick: () => navigator.share({ text: msg }).catch(() => {}) }, icon('share', 16), 'Share…') : null,
+        h('button', { class: 'btn', onclick: () => copyText(msg, 'Copied') }, 'Copy'), h('span', { class: 'sp' }),
+        h('a', { class: 'btn pri', href: 'https://wa.me/?text=' + encodeURIComponent(msg), target: '_blank', rel: 'noopener' }, icon('whatsapp', 16), 'WhatsApp')));
+  } });
+}
+/* the company email: people who sign up with it join by themselves */
+function companyEmailBox() {
+  const dom = (S.session?.user?.email || '').split('@')[1]?.toLowerCase() || '';
+  const personal = !dom || /^(gmail|googlemail|yahoo|ymail|hotmail|outlook|live|msn|icloud|me|mac|aol|proton|protonmail|pm|gmx|yandex|mail|zoho|hey|tutanota|fastmail|qq|163|126)\./.test(dom);
+  const on = !!S.ws.join_domain;
+  const box = h('div', { class: 'pbody', 'data-company-email': '1' }, h('b', { text: 'Company email' }));
+  if (personal && !on) { box.append(h('p', { class: 'note', text: 'Sign in with your company email (not Gmail or Yahoo) to let your team join by themselves.' })); return box; }
+  const shown = on ? S.ws.join_domain : dom;
+  const cb = h('input', { type: 'checkbox', id: 'joinDomain', checked: on, onchange: async e => {
+    const v = e.target.checked; const r = await sb.rpc('set_join_domain', { ws: S.ws.id, on_: v });
+    if (r.error) { e.target.checked = !v; return toast(errText(r.error)); }
+    S.ws.join_domain = r.data || null; const w = S.wsList.find(x => x.id === S.ws.id); if (w) w.join_domain = S.ws.join_domain;
+    toast(v ? `Anyone with an @${r.data} email can now join by themselves` : 'Turned off. People need an invite to join.');
+  } });
+  box.append(h('label', { class: 'check' }, cb, h('span', {}, h('span', { text: 'People who sign up with this email join this team by themselves:' }), ' ', h('b', { class: 'notr', dir: 'ltr', text: '@' + shown }))),
+    h('p', { class: 'note', text: 'They join as members after confirming their email, so only real company inboxes get in. Gmail and other personal emails still need an invite.' }));
+  return box;
 }
 function openInviteSheet() {
   if (!canInvite()) return toast('Ask an admin to add people');
@@ -4544,7 +4623,7 @@ addEventListener('online', () => { if (S.ws) { flushOutbox(); setupRealtime(); c
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { checkUpdate(); if (S.ws) { flushOutbox(); setupRealtime(); catchUp(); } } });
 
 /* a new version was uploaded: phones (and apps saved to the home screen) pick it up by themselves */
-const BUILD = '08d02ab2eb4b';
+const BUILD = 'd9ab50a62010';
 let updLast = 0, updShown = false;
 async function checkUpdate(force) {
   if (!force && Date.now() - updLast < 60000) return; updLast = Date.now();
@@ -4578,23 +4657,27 @@ function splashOut(now) {
 const bootLoader = () => `<div class="boot" role="status"><div class="boot-mark loop">${ICONS.markAnim}</div><div class="boot-cap">Loading your tasks…</div></div>`;
 const appNameSaved = () => store.get('appName', CFG.brand);
 var choseSignIn = false; // an invited person who taps "I already have an account" stays on Sign in
+var joinInfo; // the team a join link belongs to (asked once)
 var signupOpen = null; // can new teams create an account? (asked once, the sign-in screen updates when it knows)
 function authScreen(mode = 'in', msg) {
   const params = new URLSearchParams(location.search); const invEmail = params.get('invite'); const invName = params.get('name');
-  if (invEmail && mode === 'in' && !msg && !choseSignIn) mode = 'up';
+  const joinTok = store.get('joinTok', null);
+  if ((invEmail || joinTok) && mode === 'in' && !msg && !choseSignIn) mode = 'up';
+  if (joinTok && joinInfo === undefined) { joinInfo = null; sb.rpc('join_link_info', { tok: joinTok }).then(r => { joinInfo = r.data || false; if (!r.data) store.del('joinTok'); if ($('.auth form') && ![...$$('.auth form input')].some(i => i.value && i.defaultValue !== i.value)) authScreen(mode, msg); }).catch(() => {}); }
+  const joinWs = joinTok && joinInfo ? joinInfo.workspace : null;
   if (mode === 'up') choseSignIn = false;
   if (params.has('start')) { if (mode === 'in' && !msg) mode = 'up'; params.delete('start'); history.replaceState(null, '', location.pathname + (params.toString() ? '?' + params : '') + location.hash); } // "Start free" on the website, once
   if (signupOpen === null) { signupOpen = false; sb.rpc('signup_is_open').then(r => { signupOpen = !!r.data; if (signupOpen && $('.auth form') && ![...$$('.auth form input')].some(i => i.value && i.defaultValue !== i.value)) authScreen(mode, msg); }).catch(() => {}); }
-  const newTeam = mode === 'up' && !invEmail && signupOpen;
+  const newTeam = mode === 'up' && !invEmail && !joinTok && signupOpen;
   const name = h('input', { type: 'text', id: 'name', autocomplete: 'name', required: true, placeholder: 'Your full name', value: invName || '' });
   const email = h('input', { type: 'email', id: 'email', autocomplete: 'email', required: true, placeholder: 'you@company.com', value: invEmail || '' });
   const pw = h('input', { type: 'password', id: 'password', minlength: '6', required: true, autocomplete: mode === 'up' ? 'new-password' : 'current-password', placeholder: mode === 'up' ? 'Choose a password (8+ characters)' : 'Password' });
   const err = h('div', { class: 'err', hidden: true }); const info = h('div', { class: 'info', hidden: !msg, text: msg || '' });
   const keep = h('input', { type: 'checkbox', id: 'keepSignedIn', checked: !store.get('noKeep', false) });
-  const btn = h('button', { class: 'btn pri lg wide', type: 'submit' }, mode === 'in' ? 'Sign in' : mode === 'up' ? (invEmail ? 'Join the team' : 'Create my account') : 'Send reset link');
+  const btn = h('button', { class: 'btn pri lg wide', type: 'submit' }, mode === 'in' ? 'Sign in' : mode === 'up' ? (invEmail || joinWs ? 'Join the team' : 'Create my account') : 'Send reset link');
   const form = h('form', { novalidate: true },
-    h('h1', { text: mode === 'in' ? 'Sign in' : mode === 'up' ? (invEmail ? 'Welcome to the team' : newTeam ? 'Start free' : 'Create your account') : 'Reset password' }),
-    h('p', { class: 'sub', text: mode === 'in' ? 'Sign in to see whose turn it is.' : mode === 'up' ? (invEmail ? 'Your name and email are filled in. Just set a password.' : newTeam ? 'Free while Ovrto is in early access. You’ll name your team next.' : 'Use the email your admin invited.') : 'We’ll email you a link to set a new password.' }),
+    h('h1', { text: mode === 'in' ? (joinWs ? `Join ${joinWs}` : 'Sign in') : mode === 'up' ? (joinWs ? `Join ${joinWs}` : invEmail ? 'Welcome to the team' : newTeam ? 'Start free' : 'Create your account') : 'Reset password' }),
+    h('p', { class: 'sub', text: mode === 'in' ? (joinWs ? 'Sign in and you’ll join the team.' : 'Sign in to see whose turn it is.') : mode === 'up' ? (joinWs ? 'Create your account and you’re in.' : invEmail ? 'Your name and email are filled in. Just set a password.' : newTeam ? 'Free while Ovrto is in early access. You’ll name your team next.' : 'Use the email your admin invited.') : 'We’ll email you a link to set a new password.' }),
     mode === 'up' ? h('label', { class: 'field' }, 'Name', name) : null,
     h('label', { class: 'field' }, 'Email', email),
     mode !== 'reset' ? h('label', { class: 'field' }, 'Password', pwEye(pw)) : null,
@@ -4613,10 +4696,10 @@ function authScreen(mode = 'in', msg) {
     if (mode === 'up' && !name.value.trim()) { err.textContent = 'Add your name so teammates know who you are.'; err.hidden = false; return name.focus(); }
     const done = busy(btn, 'One moment…');
     try {
-      const redirect = location.origin + location.pathname;
+      const redirect = location.origin + location.pathname + (mode === 'up' && joinTok ? '?join=' + joinTok : '');
       if (mode === 'in') { keepSignedIn(keep.checked); const { error } = await sb.auth.signInWithPassword({ email: email.value.trim(), password: pw.value }); if (error) throw error; }
       else if (mode === 'up') {
-        const { data, error } = await sb.auth.signUp({ email: email.value.trim(), password: pw.value, options: { data: { full_name: name.value.trim() }, emailRedirectTo: redirect } }); if (error) throw error;
+        const { data, error } = await sb.auth.signUp({ email: email.value.trim(), password: pw.value, options: { data: Object.assign({ full_name: name.value.trim() }, joinTok ? { join: joinTok } : {}), emailRedirectTo: redirect } }); if (error) throw error;
         store.set('newcomer', true);
         if (!data.session) { history.replaceState(null, '', location.pathname); return authScreen('in', 'Account created. Check your email for a confirmation link, then sign in.'); }
       } else { const { error } = await sb.auth.resetPasswordForEmail(email.value.trim(), { redirectTo: redirect }); if (error) throw error; info.textContent = 'If this email has an account, a reset link is on its way.'; info.hidden = false; }
@@ -4731,10 +4814,19 @@ async function switchWs(id) {
   savePrefs({ last_workspace: id }); store.set('appName', w.app_name);
   await loadAll(); S.route = { v: startView() }; render(); setupRealtime(); checkDept();
 }
+/* join the company: from a team invite link, or by the company email (only after the email is confirmed) */
+async function joinCompany() {
+  const out = { ws: null, err: null }; const jt = store.get('joinTok', null);
+  if (jt) { try { const r = await sb.rpc('join_with_link', { tok: jt }); if (r.data) { out.ws = r.data; store.del('joinTok'); } else if (r.error && !isNetErr(r.error)) { out.err = errText(r.error); store.del('joinTok'); } } catch {} }
+  try { const r = await sb.rpc('join_my_company'); if (r.data && !out.ws) out.ws = r.data; } catch {}
+  return out;
+}
 async function boot() {
   if (clientTok || personTok) return clientPage(); // a client's status link or a person's own link: no sign-in
   if (booting) return; booting = true;
   try {
+    { const q = new URLSearchParams(location.search); const jt = q.get('join'); // an invite link for the whole team: remember it until they're signed in
+      if (jt && /^[0-9a-f]{40}$/i.test(jt)) { store.set('joinTok', jt); q.delete('join'); history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : '') + location.hash); } }
     if (!S.session) {
       // a client's home-screen app that opened the start page: go back to their own link instead of the sign-in page
       try { const pt = localStorage.getItem('baton.ptok'); if (pt && /^[0-9a-f]{40}$/i.test(pt) && (matchMedia('(display-mode: standalone)').matches || navigator.standalone)) { location.replace(location.pathname + '?p=' + pt); return; } } catch {}
@@ -4744,7 +4836,10 @@ async function boot() {
     if (recovering) return recoveryScreen();
     S.loaded = false; $('#app').innerHTML = bootLoader();
     try { await sb.rpc('accept_invites'); } catch {} // invited to another workspace with an account you already have
+    const joined = await joinCompany();
     await Promise.all([loadPrefs(), loadWorkspaces()]); applyTheme();
+    if (joined.ws && S.wsList.some(w => w.id === joined.ws)) { S.prefs.last_workspace = joined.ws; savePrefs({ last_workspace: joined.ws }); setTimeout(() => toast(`You joined ${S.ws?.name || 'the team'}`), 900); }
+    else if (joined.err) setTimeout(() => toast(joined.err, null, 8000), 900);
     if (!S.wsList.length) { await setupTeamScreen(); return; }
     const want = S.prefs.last_workspace && S.wsList.find(w => w.id === S.prefs.last_workspace);
     S.ws = want || S.wsList[0]; store.set('appName', S.ws.app_name);
@@ -10044,6 +10139,8 @@ AR.patterns.push(["^(.+) · saved on this phone$", "$1 · اتحفظت على ا
 Object.assign(AR.exact, {"Not sent yet": "لسه ما اتبعتش", "Connect to the internet and wait a moment: they go up by themselves. Then sign out.": "وصّل النت واستنى شوية: هيترفعوا لوحدهم. بعدين اعمل تسجيل خروج.", "Sign out and lose them": "اخرج وامسحهم", "Stay signed in": "خليك داخل"});
 AR.patterns.push(["^1 change you made offline hasn’t gone up yet\\. Signing out now deletes it from this phone\\.$", "فيه تغيير واحد عملته من غير نت لسه ما اترفعش. لو عملت تسجيل خروج دلوقتي هيتمسح من الموبايل."], ["^(\\d+) changes you made offline haven’t gone up yet\\. Signing out now deletes them from this phone\\.$", "فيه $1 تغييرات عملتها من غير نت لسه ما اترفعتش. لو عملت تسجيل خروج دلوقتي هيتمسحوا من الموبايل."]);
 Object.assign(AR.exact, {"Keep me signed in on this device": "خليني داخل على الجهاز ده", "Forgot password?": "نسيت الباسورد؟", "Forgot which email?": "نسيت الإيميل؟", "It’s usually your work email, like name@yourcompany.com.": "غالبًا هو إيميل الشغل، زي name@yourcompany.com.", "It’s also in the invite you got on WhatsApp or email: the link has your email in it.": "وموجود كمان في الدعوة اللي وصلتك على الواتساب أو الإيميل: اللينك فيه إيميلك.", "Still not sure? Ask your admin. They see every member’s email in Settings, under Members.": "لسه مش متأكد؟ اسأل الأدمن. بيشوف إيميل كل واحد في الإعدادات، تحت الأعضاء.", "Try again": "جرّب تاني"});
+Object.assign(AR.exact, {"Add many at once": "ضيف كذا واحد مرة واحدة", "Paste a list from Excel or WhatsApp, one person per line: a name and an email. The department above applies to everyone.": "الصق قايمة من Excel أو الواتساب، كل شخص في سطر: اسمه وإيميله. القسم اللي فوق هيتطبق على الكل.", "Create invites": "اعمل الدعوات", "No email found on those lines": "مفيش إيميل في السطور دي", "Paste one person per line": "الصق كل شخص في سطر", "1 invite created. Tap Send next to it.": "اتعملت دعوة واحدة. دوس ابعت اللي جنبها.", "Invite link": "لينك الدعوة", "One link for everyone. Send it in your company’s WhatsApp group: whoever opens it creates an account and joins this team as a member.": "لينك واحد للكل. ابعته في جروب الواتساب بتاع الشركة: أي حد يفتحه يعمل حساب وينضم للفريق كعضو.", "Create invite link": "اعمل لينك دعوة", "Turn off link": "اقفل اللينك", "Invite link turned off. It no longer works.": "اللينك اتقفل ومبقاش شغال.", "Send the invite link": "ابعت لينك الدعوة", "Send this to your team, for example in your company’s WhatsApp group:": "ابعت ده لفريقك، مثلًا في جروب الواتساب بتاع الشركة:", "Company email": "إيميل الشركة", "Sign in with your company email (not Gmail or Yahoo) to let your team join by themselves.": "ادخل بإيميل الشركة (مش Gmail ولا Yahoo) عشان فريقك يقدر ينضم لوحده.", "People who sign up with this email join this team by themselves:": "اللي يعمل حساب بالإيميل ده ينضم للفريق لوحده:", "They join as members after confirming their email, so only real company inboxes get in. Gmail and other personal emails still need an invite.": "بينضموا كأعضاء بعد ما يأكدوا إيميلهم، فمحدش يدخل غير اللي عنده إيميل شركة حقيقي. Gmail والإيميلات الشخصية لسه محتاجة دعوة.", "Turned off. People need an invite to join.": "اتقفلت. الناس محتاجين دعوة عشان ينضموا.", "Create your account and you’re in.": "اعمل حسابك وتدخل على طول.", "Sign in and you’ll join the team.": "ادخل وهتنضم للفريق.", "This join link was turned off or expired. Ask your admin for a new one.": "لينك الدعوة ده اتقفل أو خلصت مدته. اطلب لينك جديد من الأدمن.", "This works only with a company email, not Gmail, Yahoo or Outlook": "ده بيشتغل بإيميل الشركة بس، مش Gmail ولا Yahoo ولا Outlook", "Another Ovrto company already uses this email domain": "فيه شركة تانية على Ovrto بتستخدم إيميل الشركة ده"});
+AR.patterns.unshift(["^(\\d+) invites created\\. Tap Send next to each\\.$", "اتعملت $1 دعوات. دوس ابعت جنب كل واحدة."], ["^Join (.+)$", "انضم لـ $1"], ["^Works until (.+)\\. Anyone who has it can join as a member\\.$", "شغال لحد $1. أي حد معاه اللينك يقدر ينضم كعضو."], ["^Anyone with an @(.+) email can now join by themselves$", "أي حد عنده إيميل ‎@$1 يقدر ينضم لوحده دلوقتي"], ["^You joined (.+)$", "انضميت لـ $1"], ["^\\*?Join (.+) on (.+)\\*?$", "انضم لـ $1 على $2"]);
 var LANG = (() => { try { return JSON.parse(localStorage.getItem('baton.lang') || '"en"') === 'ar' ? 'ar' : 'en'; } catch { return 'en'; } })();
 const isAr = () => LANG === 'ar';
 var I18N_SKIP = '.row .t,.tc:not(.waitrow) .tt>b,.card>.t,.inrow .t,.stuck-row .t,.rv-item .t,.md,.mdbox,.mbody,.ev .txt,.ttl,textarea,input,select,[contenteditable],code,pre,kbd,.notr,.wordmark,.wm-anim,.mark-anim,.plate,.cp-t b,.cp-in>h1,.mhead b,.cv-name b,.chip-task,.mention,.toast .notr,.cl-row .nm>div:first-child,.prow .nm>div:first-child';

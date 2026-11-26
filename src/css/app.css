@@ -1370,3 +1370,7 @@ input[type=date]::-webkit-date-and-time-value{text-align:start}
 /* narrow Android phones (320–360px): tab labels shrink instead of widening the page */
 .tab>span:last-child{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media (max-width:340px){.tab{font-size:9.5px}}
+.joinlink .linkline code{display:block;font-size:13px;overflow-wrap:anywhere;word-break:break-all;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;text-align:left}
+.panel details.many summary{cursor:pointer;font-weight:600;font-size:14px;padding:4px 0}
+.panel details.many[open]{display:flex;flex-direction:column;gap:8px}
+.panel details.many textarea{width:100%;box-sizing:border-box;font:inherit;font-size:15px}
