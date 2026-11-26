@@ -106,8 +106,10 @@ function openDeptPicker({ forUser = uid(), first = false } = {}) {
       head.replaceChildren(mode === 'main'
         ? h('p', { class: 'note', text: mainLocked ? 'Your main job is set. Ask an admin to change it. You can add the other jobs you do.' : 'Main job: Ovrto opens on its pages.' })
         : h('p', { class: 'note', text: 'Other jobs you also do: their pages, task types and agents join your main job’s. Pick as many as you like.' }));
-      list.replaceChildren(...['Software', 'Hardware', 'Business'].map(g => h('div', { class: 'deptgrp' }, h('h4', { class: 'vsub', text: g }),
-        h('div', { class: 'chips' }, deptsOn().concat(deptList().filter(d => (d.k === m.department || extrasOf(m).includes(d.k)) && !deptsOn().includes(d))).filter(d => d.g === g && (mode === 'main' || d.k !== val)).map(d => mode === 'main'
+      const pool = deptsOn().concat(deptList().filter(d => (d.k === m.department || extrasOf(m).includes(d.k)) && !deptsOn().includes(d))).filter(d => mode === 'main' || d.k !== val);
+      const groups = ['Software', 'Hardware', 'Business'].filter(g => pool.some(d => d.g === g));
+      list.replaceChildren(...groups.map(g => h('div', { class: 'deptgrp' }, groups.length > 1 ? h('h4', { class: 'vsub', text: g }) : null,
+        h('div', { class: 'chips' }, pool.filter(d => d.g === g).map(d => mode === 'main'
           ? h('button', { class: 'chipbtn', 'data-dept': d.k, 'aria-pressed': String(val === d.k), disabled: mainLocked && val !== d.k, onclick: () => { val = d.k; draw(); } }, d.l)
           : h('button', { class: 'chipbtn', 'data-extra': d.k, 'aria-pressed': String(extra.has(d.k)), onclick: () => { extra.has(d.k) ? extra.delete(d.k) : extra.add(d.k); draw(); } }, extra.has(d.k) ? h('span', { 'aria-hidden': 'true', text: '✓ ' }) : null, h('span', { text: d.l })))))));
       more.textContent = mode === 'main' ? (extra.size ? `Other jobs: ${[...extra].map(k => deptOf(k).l).join(', ')}` : '+ I also do other jobs') : '← Back to main job';
@@ -131,7 +133,13 @@ function openDeptPicker({ forUser = uid(), first = false } = {}) {
       } else { toast(`${first_(prof(forUser))}: ${deptLabel(m)}`); drawSettings?.(); }
       render();
     });
-    sh.append(h('div', { class: 'sbody' }, head, list, h('div', { class: 'deptmorerow' }, more)),
+    const otherWrap = h('div', { class: 'otherwrap' });
+    const otherBtn = h('button', { class: 'chipbtn other', 'data-dept-other': '1', 'aria-pressed': 'false', onclick: () => {
+      const open = otherBtn.getAttribute('aria-pressed') !== 'true'; otherBtn.setAttribute('aria-pressed', String(open));
+      otherWrap.replaceChildren(...(open ? [otherTeamBox(k => { if (mode === 'main' && !mainLocked) val = k; else if (k !== val) extra.add(k); otherBtn.setAttribute('aria-pressed', 'false'); otherWrap.replaceChildren(); draw(); })] : []));
+      if (open) setTimeout(() => $('#deptOther')?.focus(), 30);
+    } }, 'Other…');
+    sh.append(h('div', { class: 'sbody' }, head, list, h('div', { class: 'deptother' }, h('p', { class: 'note', text: 'Don’t see your job? Write it in your words.' }), otherBtn, otherWrap), h('div', { class: 'deptmorerow' }, more)),
       h('div', { class: 'sfoot' }, first ? null : h('button', { class: 'btn ghost', onclick: () => closeSheet() }, 'Cancel'), h('span', { class: 'sp' }), go_));
     draw();
   } });
@@ -170,7 +178,7 @@ const DEPT_STARTER = ['backend', 'frontend', 'product', 'sales'];
 function openDeptSetup({ first = false } = {}) {
   if (!isAdmin()) return;
   const c = wsDeptCfg() || {};
-  const st = { small: c.small ?? first, on: new Set(c.on || (first ? DEPT_STARTER : BASE_DEPTS.map(d => d.k))), names: Object.assign({}, c.names || {}), custom: (c.custom || []).map(x => Object.assign({}, x)), renaming: false };
+  const st = { small: c.small ?? first, on: new Set(c.on || (first ? DEPT_STARTER : BASE_DEPTS.map(d => d.k))), names: Object.assign({}, c.names || {}), custom: (c.custom || []).map(x => Object.assign({}, x)), renaming: false, membersAdd: c.members_add !== false };
   openSheet({ title: first ? 'Set up your departments' : 'Your departments', kind: 'center', key: 'deptsetup', build: sh => {
     const body = h('div', { class: 'sbody deptsetup' });
     const mode = (v, t, s) => h('button', { class: 'dsmode', 'data-small': String(v), 'aria-pressed': String(st.small === v), onclick: () => { st.small = v; draw(); } }, h('b', { text: t }), h('span', { text: s }));
@@ -190,6 +198,7 @@ function openDeptSetup({ first = false } = {}) {
         h('h4', { class: 'vsub', text: 'Your own departments' }),
         st.custom.length ? h('div', { class: 'chips' }, st.custom.map(x => h('span', { class: 'chipbtn on dscustom', 'data-ds-custom': x.l }, h('span', { class: 'notr', text: x.l }), h('span', { class: 'sm mute', text: ' · like ' + (st.names[x.base] || deptOfBase(x.base)?.l || '') }),
           h('button', { class: 'x', 'aria-label': `Remove ${x.l}`, onclick: () => { st.custom = st.custom.filter(y => y !== x); draw(); } }, icon('x', 12))))) : h('p', { class: 'note', text: 'Add any department we don’t have. Pick the one it works most like, so it gets the right pages.' }),
+        h('label', { class: 'check', 'data-ds-membersadd': '1' }, h('input', { type: 'checkbox', checked: st.membersAdd, onchange: e => { st.membersAdd = e.target.checked; } }), h('span', { text: 'People can add a team when theirs is missing (it never comes with money pages)' })),
         h('div', { class: 'dsadd' }, newName, h('label', { class: 'sm' }, 'works like ', like), h('button', { class: 'btn sm', 'data-ds-add': '1', onclick: () => {
           const l = newName.value.trim(); if (!l) return newName.focus();
           if ([...deptList(), ...st.custom].some(d => d.l.toLowerCase() === l.toLowerCase())) return toast('You already have a department with that name');
@@ -199,7 +208,7 @@ function openDeptSetup({ first = false } = {}) {
     };
     const save = h('button', { class: 'btn pri', 'data-ds-save': '1' }, first ? 'Done' : 'Save');
     save.addEventListener('click', async () => {
-      const cfg = { small: st.small, on: BASE_DEPTS.map(d => d.k).filter(k => st.on.has(k)), names: st.names, custom: st.custom };
+      const cfg = Object.assign({}, c, { small: st.small, on: BASE_DEPTS.map(d => d.k).filter(k => st.on.has(k)), names: st.names, custom: st.custom, members_add: st.membersAdd });
       const done = busy(save, 'Saving…'); const ok = await saveWs({ departments: cfg }, 'Departments saved'); done();
       if (ok === false) return; closeSheet(true); render();
     });

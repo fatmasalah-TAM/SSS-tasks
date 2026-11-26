@@ -96,27 +96,24 @@ async function setupTeamScreen() {
     return wrap(h('form', { onsubmit: e => e.preventDefault() }, h('h1', { text: 'No workspace yet' }), h('p', { class: 'sub', text: 'Ask your admin to invite this email.' }),
       h('button', { class: 'btn lg wide', type: 'button', onclick: () => signOut() }, 'Sign out')));
   }
-  let tpl = 'blank';
-  const name = h('input', { type: 'text', id: 'teamName', maxlength: '60', placeholder: 'e.g. Bright Studio', autocomplete: 'organization' });
   const err = h('div', { class: 'err', hidden: true });
-  const go_ = h('button', { class: 'btn pri lg wide', type: 'submit' }, 'Create my team');
-  const cards = h('div', { class: 'tpl-list', role: 'radiogroup', 'aria-label': 'How does your team work?' });
-  const drawCards = () => cards.replaceChildren(...TEAM_TEMPLATES.map(t => h('button', { type: 'button', class: 'tpl', role: 'radio', 'aria-checked': String(tpl === t.k), 'data-tpl': t.k, onclick: () => { tpl = t.k; drawCards(); } },
-    h('b', { text: t.n }), h('span', { text: t.d }))));
-  drawCards();
-  const f = h('form', { novalidate: true },
-    h('h1', { text: 'Set up your team' }), h('p', { class: 'sub', text: 'Two quick choices and you’re in.' }),
-    h('label', { class: 'field' }, 'Team or company name', name),
-    h('div', { class: 'field' }, 'How does your team work?', cards),
+  const q = companySetupForm(); const name = q.name;
+  const go_ = h('button', { class: 'btn pri lg wide', type: 'submit' }, 'Create my company');
+  const f = h('form', { novalidate: true, class: 'csetup' },
+    h('h1', { text: 'Set up your company' }), h('p', { class: 'sub', text: 'A few taps. Your answers decide which pages Ovrto opens; change them any time in Settings.' }),
+    h('label', { class: 'field' }, 'Company name', name), q.box,
     err, go_,
     h('div', { class: 'links' }, h('button', { type: 'button', class: 'link', onclick: () => signOut() }, 'Sign out')));
   f.addEventListener('submit', async e => {
     e.preventDefault(); err.hidden = true;
-    const n = name.value.trim(); if (!n) { err.textContent = 'Give your team a name.'; err.hidden = false; return name.focus(); }
+    const bad = q.valid(); if (bad) { err.textContent = bad; err.hidden = false; return (name.value.trim() ? $('[data-q=size]', f) : name).scrollIntoView({ block: 'center' }); }
+    const n = name.value.trim();
     const prefix = (n.normalize('NFKD').replace(/[^A-Za-z0-9 ]/g, '').split(/\s+/).filter(Boolean).map(w => w[0]).join('').toUpperCase() || n.replace(/[^A-Za-z0-9]/g, '').toUpperCase() || 'TSK').slice(0, 4).padEnd(2, 'X');
     const done = busy(go_, 'Creating…');
-    const { data, error } = await sb.rpc('create_workspace', { ws_name: n, ws_prefix: prefix, preset: tpl });
-    done(); if (error) { err.textContent = errText(error); err.hidden = false; return; }
+    const { data, error } = await sb.rpc('create_workspace', { ws_name: n, ws_prefix: prefix, preset: q.preset() });
+    if (error) { done(); err.textContent = errText(error); err.hidden = false; return; }
+    const r2 = await sb.from('workspaces').update({ departments: q.cfg() }).eq('id', data).select(); done();
+    if (r2.error) toast(errText(r2.error)); // the company exists; the teams can be set again in Settings
     store.set('newcomer', false); store.set('teamJustMade', true);
     await loadWorkspaces(); S.prefs.last_workspace = data; await boot2(data);
   });

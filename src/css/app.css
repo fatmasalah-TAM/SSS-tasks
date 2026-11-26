@@ -1374,3 +1374,20 @@ input[type=date]::-webkit-date-and-time-value{text-align:start}
 .panel details.many summary{cursor:pointer;font-weight:600;font-size:14px;padding:4px 0}
 .panel details.many[open]{display:flex;flex-direction:column;gap:8px}
 .panel details.many textarea{width:100%;box-sizing:border-box;font:inherit;font-size:15px}
+/* setting up a company, and "Other" */
+.auth .form.setup{max-width:560px}
+.csetup .csq{display:flex;flex-direction:column;gap:14px}
+.csq-q{display:flex;flex-direction:column;gap:8px;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--panel,transparent)}
+.csq-q>b{font-size:15px}
+.csq-q .note{font-size:13px}
+.csq-g{display:flex;flex-direction:column;gap:6px;margin-top:2px}
+.csq-gl{font-size:12px;font-weight:600;color:var(--mute)}
+.csq-add{display:flex;gap:8px}
+.csq-add input{flex:1;min-width:0}
+.chipbtn.other{border-style:dashed}
+.ai-note{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;line-height:1.45;background:var(--accent-soft);color:var(--ink);border-radius:10px;padding:10px 12px}
+.ai-note input{flex:1 1 100%;min-width:0}
+.otherteam{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.otherteam>input{width:100%;box-sizing:border-box}
+.deptother{margin-top:12px}
+.deptother .note{margin:0 0 6px}

@@ -56,6 +56,7 @@ const tours = (() => {
   function request(k) { if (!S.prefs || S.prefs.tours_off || seen(k) || (TOURS[k]?.admin && !isAdmin())) return; if (!queue.includes(k)) queue.push(k); setTimeout(kick, 450); }
   function kick() {
     if (!canRun() || !queue.length) return;
+    if (S.ws && typeof myMember === 'function' && myMember() && !myMember().department) return void setTimeout(kick, 1500); // the first-time job question comes first
     const sheet = currentSheet();
     const k = queue.find(q => { const firstStep = TOURS[q].steps.find(s => findEl(s)); if (!firstStep) return false; const el = findEl(firstStep); return !sheet || sheet.contains(el); });
     if (!k) return; queue = queue.filter(q => q !== k); start(k);

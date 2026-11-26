@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-KzMwe8jvp2JuIli/BEPmIUhLpDVrzvw0YlPAtu/SBYg=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-++nZvR3SFrWKIV4rydDKuhuHrfFRyB1a97jJEMoiaGE=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-KzMwe8jvp2JuIli/BEPmIUhLpDVrzvw0YlPAtu/SBYg=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-p6VBdDdfUXU1DdDvqY6oji/xFMQ+/YGWcp8lEiuUflQ=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<meta name="ovrto-build" content="d9ab50a62010">
+<meta name="ovrto-build" content="6c175b72d1a8">
 <title>Ovrto</title>
 <meta name="description" content="Over to you. Every task shows whose turn it is.">
 <meta name="theme-color" content="#0D0D0F">
@@ -1398,6 +1398,23 @@ input[type=date]::-webkit-date-and-time-value{text-align:start}
 .panel details.many summary{cursor:pointer;font-weight:600;font-size:14px;padding:4px 0}
 .panel details.many[open]{display:flex;flex-direction:column;gap:8px}
 .panel details.many textarea{width:100%;box-sizing:border-box;font:inherit;font-size:15px}
+/* setting up a company, and "Other" */
+.auth .form.setup{max-width:560px}
+.csetup .csq{display:flex;flex-direction:column;gap:14px}
+.csq-q{display:flex;flex-direction:column;gap:8px;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--panel,transparent)}
+.csq-q>b{font-size:15px}
+.csq-q .note{font-size:13px}
+.csq-g{display:flex;flex-direction:column;gap:6px;margin-top:2px}
+.csq-gl{font-size:12px;font-weight:600;color:var(--mute)}
+.csq-add{display:flex;gap:8px}
+.csq-add input{flex:1;min-width:0}
+.chipbtn.other{border-style:dashed}
+.ai-note{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;line-height:1.45;background:var(--accent-soft);color:var(--ink);border-radius:10px;padding:10px 12px}
+.ai-note input{flex:1 1 100%;min-width:0}
+.otherteam{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.otherteam>input{width:100%;box-sizing:border-box}
+.deptother{margin-top:12px}
+.deptother .note{margin:0 0 6px}
 </style>
 </head>
 <body>
@@ -4417,6 +4434,7 @@ const tours = (() => {
   function request(k) { if (!S.prefs || S.prefs.tours_off || seen(k) || (TOURS[k]?.admin && !isAdmin())) return; if (!queue.includes(k)) queue.push(k); setTimeout(kick, 450); }
   function kick() {
     if (!canRun() || !queue.length) return;
+    if (S.ws && typeof myMember === 'function' && myMember() && !myMember().department) return void setTimeout(kick, 1500); // the first-time job question comes first
     const sheet = currentSheet();
     const k = queue.find(q => { const firstStep = TOURS[q].steps.find(s => findEl(s)); if (!firstStep) return false; const el = findEl(firstStep); return !sheet || sheet.contains(el); });
     if (!k) return; queue = queue.filter(q => q !== k); start(k);
@@ -4623,7 +4641,7 @@ addEventListener('online', () => { if (S.ws) { flushOutbox(); setupRealtime(); c
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { checkUpdate(); if (S.ws) { flushOutbox(); setupRealtime(); catchUp(); } } });
 
 /* a new version was uploaded: phones (and apps saved to the home screen) pick it up by themselves */
-const BUILD = 'd9ab50a62010';
+const BUILD = '6c175b72d1a8';
 let updLast = 0, updShown = false;
 async function checkUpdate(force) {
   if (!force && Date.now() - updLast < 60000) return; updLast = Date.now();
@@ -4737,27 +4755,24 @@ async function setupTeamScreen() {
     return wrap(h('form', { onsubmit: e => e.preventDefault() }, h('h1', { text: 'No workspace yet' }), h('p', { class: 'sub', text: 'Ask your admin to invite this email.' }),
       h('button', { class: 'btn lg wide', type: 'button', onclick: () => signOut() }, 'Sign out')));
   }
-  let tpl = 'blank';
-  const name = h('input', { type: 'text', id: 'teamName', maxlength: '60', placeholder: 'e.g. Bright Studio', autocomplete: 'organization' });
   const err = h('div', { class: 'err', hidden: true });
-  const go_ = h('button', { class: 'btn pri lg wide', type: 'submit' }, 'Create my team');
-  const cards = h('div', { class: 'tpl-list', role: 'radiogroup', 'aria-label': 'How does your team work?' });
-  const drawCards = () => cards.replaceChildren(...TEAM_TEMPLATES.map(t => h('button', { type: 'button', class: 'tpl', role: 'radio', 'aria-checked': String(tpl === t.k), 'data-tpl': t.k, onclick: () => { tpl = t.k; drawCards(); } },
-    h('b', { text: t.n }), h('span', { text: t.d }))));
-  drawCards();
-  const f = h('form', { novalidate: true },
-    h('h1', { text: 'Set up your team' }), h('p', { class: 'sub', text: 'Two quick choices and you’re in.' }),
-    h('label', { class: 'field' }, 'Team or company name', name),
-    h('div', { class: 'field' }, 'How does your team work?', cards),
+  const q = companySetupForm(); const name = q.name;
+  const go_ = h('button', { class: 'btn pri lg wide', type: 'submit' }, 'Create my company');
+  const f = h('form', { novalidate: true, class: 'csetup' },
+    h('h1', { text: 'Set up your company' }), h('p', { class: 'sub', text: 'A few taps. Your answers decide which pages Ovrto opens; change them any time in Settings.' }),
+    h('label', { class: 'field' }, 'Company name', name), q.box,
     err, go_,
     h('div', { class: 'links' }, h('button', { type: 'button', class: 'link', onclick: () => signOut() }, 'Sign out')));
   f.addEventListener('submit', async e => {
     e.preventDefault(); err.hidden = true;
-    const n = name.value.trim(); if (!n) { err.textContent = 'Give your team a name.'; err.hidden = false; return name.focus(); }
+    const bad = q.valid(); if (bad) { err.textContent = bad; err.hidden = false; return (name.value.trim() ? $('[data-q=size]', f) : name).scrollIntoView({ block: 'center' }); }
+    const n = name.value.trim();
     const prefix = (n.normalize('NFKD').replace(/[^A-Za-z0-9 ]/g, '').split(/\s+/).filter(Boolean).map(w => w[0]).join('').toUpperCase() || n.replace(/[^A-Za-z0-9]/g, '').toUpperCase() || 'TSK').slice(0, 4).padEnd(2, 'X');
     const done = busy(go_, 'Creating…');
-    const { data, error } = await sb.rpc('create_workspace', { ws_name: n, ws_prefix: prefix, preset: tpl });
-    done(); if (error) { err.textContent = errText(error); err.hidden = false; return; }
+    const { data, error } = await sb.rpc('create_workspace', { ws_name: n, ws_prefix: prefix, preset: q.preset() });
+    if (error) { done(); err.textContent = errText(error); err.hidden = false; return; }
+    const r2 = await sb.from('workspaces').update({ departments: q.cfg() }).eq('id', data).select(); done();
+    if (r2.error) toast(errText(r2.error)); // the company exists; the teams can be set again in Settings
     store.set('newcomer', false); store.set('teamJustMade', true);
     await loadWorkspaces(); S.prefs.last_workspace = data; await boot2(data);
   });
@@ -7916,8 +7931,10 @@ function openDeptPicker({ forUser = uid(), first = false } = {}) {
       head.replaceChildren(mode === 'main'
         ? h('p', { class: 'note', text: mainLocked ? 'Your main job is set. Ask an admin to change it. You can add the other jobs you do.' : 'Main job: Ovrto opens on its pages.' })
         : h('p', { class: 'note', text: 'Other jobs you also do: their pages, task types and agents join your main job’s. Pick as many as you like.' }));
-      list.replaceChildren(...['Software', 'Hardware', 'Business'].map(g => h('div', { class: 'deptgrp' }, h('h4', { class: 'vsub', text: g }),
-        h('div', { class: 'chips' }, deptsOn().concat(deptList().filter(d => (d.k === m.department || extrasOf(m).includes(d.k)) && !deptsOn().includes(d))).filter(d => d.g === g && (mode === 'main' || d.k !== val)).map(d => mode === 'main'
+      const pool = deptsOn().concat(deptList().filter(d => (d.k === m.department || extrasOf(m).includes(d.k)) && !deptsOn().includes(d))).filter(d => mode === 'main' || d.k !== val);
+      const groups = ['Software', 'Hardware', 'Business'].filter(g => pool.some(d => d.g === g));
+      list.replaceChildren(...groups.map(g => h('div', { class: 'deptgrp' }, groups.length > 1 ? h('h4', { class: 'vsub', text: g }) : null,
+        h('div', { class: 'chips' }, pool.filter(d => d.g === g).map(d => mode === 'main'
           ? h('button', { class: 'chipbtn', 'data-dept': d.k, 'aria-pressed': String(val === d.k), disabled: mainLocked && val !== d.k, onclick: () => { val = d.k; draw(); } }, d.l)
           : h('button', { class: 'chipbtn', 'data-extra': d.k, 'aria-pressed': String(extra.has(d.k)), onclick: () => { extra.has(d.k) ? extra.delete(d.k) : extra.add(d.k); draw(); } }, extra.has(d.k) ? h('span', { 'aria-hidden': 'true', text: '✓ ' }) : null, h('span', { text: d.l })))))));
       more.textContent = mode === 'main' ? (extra.size ? `Other jobs: ${[...extra].map(k => deptOf(k).l).join(', ')}` : '+ I also do other jobs') : '← Back to main job';
@@ -7941,7 +7958,13 @@ function openDeptPicker({ forUser = uid(), first = false } = {}) {
       } else { toast(`${first_(prof(forUser))}: ${deptLabel(m)}`); drawSettings?.(); }
       render();
     });
-    sh.append(h('div', { class: 'sbody' }, head, list, h('div', { class: 'deptmorerow' }, more)),
+    const otherWrap = h('div', { class: 'otherwrap' });
+    const otherBtn = h('button', { class: 'chipbtn other', 'data-dept-other': '1', 'aria-pressed': 'false', onclick: () => {
+      const open = otherBtn.getAttribute('aria-pressed') !== 'true'; otherBtn.setAttribute('aria-pressed', String(open));
+      otherWrap.replaceChildren(...(open ? [otherTeamBox(k => { if (mode === 'main' && !mainLocked) val = k; else if (k !== val) extra.add(k); otherBtn.setAttribute('aria-pressed', 'false'); otherWrap.replaceChildren(); draw(); })] : []));
+      if (open) setTimeout(() => $('#deptOther')?.focus(), 30);
+    } }, 'Other…');
+    sh.append(h('div', { class: 'sbody' }, head, list, h('div', { class: 'deptother' }, h('p', { class: 'note', text: 'Don’t see your job? Write it in your words.' }), otherBtn, otherWrap), h('div', { class: 'deptmorerow' }, more)),
       h('div', { class: 'sfoot' }, first ? null : h('button', { class: 'btn ghost', onclick: () => closeSheet() }, 'Cancel'), h('span', { class: 'sp' }), go_));
     draw();
   } });
@@ -7980,7 +8003,7 @@ const DEPT_STARTER = ['backend', 'frontend', 'product', 'sales'];
 function openDeptSetup({ first = false } = {}) {
   if (!isAdmin()) return;
   const c = wsDeptCfg() || {};
-  const st = { small: c.small ?? first, on: new Set(c.on || (first ? DEPT_STARTER : BASE_DEPTS.map(d => d.k))), names: Object.assign({}, c.names || {}), custom: (c.custom || []).map(x => Object.assign({}, x)), renaming: false };
+  const st = { small: c.small ?? first, on: new Set(c.on || (first ? DEPT_STARTER : BASE_DEPTS.map(d => d.k))), names: Object.assign({}, c.names || {}), custom: (c.custom || []).map(x => Object.assign({}, x)), renaming: false, membersAdd: c.members_add !== false };
   openSheet({ title: first ? 'Set up your departments' : 'Your departments', kind: 'center', key: 'deptsetup', build: sh => {
     const body = h('div', { class: 'sbody deptsetup' });
     const mode = (v, t, s) => h('button', { class: 'dsmode', 'data-small': String(v), 'aria-pressed': String(st.small === v), onclick: () => { st.small = v; draw(); } }, h('b', { text: t }), h('span', { text: s }));
@@ -8000,6 +8023,7 @@ function openDeptSetup({ first = false } = {}) {
         h('h4', { class: 'vsub', text: 'Your own departments' }),
         st.custom.length ? h('div', { class: 'chips' }, st.custom.map(x => h('span', { class: 'chipbtn on dscustom', 'data-ds-custom': x.l }, h('span', { class: 'notr', text: x.l }), h('span', { class: 'sm mute', text: ' · like ' + (st.names[x.base] || deptOfBase(x.base)?.l || '') }),
           h('button', { class: 'x', 'aria-label': `Remove ${x.l}`, onclick: () => { st.custom = st.custom.filter(y => y !== x); draw(); } }, icon('x', 12))))) : h('p', { class: 'note', text: 'Add any department we don’t have. Pick the one it works most like, so it gets the right pages.' }),
+        h('label', { class: 'check', 'data-ds-membersadd': '1' }, h('input', { type: 'checkbox', checked: st.membersAdd, onchange: e => { st.membersAdd = e.target.checked; } }), h('span', { text: 'People can add a team when theirs is missing (it never comes with money pages)' })),
         h('div', { class: 'dsadd' }, newName, h('label', { class: 'sm' }, 'works like ', like), h('button', { class: 'btn sm', 'data-ds-add': '1', onclick: () => {
           const l = newName.value.trim(); if (!l) return newName.focus();
           if ([...deptList(), ...st.custom].some(d => d.l.toLowerCase() === l.toLowerCase())) return toast('You already have a department with that name');
@@ -8009,7 +8033,7 @@ function openDeptSetup({ first = false } = {}) {
     };
     const save = h('button', { class: 'btn pri', 'data-ds-save': '1' }, first ? 'Done' : 'Save');
     save.addEventListener('click', async () => {
-      const cfg = { small: st.small, on: BASE_DEPTS.map(d => d.k).filter(k => st.on.has(k)), names: st.names, custom: st.custom };
+      const cfg = Object.assign({}, c, { small: st.small, on: BASE_DEPTS.map(d => d.k).filter(k => st.on.has(k)), names: st.names, custom: st.custom, members_add: st.membersAdd });
       const done = busy(save, 'Saving…'); const ok = await saveWs({ departments: cfg }, 'Departments saved'); done();
       if (ok === false) return; closeSheet(true); render();
     });
@@ -8024,6 +8048,164 @@ function deptSummary() {
   return `${n} department${n === 1 ? '' : 's'} · ${c.small ? 'small team: everyone sees every page' : 'each sees its own pages'}`;
 }
 
+/* ═════════════ Setting up a company, and understanding what people type in "Other" ═════════════
+   A new company answers four taps (what it does, its weekly work, its teams, its size). Each answer picks the next one's
+   likely answers, and the teams decide everyone's pages. "Other" takes free text in English, Arabic or Franco:
+   Ovrto matches it to what already exists, and only if nothing fits does it become something new. */
+
+/* words people use for each kind of work, in English, Arabic and Franco */
+const KW = {
+  sales: ['sell', 'sales', 'deal', 'client call', 'clients', 'customer', 'lead', 'bay3', 'مبيعات', 'سيلز', 'بيع', 'عملاء', 'عميل'],
+  success: ['customer service', 'customer care', 'complain', 'request', 'call center', 'reception', 'خدمة العملاء', 'شكاوى', 'شكوى', 'كول سنتر', 'استقبال', 'customer success', 'account manag'],
+  marketing: ['marketing', 'social', 'instagram', 'facebook', 'tiktok', 'post', 'content', 'campaign', ' ads', 'brand', ' seo ', 'تسويق', 'سوشيال', 'انستجرام', 'فيسبوك', 'تيك توك', 'بوست', 'اعلان', 'إعلان', 'محتوى', 'ماركتنج'],
+  finance: ['financ', 'account', 'invoice', 'payment', 'pay supplier', 'collect', 'budget', ' tax', ' vat ', 'حسابات', 'محاسب', 'فواتير', 'فاتورة', 'مالية', 'تحصيل', 'فلوس', 'ضرايب', 'ضرائب'],
+  hr: [' hr ', 'human resource', 'hiring', 'recruit', 'onboard', 'payroll', 'people team', 'موارد بشرية', 'توظيف', 'تعيين', 'شئون العاملين', 'شؤون الموظفين', 'مرتبات'],
+  operations: ['operation', 'logistic', 'deliver', 'driver', 'dispatch', 'admin office', 'office manag', 'عمليات', 'توصيل', 'شحن', 'سواق', 'لوجستيات', 'تشغيل'],
+  warehouse: ['stock', 'inventory', 'warehouse', 'store keeper', 'storekeeper', 'مخزن', 'مخزون', 'مخازن', 'جرد'],
+  purchasing: ['purchas', 'procure', 'buy', 'supplier', 'vendor', 'مشتريات', 'موردين', 'مورد', 'شراء'],
+  production: ['factory', 'production', 'manufactur', 'assembly', 'workshop', 'kitchen', 'chef', 'مصنع', 'انتاج', 'إنتاج', 'تصنيع', 'ورشة', 'مطبخ', 'شيف'],
+  management: ['manag', 'ceo', 'director', 'owner', 'founder', ' gm ', 'مدير', 'ادارة', 'إدارة', 'صاحب', 'رئيس'],
+  pm: ['project', 'coordinat', 'planning', 'planner', 'scrum', 'مشروع', 'مشاريع', 'تنسيق', 'تخطيط'],
+  backend: ['software', 'develop', 'program', 'code', 'coding', 'backend', 'frontend', 'web', ' app', 'برمجة', 'مبرمج', 'مطور', 'تطوير', 'سوفتوير', 'ابلكيشن', 'موقع'],
+  qa: ['test', ' qa ', 'quality', 'اختبار', 'تيست', 'جودة'],
+  design: ['design', 'graphic', ' ui ', ' ux ', 'تصميم', 'جرافيك', 'ديزاين'],
+  media: ['photo', 'video', 'film', 'drone', 'montage', 'camera', 'تصوير', 'فيديو', 'مونتاج', 'فوتوغرافي'],
+  devops: [' it ', 'network', 'server', 'system admin', 'helpdesk', 'help desk', 'شبكات', 'سيرفر', 'آي تي', 'اي تي'],
+  field: ['field', 'site', 'install', 'technician', 'maintenance', 'repair', 'فني', 'فنيين', 'تركيب', 'صيانة', 'موقع العميل', 'تصليح'],
+  support: ['support', 'ticket', 'helpline', 'troubleshoot', 'دعم', 'سابورت', 'تذاكر'],
+  legal: ['legal', 'lawyer', 'contract', 'قانون', 'محامي', 'عقود', 'شئون قانونية'],
+};
+/* the teams a company can tick; generic names, each working like one of Ovrto's built-in departments */
+const TEAMS = [
+  { k: 'management', l: 'Management', base: 'management' }, { k: 'sales', l: 'Sales', base: 'sales' }, { k: 'success', l: 'Customer service', base: 'success' },
+  { k: 'operations', l: 'Operations', base: 'operations' }, { k: 'finance', l: 'Finance', base: 'finance' }, { k: 'hr', l: 'HR', base: 'hr' },
+  { k: 'marketing', l: 'Marketing', base: 'marketing' }, { k: 'pm', l: 'Projects', base: 'pm' }, { k: 'backend', l: 'Software', base: 'backend' },
+  { k: 'qa', l: 'Testing', base: 'qa' }, { k: 'design', l: 'Design', base: 'design' }, { k: 'devops', l: 'IT', base: 'devops' },
+  { k: 'field', l: 'Field team', base: 'field' }, { k: 'support', l: 'Technical support', base: 'support' },
+  { k: 'warehouse', l: 'Warehouse', base: 'operations', custom: true }, { k: 'purchasing', l: 'Purchasing', base: 'operations', custom: true },
+  { k: 'production', l: 'Production', base: 'operations', custom: true }, { k: 'legal', l: 'Legal', base: 'management', custom: true },
+];
+const WEEKLY = [
+  { g: 'With clients', items: [['sell', 'Find and sell to clients', 'sales'], ['requests', 'Answer client requests', 'success'], ['sites', 'Visit client sites', 'field']] },
+  { g: 'Doing the work', items: [['projects', 'Run projects', 'pm'], ['software', 'Build software', 'backend'], ['test', 'Test before delivery', 'qa'], ['make', 'Make products', 'production'], ['deliver', 'Deliver orders', 'operations']] },
+  { g: 'Things and suppliers', items: [['stock', 'Keep stock', 'warehouse'], ['equipment', 'Look after equipment', 'support'], ['suppliers', 'Buy from suppliers', 'purchasing']] },
+  { g: 'Office', items: [['invoices', 'Send invoices and collect payments', 'finance'], ['approve', 'Approve requests', 'management'], ['hire', 'Hire and onboard people', 'hr'], ['campaigns', 'Run marketing', 'marketing']] },
+];
+const BIZ = [
+  { k: 'software', l: 'Software and IT', preset: 'blank', work: ['sell', 'requests', 'projects', 'software', 'test', 'invoices'], words: ['software', ' it ', ' app', 'web', 'saas', 'tech', 'برمجة', 'سوفتوير', 'تطبيقات', 'مواقع'] },
+  { k: 'devices', l: 'Devices and electronics', preset: 'general', work: ['sell', 'requests', 'sites', 'equipment', 'stock', 'projects', 'invoices'], words: ['device', 'electronic', 'hardware', 'camera', 'security system', 'smart', 'أجهزة', 'اجهزة', 'الكترونيات', 'كاميرات'] },
+  { k: 'field', l: 'Maintenance and field service', preset: 'general', work: ['requests', 'sites', 'equipment', 'stock', 'invoices'], words: ['maintenance', 'repair', 'service', ' ac ', 'air condition', 'clean', 'install', 'صيانة', 'تكييف', 'تصليح', 'نظافة', 'تركيب'] },
+  { k: 'build', l: 'Construction and real estate', preset: 'general', work: ['sell', 'projects', 'sites', 'suppliers', 'invoices', 'approve'], words: ['construct', 'real estate', 'property', 'building', 'contract', 'interior', 'مقاولات', 'عقارات', 'بناء', 'تشطيب', 'ديكور'] },
+  { k: 'factory', l: 'Factory and production', preset: 'general', work: ['sell', 'make', 'stock', 'suppliers', 'approve', 'invoices'], words: ['factory', 'manufactur', 'production', 'plant', 'مصنع', 'تصنيع', 'انتاج', 'إنتاج'] },
+  { k: 'shops', l: 'Shops and restaurants', preset: 'general', work: ['requests', 'stock', 'suppliers', 'deliver', 'hire'], words: ['shop', 'store', 'retail', 'restaurant', 'cafe', 'café', 'bakery', 'branch', 'محل', 'محلات', 'مطعم', 'كافيه', 'فروع', 'سوبر ماركت'] },
+  { k: 'online', l: 'Online store', preset: 'general', work: ['requests', 'stock', 'deliver', 'campaigns', 'suppliers'], words: ['online store', 'e-commerce', 'ecommerce', 'online shop', 'متجر', 'اونلاين', 'أونلاين'] },
+  { k: 'clinic', l: 'Clinic and healthcare', preset: 'general', work: ['requests', 'stock', 'invoices', 'hire'], words: ['clinic', 'hospital', 'doctor', 'dental', 'pharmacy', 'medical', 'health', 'عيادة', 'مستشفى', 'دكتور', 'اسنان', 'صيدلية', 'طبي'] },
+  { k: 'school', l: 'School and training', preset: 'general', work: ['requests', 'projects', 'invoices', 'campaigns'], words: ['school', 'training', 'course', 'academy', 'education', 'nursery', 'مدرسة', 'تدريب', 'كورسات', 'اكاديمية', 'تعليم', 'حضانة'] },
+  { k: 'agency', l: 'Agency and marketing', preset: 'agency', work: ['sell', 'projects', 'campaigns', 'invoices'], words: ['agency', 'marketing', 'advertis', 'creative', 'media', 'production house', 'event', 'wedding', 'وكالة', 'تسويق', 'اعلانات', 'دعاية', 'ايفنت', 'أفراح', 'افراح', 'مناسبات'] },
+  { k: 'services', l: 'Services', preset: 'general', work: ['sell', 'requests', 'projects', 'invoices'], words: ['consult', 'service', 'law firm', 'accounting firm', 'travel', 'استشارات', 'خدمات', 'سفر', 'سياحة'] },
+];
+const SIZES = ['1', '2–10', '11–50', '51–200', '201–1,000', '1,000+'];
+
+/* score free text against lists of words; returns the best key, or null */
+function matchWords(text, table) {
+  const t = ' ' + String(text || '').toLowerCase().replace(/[.,;:!?()]/g, ' ').replace(/\s+/g, ' ') + ' ';
+  let best = null, score = 0;
+  for (const [k, words] of Object.entries(table)) {
+    const s = words.reduce((n, w) => n + (t.includes(w.toLowerCase()) ? w.length : 0), 0);
+    if (s > score) { score = s; best = k; }
+  }
+  return best;
+}
+const guessBiz = text => matchWords(text, Object.fromEntries(BIZ.map(b => [b.k, b.words])));
+/* which built-in department a job sounds like (the pages it gets); never one with money pages */
+function guessBase(text) { const k = matchWords(text, KW); const b = { warehouse: 'operations', purchasing: 'operations', production: 'operations', legal: 'operations', media: 'design' }[k] || k; return b && !['management', 'finance', 'hwlead'].includes(b) ? b : 'operations'; }
+/* which of the company's own teams a job sounds like: its name first, then its words */
+function matchTeam(text, teams = deptsOn()) {
+  const t = String(text || '').trim().toLowerCase(); if (!t) return null;
+  const byName = teams.find(d => d.l.toLowerCase() === t || (t.length > 3 && (t.includes(d.l.toLowerCase()) || d.l.toLowerCase().includes(t))));
+  if (byName) return byName;
+  const k = matchWords(t, KW); if (!k) return null;
+  const custom = teams.find(d => d.l.toLowerCase() === (TEAMS.find(x => x.k === k)?.l || k).toLowerCase());
+  if (custom) return custom;
+  if (k === 'media') return null; // filming isn't UI design: a company without a media team gets asked to add one
+  const base = { warehouse: 'operations', purchasing: 'operations', production: 'operations', legal: 'management' }[k] || k;
+  return teams.find(d => d.k === base) || teams.find(d => d.base === base) || null;
+}
+
+/* ── the admin sets up a new company: name, then four questions ── */
+function companySetupForm(onDone, err) {
+  const st = { biz: new Set(), other: '', work: new Set(), teams: new Set(['management']), size: '', otherTeam: '' };
+  const name = h('input', { type: 'text', id: 'teamName', maxlength: '60', placeholder: 'e.g. Bright Studio', autocomplete: 'organization' });
+  const box = h('div', { class: 'csq' });
+  const chip = (on, label, attrs, fn) => h('button', Object.assign({ type: 'button', class: 'chipbtn', 'aria-pressed': String(on), onclick: fn }, attrs), on ? h('span', { 'aria-hidden': 'true', text: '✓ ' }) : null, h('span', { text: label }));
+  const applyBiz = () => { const work = new Set(); for (const k of st.biz) (BIZ.find(b => b.k === k)?.work || []).forEach(w => work.add(w)); st.work = work; applyWork(); };
+  const applyWork = () => { const t = new Set(['management']); for (const g of WEEKLY) for (const [k, , team] of g.items) if (st.work.has(k)) t.add(team); st.teams = t; };
+  const otherI = h('input', { type: 'text', id: 'bizOther', maxlength: '120', placeholder: 'In a few words, e.g. we plan weddings and company events', value: st.other });
+  const otherNote = h('div', { class: 'ai-note', hidden: true, 'aria-live': 'polite' });
+  otherI.addEventListener('input', () => { st.other = otherI.value; clearTimeout(otherI._t); otherI._t = setTimeout(() => { const k = guessBiz(st.other); if (k && !st.biz.has(k)) { st.biz = new Set([k]); applyBiz(); draw(); } showOther(); }, 450); });
+  const showOther = () => { const k = guessBiz(st.other); otherNote.hidden = !st.other.trim(); otherNote.textContent = k ? `Got it: ${BIZ.find(b => b.k === k).l}. We picked the answers below for you.` : 'Thanks. Pick what the company does every week below.'; };
+  let showOtherBox = false;
+  const teamOtherI = h('input', { type: 'text', id: 'teamOther', maxlength: '40', placeholder: 'Team name, e.g. Media' });
+  const draw = () => {
+    box.replaceChildren(
+      h('div', { class: 'csq-q', 'data-q': 'biz' }, h('b', { text: 'What kind of business is the company?' }), h('span', { class: 'note', text: 'Pick one or two.' }),
+        h('div', { class: 'chips' }, ...BIZ.map(b => chip(st.biz.has(b.k), b.l, { 'data-biz': b.k }, () => { st.biz.has(b.k) ? st.biz.delete(b.k) : (st.biz.size >= 2 ? null : st.biz.add(b.k)); applyBiz(); draw(); })),
+          chip(showOtherBox, 'Other…', { 'data-biz': 'other', class: 'chipbtn other' }, () => { showOtherBox = !showOtherBox; draw(); if (showOtherBox) setTimeout(() => otherI.focus(), 30); })),
+        showOtherBox ? otherI : null, showOtherBox ? otherNote : null),
+      h('div', { class: 'csq-q', 'data-q': 'work' }, h('b', { text: 'What does the company do every week?' }), h('span', { class: 'note', text: st.biz.size ? 'Picked for you. Each one opens its pages; tap to change.' : 'Pick all that apply. Each one opens its pages.' }),
+        ...WEEKLY.map(g => h('div', { class: 'csq-g' }, h('span', { class: 'csq-gl', text: g.g }), h('div', { class: 'chips' }, ...g.items.map(([k, l]) => chip(st.work.has(k), l, { 'data-work': k }, () => { st.work.has(k) ? st.work.delete(k) : st.work.add(k); applyWork(); draw(); })))))),
+      h('div', { class: 'csq-q', 'data-q': 'teams' }, h('b', { text: 'Which teams does the company have?' }), h('span', { class: 'note', text: 'Each person’s menu starts from their team. You can rename any team later.' }),
+        h('div', { class: 'chips' }, ...TEAMS.map(t => chip(st.teams.has(t.k), t.l, { 'data-team': t.k }, () => { st.teams.has(t.k) ? st.teams.delete(t.k) : st.teams.add(t.k); draw(); })),
+          ...[...st.teams].filter(k => k.startsWith('own:')).map(k => chip(true, k.slice(4), { 'data-team': k }, () => { st.teams.delete(k); draw(); }))),
+        h('div', { class: 'csq-add' }, teamOtherI, h('button', { type: 'button', class: 'btn sm', 'data-team-add': '1', onclick: () => {
+          const v = teamOtherI.value.trim(); if (!v) return teamOtherI.focus();
+          const known = TEAMS.find(t => t.l.toLowerCase() === v.toLowerCase()); st.teams.add(known ? known.k : 'own:' + v); teamOtherI.value = ''; draw();
+        } }, icon('plus', 14), 'Add'))),
+      h('div', { class: 'csq-q', 'data-q': 'size' }, h('b', { text: 'How many people work at the company?' }),
+        h('div', { class: 'chips' }, ...SIZES.map(s => chip(st.size === s, s, { 'data-size': s }, () => { st.size = s; draw(); })))));
+  };
+  draw();
+  const cfg = () => {
+    const chosen = [...st.teams]; const on = [], names = {}, custom = [];
+    for (const k of chosen) {
+      if (k.startsWith('own:')) { const l = k.slice(4); custom.push({ k: 'c_' + Math.random().toString(36).slice(2, 8), l, base: guessBase(l) }); continue; }
+      const t = TEAMS.find(x => x.k === k); if (!t) continue;
+      if (t.custom) custom.push({ k: 'c_' + t.k, l: t.l, base: t.base });
+      else { on.push(t.base); if (t.l !== deptOfBase(t.base)?.l) names[t.base] = t.l; }
+    }
+    return { small: ['1', '2–10'].includes(st.size), on, names, custom, biz: [...st.biz], biz_other: st.other.trim() || undefined, size: st.size || undefined, work: [...st.work] };
+  };
+  const preset = () => { const b = [...st.biz].map(k => BIZ.find(x => x.k === k)); return b.find(x => x?.preset === 'blank') ? 'blank' : b.find(x => x?.preset === 'agency') ? 'agency' : 'general'; };
+  return { name, box, cfg, preset, valid: () => { if (!name.value.trim()) return 'Give your company a name.'; if (!st.size) return 'Pick how many people work at the company.'; return ''; } };
+}
+
+/* ── a member's "Other": match it to a team the company has, or add a new team ── */
+function otherTeamBox(onPick) {
+  const inp = h('input', { type: 'text', id: 'deptOther', maxlength: '60', placeholder: 'Your job in a few words, e.g. I post on our Instagram' });
+  const out = h('div', { class: 'ai-note', 'aria-live': 'polite', hidden: true });
+  const check = () => {
+    const v = inp.value.trim(); out.hidden = !v; if (!v) return out.replaceChildren();
+    const d = matchTeam(v);
+    if (d) return out.replaceChildren(h('span', {}, h('span', { text: 'Sounds like ' }), h('b', { text: d.l }), h('span', { text: '.' })), h('button', { type: 'button', class: 'btn sm pri', 'data-other-use': d.k, onclick: () => onPick(d.k) }, `Use ${d.l}`));
+    const can = isAdmin() || wsDeptCfg()?.members_add !== false;
+    const nm = v.length <= 30 ? v.replace(/^i (also )?(do|work in|work on|handle|post on|post|make|run|am in)\s+/i, '').replace(/^\w/, c => c.toUpperCase()) : '';
+    if (!can) return out.replaceChildren(h('span', { text: 'There’s no team like this yet. Ask your admin to add it.' }));
+    const nameI = h('input', { type: 'text', id: 'newTeamName', maxlength: '40', value: nm, placeholder: 'Name the team, e.g. Media', 'aria-label': 'Team name' });
+    out.replaceChildren(h('span', { text: 'There’s no team like this yet. Add it? Others who do the same job can join it.' }), nameI,
+      h('button', { type: 'button', class: 'btn sm pri', 'data-other-add': '1', onclick: async e => {
+        const l = nameI.value.trim(); if (l.length < 2) return nameI.focus();
+        const done = busy(e.currentTarget, 'Adding…'); const r = await sb.rpc('add_my_team', { ws: S.ws.id, team: l, works_like: guessBase(v + ' ' + l) }); done();
+        if (r.error) return toast(errText(r.error));
+        const c = Object.assign({}, wsDeptCfg() || {}); const k = r.data;
+        if (!(c.custom || []).some(x => x.k === k)) c.custom = [...(c.custom || []), { k, l, base: guessBase(v + ' ' + l), by: uid() }];
+        S.ws.departments = c; const w = S.wsList.find(x => x.id === S.ws.id); if (w) w.departments = c;
+        toast(`${l} team added`); onPick(k);
+      } }, icon('plus', 14), 'Add team'));
+  };
+  inp.addEventListener('input', () => { clearTimeout(inp._t); inp._t = setTimeout(check, 350); });
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(inp._t); check(); } });
+  return h('div', { class: 'otherteam' }, inp, out);
+}
 /* ═════════════ Tell Ovrto: say or type one thing, Ovrto finds the task and offers the right button ═════════════
    The AI only understands; the app's own buttons do the work (Send to review, Approve, waiting on someone,
    where I stopped, New task), so review rights, root causes and checklists all still apply. */
@@ -10141,6 +10323,8 @@ AR.patterns.push(["^1 change you made offline hasn’t gone up yet\\. Signing ou
 Object.assign(AR.exact, {"Keep me signed in on this device": "خليني داخل على الجهاز ده", "Forgot password?": "نسيت الباسورد؟", "Forgot which email?": "نسيت الإيميل؟", "It’s usually your work email, like name@yourcompany.com.": "غالبًا هو إيميل الشغل، زي name@yourcompany.com.", "It’s also in the invite you got on WhatsApp or email: the link has your email in it.": "وموجود كمان في الدعوة اللي وصلتك على الواتساب أو الإيميل: اللينك فيه إيميلك.", "Still not sure? Ask your admin. They see every member’s email in Settings, under Members.": "لسه مش متأكد؟ اسأل الأدمن. بيشوف إيميل كل واحد في الإعدادات، تحت الأعضاء.", "Try again": "جرّب تاني"});
 Object.assign(AR.exact, {"Add many at once": "ضيف كذا واحد مرة واحدة", "Paste a list from Excel or WhatsApp, one person per line: a name and an email. The department above applies to everyone.": "الصق قايمة من Excel أو الواتساب، كل شخص في سطر: اسمه وإيميله. القسم اللي فوق هيتطبق على الكل.", "Create invites": "اعمل الدعوات", "No email found on those lines": "مفيش إيميل في السطور دي", "Paste one person per line": "الصق كل شخص في سطر", "1 invite created. Tap Send next to it.": "اتعملت دعوة واحدة. دوس ابعت اللي جنبها.", "Invite link": "لينك الدعوة", "One link for everyone. Send it in your company’s WhatsApp group: whoever opens it creates an account and joins this team as a member.": "لينك واحد للكل. ابعته في جروب الواتساب بتاع الشركة: أي حد يفتحه يعمل حساب وينضم للفريق كعضو.", "Create invite link": "اعمل لينك دعوة", "Turn off link": "اقفل اللينك", "Invite link turned off. It no longer works.": "اللينك اتقفل ومبقاش شغال.", "Send the invite link": "ابعت لينك الدعوة", "Send this to your team, for example in your company’s WhatsApp group:": "ابعت ده لفريقك، مثلًا في جروب الواتساب بتاع الشركة:", "Company email": "إيميل الشركة", "Sign in with your company email (not Gmail or Yahoo) to let your team join by themselves.": "ادخل بإيميل الشركة (مش Gmail ولا Yahoo) عشان فريقك يقدر ينضم لوحده.", "People who sign up with this email join this team by themselves:": "اللي يعمل حساب بالإيميل ده ينضم للفريق لوحده:", "They join as members after confirming their email, so only real company inboxes get in. Gmail and other personal emails still need an invite.": "بينضموا كأعضاء بعد ما يأكدوا إيميلهم، فمحدش يدخل غير اللي عنده إيميل شركة حقيقي. Gmail والإيميلات الشخصية لسه محتاجة دعوة.", "Turned off. People need an invite to join.": "اتقفلت. الناس محتاجين دعوة عشان ينضموا.", "Create your account and you’re in.": "اعمل حسابك وتدخل على طول.", "Sign in and you’ll join the team.": "ادخل وهتنضم للفريق.", "This join link was turned off or expired. Ask your admin for a new one.": "لينك الدعوة ده اتقفل أو خلصت مدته. اطلب لينك جديد من الأدمن.", "This works only with a company email, not Gmail, Yahoo or Outlook": "ده بيشتغل بإيميل الشركة بس، مش Gmail ولا Yahoo ولا Outlook", "Another Ovrto company already uses this email domain": "فيه شركة تانية على Ovrto بتستخدم إيميل الشركة ده"});
 AR.patterns.unshift(["^(\\d+) invites created\\. Tap Send next to each\\.$", "اتعملت $1 دعوات. دوس ابعت جنب كل واحدة."], ["^Join (.+)$", "انضم لـ $1"], ["^Works until (.+)\\. Anyone who has it can join as a member\\.$", "شغال لحد $1. أي حد معاه اللينك يقدر ينضم كعضو."], ["^Anyone with an @(.+) email can now join by themselves$", "أي حد عنده إيميل ‎@$1 يقدر ينضم لوحده دلوقتي"], ["^You joined (.+)$", "انضميت لـ $1"], ["^\\*?Join (.+) on (.+)\\*?$", "انضم لـ $1 على $2"]);
+Object.assign(AR.exact, {"Set up your company": "جهّز شركتك", "A few taps. Your answers decide which pages Ovrto opens; change them any time in Settings.": "كام لمسة بس. إجاباتك بتحدد الصفحات اللي Ovrto هيفتحها، وتقدر تغيّرها في أي وقت من الإعدادات.", "Company name": "اسم الشركة", "Create my company": "اعمل شركتي", "Give your company a name.": "اكتب اسم الشركة.", "Pick how many people work at the company.": "اختار الشركة فيها كام واحد.", "What kind of business is the company?": "الشركة شغلها إيه؟", "Pick one or two.": "اختار واحد أو اتنين.", "Other…": "غير كده…", "In a few words, e.g. we plan weddings and company events": "في كلمتين، مثلًا: بننظم أفراح ومناسبات شركات", "Thanks. Pick what the company does every week below.": "شكرًا. اختار تحت الشركة بتعمل إيه كل أسبوع.", "What does the company do every week?": "الشركة بتعمل إيه كل أسبوع؟", "Picked for you. Each one opens its pages; tap to change.": "اخترناها لك. كل اختيار بيفتح صفحاته، دوس عشان تغيّر.", "Pick all that apply. Each one opens its pages.": "اختار كل اللي ينطبق. كل اختيار بيفتح صفحاته.", "With clients": "مع العملاء", "Doing the work": "تنفيذ الشغل", "Things and suppliers": "المخزون والموردين", "Office": "المكتب", "Find and sell to clients": "نجيب عملاء ونبيع لهم", "Answer client requests": "نرد على طلبات العملاء", "Visit client sites": "نزور مواقع العملاء", "Run projects": "ندير مشاريع", "Build software": "نبني سوفتوير", "Test before delivery": "نختبر قبل التسليم", "Make products": "نصنع منتجات", "Deliver orders": "نوصّل طلبات", "Keep stock": "نمسك مخزون", "Look after equipment": "نتابع أجهزة ومعدات", "Buy from suppliers": "نشتري من موردين", "Send invoices and collect payments": "نبعت فواتير ونحصّل فلوس", "Approve requests": "نوافق على طلبات", "Hire and onboard people": "نوظف ناس ونستقبلهم", "Run marketing": "نعمل تسويق", "Which teams does the company have?": "الشركة فيها أنهي أقسام؟", "Each person’s menu starts from their team. You can rename any team later.": "قايمة كل شخص بتبدأ من قسمه. تقدر تغيّر اسم أي قسم بعدين.", "Team name, e.g. Media": "اسم القسم، مثلًا Media", "How many people work at the company?": "الشركة فيها كام واحد؟", "Software and IT": "سوفتوير وIT", "Devices and electronics": "أجهزة وإلكترونيات", "Maintenance and field service": "صيانة وخدمات ميدانية", "Construction and real estate": "مقاولات وعقارات", "Factory and production": "مصنع وإنتاج", "Shops and restaurants": "محلات ومطاعم", "Online store": "متجر أونلاين", "Clinic and healthcare": "عيادات ورعاية صحية", "School and training": "مدارس وتدريب", "Agency and marketing": "وكالة وتسويق", "Services": "خدمات", "Customer service": "خدمة العملاء", "Operations": "العمليات", "Finance": "المالية", "HR": "الموارد البشرية", "IT": "IT", "Field team": "الفريق الميداني", "Warehouse": "المخزن", "Purchasing": "المشتريات", "Legal": "الشؤون القانونية", "Don’t see your job? Write it in your words.": "شغلانتك مش موجودة؟ اكتبها بكلامك.", "Your job in a few words, e.g. I post on our Instagram": "شغلانتك في كلمتين، مثلًا: بنزّل بوستات على انستجرام الشركة", "There’s no team like this yet. Ask your admin to add it.": "مفيش قسم زي ده لسه. اطلب من الأدمن يضيفه.", "There’s no team like this yet. Add it? Others who do the same job can join it.": "مفيش قسم زي ده لسه. تضيفه؟ اللي بيعملوا نفس الشغل يقدروا ينضموا له.", "Name the team, e.g. Media": "سمّي القسم، مثلًا Media", "Add team": "ضيف القسم", "Sounds like ": "شكلها ", "People can add a team when theirs is missing (it never comes with money pages)": "الموظفين يقدروا يضيفوا قسم لو قسمهم مش موجود (من غير صفحات الفلوس أبدًا)", "Only admins can add teams here. Ask your admin.": "الأدمن بس يقدر يضيف أقسام هنا. اسأل الأدمن.", "Give the team a name of 2 to 40 letters": "اكتب اسم للقسم من 2 لـ 40 حرف"});
+AR.patterns.unshift(["^Got it: (.+)\\. We picked the answers below for you\\.$", "فهمت: $1. اخترنا لك الإجابات اللي تحت."], ["^Use (.+)$", "اختار $1"], ["^(.+) team added$", "اتضاف قسم $1"]);
 var LANG = (() => { try { return JSON.parse(localStorage.getItem('baton.lang') || '"en"') === 'ar' ? 'ar' : 'en'; } catch { return 'en'; } })();
 const isAr = () => LANG === 'ar';
 var I18N_SKIP = '.row .t,.tc:not(.waitrow) .tt>b,.card>.t,.inrow .t,.stuck-row .t,.rv-item .t,.md,.mdbox,.mbody,.ev .txt,.ttl,textarea,input,select,[contenteditable],code,pre,kbd,.notr,.wordmark,.wm-anim,.mark-anim,.plate,.cp-t b,.cp-in>h1,.mhead b,.cv-name b,.chip-task,.mention,.toast .notr,.cl-row .nm>div:first-child,.prow .nm>div:first-child';
