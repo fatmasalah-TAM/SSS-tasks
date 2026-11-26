@@ -407,6 +407,7 @@ textarea{resize:vertical;line-height:1.55}
   --bg:#0B0B0D;--surface:#141418;--sunk:#0F0F12;--line:#25252B;--line-strong:#34343C;--fg:#F4F4F2;--fg2:#C4C4CB;--mute:#A1A1A8;--on-accent:#0B0B0D;
   --red:#FF8A7A;--green:#5FCB8A;--accent:#8FA3FF;--accent-soft:#1C2342;--act:#8FA3FF;--on-act:#0B0B0D;--pill:#232A4D;color-scheme:dark;background:var(--bg);color:var(--fg)}
 .auth .art{position:relative;display:flex;flex-direction:column;align-items:center;gap:16px}
+.auth{overflow-x:clip} /* the glow behind the logo is wider than a phone */
 .auth .art::before{content:"";position:absolute;left:50%;top:50%;width:460px;height:340px;margin:-170px 0 0 -230px;background:radial-gradient(closest-side,rgb(42 68 176/.42),transparent);pointer-events:none}
 .auth .art.play::before{animation:wm-glow .7s ease .6s both}
 .auth .art>*{position:relative}
@@ -419,6 +420,10 @@ textarea{resize:vertical;line-height:1.55}
 .auth h1{margin:0;font:650 30px/34px var(--display);letter-spacing:-.01em;text-align:center}
 .auth p.sub{margin:-4px 0 4px;color:var(--mute);text-align:center}
 .auth .links{flex-direction:column;align-items:center;gap:14px;margin-top:4px}
+.auth .links.forgot{flex-direction:row;justify-content:space-between;gap:8px;margin-top:-2px}
+.auth .links.forgot .link{padding:8px 0}
+.auth .check.keep{align-items:center;font-size:14px}
+.auth .check.keep input{padding:0}
 .auth .link{font-size:14px}
 .auth input{padding:11px 12px;font-size:16px}
 .err{border-inline-start:3px solid var(--red);background:color-mix(in srgb,var(--red) 10%,var(--surface));color:var(--fg);padding:9px 12px;font-size:13.5px;border-radius:6px}

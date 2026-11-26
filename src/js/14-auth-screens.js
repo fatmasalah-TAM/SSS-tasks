@@ -28,6 +28,7 @@ function authScreen(mode = 'in', msg) {
   const email = h('input', { type: 'email', id: 'email', autocomplete: 'email', required: true, placeholder: 'you@company.com', value: invEmail || '' });
   const pw = h('input', { type: 'password', id: 'password', minlength: '6', required: true, autocomplete: mode === 'up' ? 'new-password' : 'current-password', placeholder: mode === 'up' ? 'Choose a password (8+ characters)' : 'Password' });
   const err = h('div', { class: 'err', hidden: true }); const info = h('div', { class: 'info', hidden: !msg, text: msg || '' });
+  const keep = h('input', { type: 'checkbox', id: 'keepSignedIn', checked: !store.get('noKeep', false) });
   const btn = h('button', { class: 'btn pri lg wide', type: 'submit' }, mode === 'in' ? 'Sign in' : mode === 'up' ? (invEmail ? 'Join the team' : 'Create my account') : 'Send reset link');
   const form = h('form', { novalidate: true },
     h('h1', { text: mode === 'in' ? 'Sign in' : mode === 'up' ? (invEmail ? 'Welcome to the team' : newTeam ? 'Start free' : 'Create your account') : 'Reset password' }),
@@ -35,10 +36,13 @@ function authScreen(mode = 'in', msg) {
     mode === 'up' ? h('label', { class: 'field' }, 'Name', name) : null,
     h('label', { class: 'field' }, 'Email', email),
     mode !== 'reset' ? h('label', { class: 'field' }, 'Password', pwEye(pw)) : null,
+    mode === 'in' ? h('label', { class: 'check keep' }, keep, 'Keep me signed in on this device') : null,
     err, info, btn,
+    mode === 'in' ? h('div', { class: 'links forgot' },
+      h('button', { type: 'button', class: 'link', 'data-forgot': 'pw', onclick: () => authScreen('reset') }, 'Forgot password?'),
+      h('button', { type: 'button', class: 'link', 'data-forgot': 'email', onclick: () => forgotEmailSheet() }, 'Forgot which email?')) : null,
     h('div', { class: 'links' },
       mode !== 'in' ? h('button', { type: 'button', class: 'link', onclick: () => { choseSignIn = true; authScreen('in'); } }, 'I already have an account') : h('button', { type: 'button', class: 'link', onclick: () => authScreen('up') }, signupOpen ? 'New to Ovrto? Start free' : 'First time here? Create an account'),
-      mode === 'in' ? h('button', { type: 'button', class: 'link', onclick: () => authScreen('reset') }, 'Forgot password') : null,
       h('button', { type: 'button', class: 'link notr', lang: isAr() ? 'en' : 'ar', onclick: () => setLang(isAr() ? 'en' : 'ar') }, isAr() ? 'English' : 'العربية')));
   form.addEventListener('submit', async e => {
     e.preventDefault(); err.hidden = true; info.hidden = true;
@@ -48,7 +52,7 @@ function authScreen(mode = 'in', msg) {
     const done = busy(btn, 'One moment…');
     try {
       const redirect = location.origin + location.pathname;
-      if (mode === 'in') { const { error } = await sb.auth.signInWithPassword({ email: email.value.trim(), password: pw.value }); if (error) throw error; }
+      if (mode === 'in') { keepSignedIn(keep.checked); const { error } = await sb.auth.signInWithPassword({ email: email.value.trim(), password: pw.value }); if (error) throw error; }
       else if (mode === 'up') {
         const { data, error } = await sb.auth.signUp({ email: email.value.trim(), password: pw.value, options: { data: { full_name: name.value.trim() }, emailRedirectTo: redirect } }); if (error) throw error;
         store.set('newcomer', true);
@@ -60,6 +64,19 @@ function authScreen(mode = 'in', msg) {
   $('#app').replaceChildren(h('div', { class: 'auth' }, authArt(), h('div', { class: 'form' }, form))); splashOut(true);
   setTimeout(() => (mode === 'up' ? (invName ? pw : name) : email).focus(), 50);
   document.title = appNameSaved();
+}
+/* "Keep me signed in": when it's off, the sign-in lasts until this browser tab or app is closed */
+function keepSignedIn(on) { if (on) store.del('noKeep'); else store.set('noKeep', true); try { sessionStorage.setItem('ovrto.tab', '1'); } catch {} }
+function signedInTooLong() { if (!store.get('noKeep', false)) return false; try { return !sessionStorage.getItem('ovrto.tab'); } catch { return false; } }
+/* "Forgot which email?": we never say which emails have an account, so we help people find it themselves */
+function forgotEmailSheet() {
+  openSheet({ title: 'Forgot which email?', kind: 'center', key: 'forgotEmail', build: sh => {
+    sh.append(h('div', { class: 'sbody' },
+      h('p', { text: 'It’s usually your work email, like name@yourcompany.com.' }),
+      h('p', { text: 'It’s also in the invite you got on WhatsApp or email: the link has your email in it.' }),
+      h('p', { class: 'note', text: 'Still not sure? Ask your admin. They see every member’s email in Settings, under Members.' })),
+      h('div', { class: 'sfoot' }, h('span', { class: 'sp' }), h('button', { class: 'btn pri', onclick: () => { closeSheet(); setTimeout(() => $('#email')?.focus(), 60); } }, 'Try again')));
+  } });
 }
 /* ── a new person with no team yet: name the team, pick how it works, go ── */
 var TEAM_TEMPLATES = [

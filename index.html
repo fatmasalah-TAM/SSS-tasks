@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-KzMwe8jvp2JuIli/BEPmIUhLpDVrzvw0YlPAtu/SBYg=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-bI4M/nw3RqKm3SxDYKKPxsP4tHyqKHqyw5kzU7Yv9H8=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-KzMwe8jvp2JuIli/BEPmIUhLpDVrzvw0YlPAtu/SBYg=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-6prsCz8SLG1SPYetFqJh1bOMQoHwB5T9KKrujaoWJVM=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<meta name="ovrto-build" content="22ce85caf7f0">
+<meta name="ovrto-build" content="08d02ab2eb4b">
 <title>Ovrto</title>
 <meta name="description" content="Over to you. Every task shows whose turn it is.">
 <meta name="theme-color" content="#0D0D0F">
@@ -431,6 +431,7 @@ textarea{resize:vertical;line-height:1.55}
   --bg:#0B0B0D;--surface:#141418;--sunk:#0F0F12;--line:#25252B;--line-strong:#34343C;--fg:#F4F4F2;--fg2:#C4C4CB;--mute:#A1A1A8;--on-accent:#0B0B0D;
   --red:#FF8A7A;--green:#5FCB8A;--accent:#8FA3FF;--accent-soft:#1C2342;--act:#8FA3FF;--on-act:#0B0B0D;--pill:#232A4D;color-scheme:dark;background:var(--bg);color:var(--fg)}
 .auth .art{position:relative;display:flex;flex-direction:column;align-items:center;gap:16px}
+.auth{overflow-x:clip} /* the glow behind the logo is wider than a phone */
 .auth .art::before{content:"";position:absolute;left:50%;top:50%;width:460px;height:340px;margin:-170px 0 0 -230px;background:radial-gradient(closest-side,rgb(42 68 176/.42),transparent);pointer-events:none}
 .auth .art.play::before{animation:wm-glow .7s ease .6s both}
 .auth .art>*{position:relative}
@@ -443,6 +444,10 @@ textarea{resize:vertical;line-height:1.55}
 .auth h1{margin:0;font:650 30px/34px var(--display);letter-spacing:-.01em;text-align:center}
 .auth p.sub{margin:-4px 0 4px;color:var(--mute);text-align:center}
 .auth .links{flex-direction:column;align-items:center;gap:14px;margin-top:4px}
+.auth .links.forgot{flex-direction:row;justify-content:space-between;gap:8px;margin-top:-2px}
+.auth .links.forgot .link{padding:8px 0}
+.auth .check.keep{align-items:center;font-size:14px}
+.auth .check.keep input{padding:0}
 .auth .link{font-size:14px}
 .auth input{padding:11px 12px;font-size:16px}
 .err{border-inline-start:3px solid var(--red);background:color-mix(in srgb,var(--red) 10%,var(--surface));color:var(--fg);padding:9px 12px;font-size:13.5px;border-radius:6px}
@@ -4539,7 +4544,7 @@ addEventListener('online', () => { if (S.ws) { flushOutbox(); setupRealtime(); c
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { checkUpdate(); if (S.ws) { flushOutbox(); setupRealtime(); catchUp(); } } });
 
 /* a new version was uploaded: phones (and apps saved to the home screen) pick it up by themselves */
-const BUILD = '22ce85caf7f0';
+const BUILD = '08d02ab2eb4b';
 let updLast = 0, updShown = false;
 async function checkUpdate(force) {
   if (!force && Date.now() - updLast < 60000) return; updLast = Date.now();
@@ -4585,6 +4590,7 @@ function authScreen(mode = 'in', msg) {
   const email = h('input', { type: 'email', id: 'email', autocomplete: 'email', required: true, placeholder: 'you@company.com', value: invEmail || '' });
   const pw = h('input', { type: 'password', id: 'password', minlength: '6', required: true, autocomplete: mode === 'up' ? 'new-password' : 'current-password', placeholder: mode === 'up' ? 'Choose a password (8+ characters)' : 'Password' });
   const err = h('div', { class: 'err', hidden: true }); const info = h('div', { class: 'info', hidden: !msg, text: msg || '' });
+  const keep = h('input', { type: 'checkbox', id: 'keepSignedIn', checked: !store.get('noKeep', false) });
   const btn = h('button', { class: 'btn pri lg wide', type: 'submit' }, mode === 'in' ? 'Sign in' : mode === 'up' ? (invEmail ? 'Join the team' : 'Create my account') : 'Send reset link');
   const form = h('form', { novalidate: true },
     h('h1', { text: mode === 'in' ? 'Sign in' : mode === 'up' ? (invEmail ? 'Welcome to the team' : newTeam ? 'Start free' : 'Create your account') : 'Reset password' }),
@@ -4592,10 +4598,13 @@ function authScreen(mode = 'in', msg) {
     mode === 'up' ? h('label', { class: 'field' }, 'Name', name) : null,
     h('label', { class: 'field' }, 'Email', email),
     mode !== 'reset' ? h('label', { class: 'field' }, 'Password', pwEye(pw)) : null,
+    mode === 'in' ? h('label', { class: 'check keep' }, keep, 'Keep me signed in on this device') : null,
     err, info, btn,
+    mode === 'in' ? h('div', { class: 'links forgot' },
+      h('button', { type: 'button', class: 'link', 'data-forgot': 'pw', onclick: () => authScreen('reset') }, 'Forgot password?'),
+      h('button', { type: 'button', class: 'link', 'data-forgot': 'email', onclick: () => forgotEmailSheet() }, 'Forgot which email?')) : null,
     h('div', { class: 'links' },
       mode !== 'in' ? h('button', { type: 'button', class: 'link', onclick: () => { choseSignIn = true; authScreen('in'); } }, 'I already have an account') : h('button', { type: 'button', class: 'link', onclick: () => authScreen('up') }, signupOpen ? 'New to Ovrto? Start free' : 'First time here? Create an account'),
-      mode === 'in' ? h('button', { type: 'button', class: 'link', onclick: () => authScreen('reset') }, 'Forgot password') : null,
       h('button', { type: 'button', class: 'link notr', lang: isAr() ? 'en' : 'ar', onclick: () => setLang(isAr() ? 'en' : 'ar') }, isAr() ? 'English' : 'العربية')));
   form.addEventListener('submit', async e => {
     e.preventDefault(); err.hidden = true; info.hidden = true;
@@ -4605,7 +4614,7 @@ function authScreen(mode = 'in', msg) {
     const done = busy(btn, 'One moment…');
     try {
       const redirect = location.origin + location.pathname;
-      if (mode === 'in') { const { error } = await sb.auth.signInWithPassword({ email: email.value.trim(), password: pw.value }); if (error) throw error; }
+      if (mode === 'in') { keepSignedIn(keep.checked); const { error } = await sb.auth.signInWithPassword({ email: email.value.trim(), password: pw.value }); if (error) throw error; }
       else if (mode === 'up') {
         const { data, error } = await sb.auth.signUp({ email: email.value.trim(), password: pw.value, options: { data: { full_name: name.value.trim() }, emailRedirectTo: redirect } }); if (error) throw error;
         store.set('newcomer', true);
@@ -4617,6 +4626,19 @@ function authScreen(mode = 'in', msg) {
   $('#app').replaceChildren(h('div', { class: 'auth' }, authArt(), h('div', { class: 'form' }, form))); splashOut(true);
   setTimeout(() => (mode === 'up' ? (invName ? pw : name) : email).focus(), 50);
   document.title = appNameSaved();
+}
+/* "Keep me signed in": when it's off, the sign-in lasts until this browser tab or app is closed */
+function keepSignedIn(on) { if (on) store.del('noKeep'); else store.set('noKeep', true); try { sessionStorage.setItem('ovrto.tab', '1'); } catch {} }
+function signedInTooLong() { if (!store.get('noKeep', false)) return false; try { return !sessionStorage.getItem('ovrto.tab'); } catch { return false; } }
+/* "Forgot which email?": we never say which emails have an account, so we help people find it themselves */
+function forgotEmailSheet() {
+  openSheet({ title: 'Forgot which email?', kind: 'center', key: 'forgotEmail', build: sh => {
+    sh.append(h('div', { class: 'sbody' },
+      h('p', { text: 'It’s usually your work email, like name@yourcompany.com.' }),
+      h('p', { text: 'It’s also in the invite you got on WhatsApp or email: the link has your email in it.' }),
+      h('p', { class: 'note', text: 'Still not sure? Ask your admin. They see every member’s email in Settings, under Members.' })),
+      h('div', { class: 'sfoot' }, h('span', { class: 'sp' }), h('button', { class: 'btn pri', onclick: () => { closeSheet(); setTimeout(() => $('#email')?.focus(), 60); } }, 'Try again')));
+  } });
 }
 /* ── a new person with no team yet: name the team, pick how it works, go ── */
 var TEAM_TEMPLATES = [
@@ -4718,6 +4740,7 @@ async function boot() {
       try { const pt = localStorage.getItem('baton.ptok'); if (pt && /^[0-9a-f]{40}$/i.test(pt) && (matchMedia('(display-mode: standalone)').matches || navigator.standalone)) { location.replace(location.pathname + '?p=' + pt); return; } } catch {}
       S.ws = null; authScreen('in'); return;
     }
+    if (signedInTooLong()) { booting = false; await signOut(); return; } // they asked not to stay signed in
     if (recovering) return recoveryScreen();
     S.loaded = false; $('#app').innerHTML = bootLoader();
     try { await sb.rpc('accept_invites'); } catch {} // invited to another workspace with an account you already have
@@ -10020,6 +10043,7 @@ Object.assign(AR.exact, {"Offline · your work is saved on this phone": "غير 
 AR.patterns.push(["^(.+) · saved on this phone$", "$1 · اتحفظت على الموبايل"], ["^No internet, and (.+) is over 25 MB\\. Send it when you’re back online\\.$", "مفيش نت، و$1 أكبر من ٢٥ ميجا. ابعته لما النت يرجع."]);
 Object.assign(AR.exact, {"Not sent yet": "لسه ما اتبعتش", "Connect to the internet and wait a moment: they go up by themselves. Then sign out.": "وصّل النت واستنى شوية: هيترفعوا لوحدهم. بعدين اعمل تسجيل خروج.", "Sign out and lose them": "اخرج وامسحهم", "Stay signed in": "خليك داخل"});
 AR.patterns.push(["^1 change you made offline hasn’t gone up yet\\. Signing out now deletes it from this phone\\.$", "فيه تغيير واحد عملته من غير نت لسه ما اترفعش. لو عملت تسجيل خروج دلوقتي هيتمسح من الموبايل."], ["^(\\d+) changes you made offline haven’t gone up yet\\. Signing out now deletes them from this phone\\.$", "فيه $1 تغييرات عملتها من غير نت لسه ما اترفعتش. لو عملت تسجيل خروج دلوقتي هيتمسحوا من الموبايل."]);
+Object.assign(AR.exact, {"Keep me signed in on this device": "خليني داخل على الجهاز ده", "Forgot password?": "نسيت الباسورد؟", "Forgot which email?": "نسيت الإيميل؟", "It’s usually your work email, like name@yourcompany.com.": "غالبًا هو إيميل الشغل، زي name@yourcompany.com.", "It’s also in the invite you got on WhatsApp or email: the link has your email in it.": "وموجود كمان في الدعوة اللي وصلتك على الواتساب أو الإيميل: اللينك فيه إيميلك.", "Still not sure? Ask your admin. They see every member’s email in Settings, under Members.": "لسه مش متأكد؟ اسأل الأدمن. بيشوف إيميل كل واحد في الإعدادات، تحت الأعضاء.", "Try again": "جرّب تاني"});
 var LANG = (() => { try { return JSON.parse(localStorage.getItem('baton.lang') || '"en"') === 'ar' ? 'ar' : 'en'; } catch { return 'en'; } })();
 const isAr = () => LANG === 'ar';
 var I18N_SKIP = '.row .t,.tc:not(.waitrow) .tt>b,.card>.t,.inrow .t,.stuck-row .t,.rv-item .t,.md,.mdbox,.mbody,.ev .txt,.ttl,textarea,input,select,[contenteditable],code,pre,kbd,.notr,.wordmark,.wm-anim,.mark-anim,.plate,.cp-t b,.cp-in>h1,.mhead b,.cv-name b,.chip-task,.mention,.toast .notr,.cl-row .nm>div:first-child,.prow .nm>div:first-child';
