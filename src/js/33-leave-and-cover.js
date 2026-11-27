@@ -17,7 +17,7 @@ function leaveBanners() {
     out.push(h('button', { class: 'leavebar mine', onclick: () => openHandover(l) }, icon('leave', 18), h('span', { class: 'grow' },
       h('b', { text: st === 'over' ? 'Welcome back. Take your work back' : `Your leave · ${fmtDate(l.start_date)} – ${fmtDate(l.end_date)}` }),
       h('span', { class: 'sm', text: st === 'over' ? `${first(prof(l.cover_id))} covered for you` : `${first(prof(l.cover_id)) || 'Nobody'} covers you` }),
-      st !== 'over' && coverWaitText() ? h('span', { class: 'sm pjalert', text: 'Open Access to share your logins with them' }) : null), icon('back', 16)));
+      st !== 'over' && coverWaitText() ? h('span', { class: 'sm pjalert', text: 'Open Passwords to share your logins with them' }) : null), icon('back', 16)));
   }
   return out.length ? h('div', { class: 'leavebars' }, out) : null;
 }
@@ -37,11 +37,11 @@ async function openLeave() {
     const itemsPart = h('div', {});
     const drawItems = () => {
       if (!myItems.length) return itemsPart.replaceChildren(h('p', { class: 'note', text: 'No logins shared with you.' }));
-      if (!vaultUnlocked()) { const p = passField('lvPass', 'Your access passphrase', 'current-password'); const b = h('button', { class: 'btn' }, 'Unlock');
+      if (!vaultUnlocked()) { const p = passField('lvPass', 'Your Passwords passphrase', 'current-password'); const b = h('button', { class: 'btn' }, 'Unlock');
         b.addEventListener('click', async () => { if (await vaultUnlock(p.value)) drawItems(); else toast('Wrong passphrase'); });
         return itemsPart.replaceChildren(h('p', { class: 'sm mute', text: `Unlock to share your ${plural(myItems.length, 'login')} until you’re back.` }), h('div', { style: { display: 'flex', gap: '6px' } }, pwEye(p), b), h('button', { class: 'lnk sm', onclick: () => openVaultForgot() }, 'Forgot your passphrase?')); }
       itemsPart.replaceChildren(...[h('div', { class: 'pjlist lvlist' }, myItems.map(i => h('label', { class: 'pjrow' }, box(iSel, i.id), h('span', { class: 'vkind', text: i.kind }), h('span', { class: 'grow' }, h('b', { text: i.name }), h('span', { class: 'sm mute', text: pjOf(i.project_id)?.name || '' }))))),
-        cover && !V.keys[cover] ? h('p', { class: 'sm pjalert', text: `${first(prof(cover))} hasn’t set up access yet. They’ll be asked to, and a keeper can share these with them.` }) : null].filter(Boolean));
+        cover && !V.keys[cover] ? h('p', { class: 'sm pjalert', text: `${first(prof(cover))} hasn’t set up Passwords yet. They’ll be asked to, and a keeper can share these with them.` }) : null].filter(Boolean));
     };
     coverBtn.addEventListener('click', e => picker(e.currentTarget, { options: memberOptions([uid()]).map(o => Object.assign(o, { sub: '' })), value: cover, placeholder: 'Who covers you?', onPick: v => { cover = v; coverBtn.textContent = dname(prof(v)); drawItems(); sync(); } }));
     const note = autoGrow(h('textarea', { id: 'lvNote', rows: '2', placeholder: 'Anything they should know: who to call, what is urgent', style: { width: '100%' } }));
@@ -57,7 +57,7 @@ async function openLeave() {
       for (const id of tSel) await patchTask(id, { assignee_id: cover }, { noUndo: true });
       let miss = []; for (const i of items) miss = await shareItem(i, [cover], to.value);
       closeSheet(true); track('leave_new');
-      toast(miss.length ? `Handed over to ${first(prof(cover))}. Logins reach them once they set up access` : `Handed over to ${first(prof(cover))}. Enjoy your leave`); refresh();
+      toast(miss.length ? `Handed over to ${first(prof(cover))}. Logins reach them once they set up Passwords` : `Handed over to ${first(prof(cover))}. Enjoy your leave`); refresh();
     });
     sh.append(h('div', { class: 'sbody' },
       h('div', { class: 'field' }, 'When', h('div', { style: { display: 'flex', gap: '8px', alignItems: 'center' } }, from, h('span', { class: 'mute', text: '→' }), to)),
@@ -96,9 +96,9 @@ function openHandover(l) {
       back,
       h('h4', { class: 'vsub', text: `Logins · ${its.length}` }),
       its.length ? h('div', { class: 'pjlist' }, its.map(i => h('div', { class: 'pjrow' }, tick(i.id), i.kind ? h('span', { class: 'vkind', text: i.kind }) : null,
-        h('button', { class: 'grow lvopen', onclick: () => { if (!V.items.includes(i)) return toast(myKey() ? `${giver} will share it automatically the next time they open Access` : 'Set up your access first, then it will be shared with you'); closeSheet(true); go({ v: 'vault' }); setTimeout(() => vaultUnlocked() && openLoginView(i), 300); } }, h('b', { text: i.name }), h('span', { class: 'sm mute', text: V.items.includes(i) ? 'Open in Access' : mineL ? (V.keys[l.cover_id] ? 'Shared when you unlock Access' : `Waiting for ${first(prof(l.cover_id))} to set up access`) : myKey() ? `Arrives when ${giver} opens Access` : 'Set up access to receive it' })))))
+        h('button', { class: 'grow lvopen', onclick: () => { if (!V.items.includes(i)) return toast(myKey() ? `${giver} will share it automatically the next time they open Passwords` : 'Set up Passwords first, then it will be shared with you'); closeSheet(true); go({ v: 'vault' }); setTimeout(() => vaultUnlocked() && openLoginView(i), 300); } }, h('b', { text: i.name }), h('span', { class: 'sm mute', text: V.items.includes(i) ? 'Open in Passwords' : mineL ? (V.keys[l.cover_id] ? 'Shared when you unlock Passwords' : `Waiting for ${first(prof(l.cover_id))} to set up Passwords`) : myKey() ? `Arrives when ${giver} opens Passwords` : 'Set up Passwords to receive it' })))))
         : h('p', { class: 'note', text: 'No logins handed over.' }),
-      !mineL && !myKey() ? h('button', { class: 'btn', onclick: () => { closeSheet(true); go({ v: 'vault' }); } }, icon('key', 16), 'Set up access to receive logins') : null,
+      !mineL && !myKey() ? h('button', { class: 'btn', onclick: () => { closeSheet(true); go({ v: 'vault' }); } }, icon('key', 16), 'Set up Passwords to receive logins') : null,
       h('h4', { class: 'vsub', text: `Tasks · ${ts.length}` }),
       ts.length ? h('div', { class: 'pjlist' }, ts.map(t => h('div', { class: 'pjrow' }, tick(t.id), h('button', { class: 'grow lvopen', onclick: () => openTask(t.id) }, h('b', { text: t.title }),
         h('span', { class: 'sm mute', text: `${taskKey(t)} · ${stOf(t.status_id)?.name || ''} · with ${first(prof(t.assignee_id)) || 'nobody'}` }), t.stopped?.text ? h('span', { class: 'sm stopline', text: '↳ ' + t.stopped.text }) : null))))

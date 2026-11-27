@@ -1,4 +1,4 @@
-/* ═════════════ Access: shared logins, locked on each person's device ═════════════
+/* ═════════════ Passwords (the vault): shared logins, locked on each person's device ═════════════
    How it stays safe: each person makes a key pair the first time. The private half is locked with a passphrase only they
    know, in the browser, and the server only stores it locked. Every login gets its own random key; a copy of that key is
    locked for each person who may open it. So the database, Ovrto and anyone reading it see only scrambled text.
@@ -26,7 +26,7 @@ async function wrapFor(rawKey, jwk) { const pub = await crypto.subtle.importKey(
 const myKey = () => V.keys[uid()];
 const vaultUnlocked = () => !!V.priv && Date.now() < V.lockAt;
 function vaultTouch() { V.lockAt = Date.now() + VAULT_IDLE; }
-function vaultLock(quiet) { V.priv = null; V.open = {}; V.lockAt = 0; if (!quiet) toast('Access locked'); if (S.route.v === 'vault') render(); }
+function vaultLock(quiet) { V.priv = null; V.open = {}; V.lockAt = 0; if (!quiet) toast('Passwords locked'); if (S.route.v === 'vault') render(); }
 setInterval(() => { if (V.priv && Date.now() >= V.lockAt) vaultLock(true); }, 30000);
 
 async function loadVault() {
@@ -95,7 +95,7 @@ async function unshare(item, person) {
   const { error } = await sb.from('vault_grants').delete().eq('item_id', item.id).eq('user_id', person);
   if (error) return toast(errText(error));
   V.grants = V.grants.filter(g => !(g.item_id === item.id && g.user_id === person)); if (person === uid()) V.items = V.items.filter(i => i.id !== item.id);
-  toast('Access removed'); refresh();
+  toast('Login removed'); refresh();
 }
 function genPassword() { const c = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%*-_'; const r = crypto.getRandomValues(new Uint32Array(20)); return [...r].map(x => c[x % c.length]).join(''); }
 const vaultKinds = () => [...new Set([...VAULT_KINDS, ...V.items.map(i => i.kind)])];
@@ -104,8 +104,8 @@ const hostOf = u => { try { return new URL(/^\w+:\/\//.test(u) ? u : 'https://' 
 /* ── the page ── */
 let vaultQ = '', vaultKind = null;
 function viewVault() {
-  if (!V.loaded) { loadVault().then(() => render()); return [pageHead('Access'), h('div', { class: 'scroll' }, h('p', { class: 'note', style: { padding: '24px' }, text: 'Loading…' }))]; }
-  if (V.unavailable) return [pageHead('Access'), h('div', { class: 'scroll' }, h('div', { class: 'pjpage' }, h('section', { class: 'vcard' }, icon('key', 28), h('h2', { text: 'Access is almost ready' }), h('p', { text: 'Its database part is waiting to be switched on. Check back soon.' }))))];
+  if (!V.loaded) { loadVault().then(() => render()); return [pageHead('Passwords'), h('div', { class: 'scroll' }, h('p', { class: 'note', style: { padding: '24px' }, text: 'Loading…' }))]; }
+  if (V.unavailable) return [pageHead('Passwords'), h('div', { class: 'scroll' }, h('div', { class: 'pjpage' }, h('section', { class: 'vcard' }, icon('key', 28), h('h2', { text: 'Passwords are almost ready' }), h('p', { text: 'Its database part is waiting to be switched on. Check back soon.' }))))];
   const me_ = myKey(); const unlocked = vaultUnlocked();
   const extra = [unlocked ? { label: 'Lock now', icon: 'lock', fn: () => vaultLock() } : null, isAdmin() ? { label: 'Keepers…', icon: 'gear', fn: () => openKeepers() } : null].filter(Boolean);
   const tools = h('div', { class: 'tools' },
@@ -113,7 +113,7 @@ function viewVault() {
       unlocked ? h('button', { class: 'btn icon ghost', title: 'Lock', 'aria-label': 'Lock', onclick: () => vaultLock() }, icon('lock')) : null,
       isAdmin() ? h('button', { class: 'btn icon ghost', title: 'Keepers', 'aria-label': 'Keepers', onclick: () => openKeepers() }, icon('gear')) : null],
     unlocked ? h('button', { class: 'btn pri' + (isPhone() ? ' icon' : ''), 'data-new-login': '1', 'aria-label': 'Add login', title: 'Add login', onclick: () => openLogin() }, icon('plus', 16), isPhone() ? null : 'Add login') : null);
-  const head = pageHead('Access', h('span', { text: 'Logins for servers, stores and dashboards. Locked on your device.' }), tools);
+  const head = pageHead('Passwords', h('span', { text: 'Logins for servers, stores and dashboards. Locked on your device.' }), tools);
   let body;
   if (!me_) body = vaultSetupCard();
   else if (!unlocked) body = vaultUnlockCard();
@@ -129,9 +129,9 @@ function vaultSetupCard() {
     if (a.value.length < 8) return toast('Use at least 8 characters');
     if (a.value !== b.value) return toast('The two don’t match');
     go_.disabled = true; go_.textContent = 'Setting up…';
-    try { await vaultSetup(a.value); toast('Your access is ready'); render(); } catch (e) { toast(errText(e)); go_.disabled = false; go_.textContent = 'Set up'; }
+    try { await vaultSetup(a.value); toast('Passwords is set up'); render(); } catch (e) { toast(errText(e)); go_.disabled = false; go_.textContent = 'Set up'; }
   });
-  return h('section', { class: 'vcard' }, icon('key', 28), h('h2', { text: 'Set up your access' }),
+  return h('section', { class: 'vcard' }, icon('key', 28), h('h2', { text: 'Set up Passwords' }),
     h('p', { text: 'Pick a passphrase only you know. It unlocks the logins shared with you on this device. Ovrto never sees it.' }),
     h('p', { class: 'sm mute', text: ks ? `If you forget it, ${ks} can share your logins with you again.` : 'Write it down somewhere safe. If you forget it, someone who has the logins must share them with you again.' }),
     pwEye(a), pwEye(b), go_);
@@ -141,7 +141,7 @@ function vaultUnlockCard() {
   const run = async () => { go_.disabled = true; const ok = await vaultUnlock(a.value); go_.disabled = false; if (!ok) { a.value = ''; a.focus(); return toast('Wrong passphrase'); } render(); };
   go_.addEventListener('click', run); a.addEventListener('keydown', e => { if (e.key === 'Enter') run(); });
   setTimeout(() => a.focus(), 60);
-  return h('section', { class: 'vcard' }, icon('lock', 28), h('h2', { text: 'Unlock access' }), h('p', { text: `${plural(V.items.length, 'login')} shared with you. It locks again after 15 minutes.` }),
+  return h('section', { class: 'vcard' }, icon('lock', 28), h('h2', { text: 'Unlock Passwords' }), h('p', { text: `${plural(V.items.length, 'login')} shared with you. It locks again after 15 minutes.` }),
     waitingPeople().length ? h('p', { class: 'sm pjalert', text: `${waitingPeople().map(p => first(prof(p))).join(', ')} made a new passphrase. Unlock to give their logins back.` }) : null,
     coverWaitText() ? h('p', { class: 'sm pjalert', text: coverWaitText() }) : null,
     !coverWaitText() && pendingWaitText() ? h('p', { class: 'sm pjalert', text: pendingWaitText() }) : null, pwEye(a), go_,
@@ -196,12 +196,12 @@ function openVaultNewPass() {
         if (lost.length) { const { error } = await sb.from('vault_grants').delete().eq('user_id', uid()).eq('workspace_id', S.ws.id); if (error) throw error; }
         V.grants = V.grants.filter(g => g.user_id !== uid()); V.items = V.items.filter(i => i.created_by === uid() && false);
         await vaultSetup(a.value, lost);
-        closeSheet(true); toast(lost.length ? `New passphrase set. ${plural(lost.length, 'login')} will come back when someone who has them opens Access` : 'New passphrase set'); render();
+        closeSheet(true); toast(lost.length ? `New passphrase set. ${plural(lost.length, 'login')} will come back when someone who has them opens Passwords` : 'New passphrase set'); render();
       } catch (e) { go_.disabled = false; go_.textContent = 'Make a new one'; toast(errText(e)); }
     });
     sh.append(h('div', { class: 'sbody' },
       h('p', { text: 'Ovrto never knew your passphrase, so it can’t send it to you. Make a new one instead.' }),
-      h('p', { class: 'sm mute', text: ks.length ? `Your logins will come back automatically the next time ${ks.join(' or ')} opens Access.` : 'Your logins will come back the next time someone who has them opens Access.' }),
+      h('p', { class: 'sm mute', text: ks.length ? `Your logins will come back automatically the next time ${ks.join(' or ')} opens Passwords.` : 'Your logins will come back the next time someone who has them opens Passwords.' }),
       h('label', { class: 'field' }, 'New passphrase', pwEye(a)), h('label', { class: 'field' }, 'Type it again', pwEye(b))),
       h('div', { class: 'sfoot' }, h('span', { class: 'sp' }), h('button', { class: 'btn ghost', onclick: () => closeSheet() }, 'Cancel'), go_));
     setTimeout(() => a.focus(), 80);
@@ -221,7 +221,7 @@ const coverPending = () => (S.leaves || []).filter(l => leaveState(l) !== 'over'
 /* before unlock we can't open items, but we can see the promise in the leave and whether the cover is ready */
 function pendingWaitText() {
   const who = [...new Set(V.items.flatMap(i => Object.keys(i.pending || {}).filter(p => V.keys[p])))];
-  return who.length ? `${who.map(p => first(prof(p))).join(', ')} set up access and ${who.length === 1 ? 'is' : 'are'} waiting for logins. Unlock to send them.` : '';
+  return who.length ? `${who.map(p => first(prof(p))).join(', ')} set up Passwords and ${who.length === 1 ? 'is' : 'are'} waiting for logins. Unlock to send them.` : '';
 }
 function coverWaitText() {
   const ls = (S.leaves || []).filter(l => leaveState(l) !== 'over' && l.cover_id && V.keys[l.cover_id] && (l.user_id === uid() || keepers().includes(uid())) && (l.handover?.items || []).some(id => !V.grants.some(g => g.item_id === id && g.user_id === l.cover_id)));
@@ -279,13 +279,13 @@ function openLoginView(item) {
   } });
 }
 function memberOptions(exclude = []) {
-  return S.members.filter(m => !exclude.includes(m.user_id)).map(m => { const p = prof(m.user_id); return { v: m.user_id, label: dname(p) || p?.email || 'Someone', sub: V.keys[m.user_id] ? '' : 'hasn’t set up access yet' }; }).sort((a, b) => a.label.localeCompare(b.label));
+  return S.members.filter(m => !exclude.includes(m.user_id)).map(m => { const p = prof(m.user_id); return { v: m.user_id, label: dname(p) || p?.email || 'Someone', sub: V.keys[m.user_id] ? '' : 'hasn’t set up Passwords yet' }; }).sort((a, b) => a.label.localeCompare(b.label));
 }
 function pickShare(anchor, item) {
   picker(anchor, { options: memberOptions(holders(item).map(g => g.user_id)), multi: true, value: [], placeholder: 'Share with…',
     onPick: async v => { const list = [...(v || [])]; if (!list.length) return; closePop(); const miss = await shareItem(item, list);
       const ok = list.length - miss.length; if (ok) toast(`Shared with ${plural(ok, 'person').replace('persons', 'people')}`);
-      if (miss.length) toast(`${miss.map(p => first(prof(p))).join(', ')} will get it as soon as they set up access`);
+      if (miss.length) toast(`${miss.map(p => first(prof(p))).join(', ')} will get it as soon as they set up Passwords`);
       closeSheet(true); openLoginView(item); refresh(); } });
 }
 function openLogin(item, sec) {
@@ -317,7 +317,7 @@ function openLogin(item, sec) {
           V.items.push(row); V.grants.push(mine); V.open[row.id] = secret;
           const miss = await shareItem(row, [...new Set([...keepers(), ...share])].filter(p => p !== uid()));
           const missAsked = miss.filter(p => share.has(p));
-          toast(missAsked.length ? `Saved. ${missAsked.map(p => first(prof(p))).join(', ')} will get it as soon as they set up access` : 'Login saved'); track('vault_add');
+          toast(missAsked.length ? `Saved. ${missAsked.map(p => first(prof(p))).join(', ')} will get it as soon as they set up Passwords` : 'Login saved'); track('vault_add');
         } else {
           const raw = await itemRawKey(item);
           const patch = { project_id: project, kind, name: name.value.trim(), url: url.value.trim(), secret: await aesSeal(raw, secret), updated_by: uid(), updated_at: nowIso() };

@@ -12,7 +12,7 @@ const BUILTIN = {
   sprint: { name: 'Sprint', icon: 'sprint', special: 'sprint', config: () => ({ filters: [{ f: 'sprint', op: 'any', v: ['current'] }], group: 'status', sort: 'priority', layout: S.prefs?.layout || 'board', columns: DEFAULT_COLS }) },
   clients: { name: 'Clients', icon: 'client', special: 'clients', config: () => ({ filters: [{ f: 'closed', op: 'none', v: ['closed'] }], group: clientField() ? 'f:' + clientField().id : 'project', sort: 'priority', layout: 'list', columns: DEFAULT_COLS }) },
   projects: { name: 'Projects', icon: 'folder', special: 'projects' },
-  vault: { name: 'Access', icon: 'key', special: 'vault' },
+  vault: { name: 'Passwords', icon: 'key', special: 'vault' },
   company: { name: 'Company', icon: 'company', special: 'company' },
   home: { name: 'Home', icon: 'turn', special: 'home' },
   deals: { name: 'Deals', icon: 'deal', special: 'deals' },

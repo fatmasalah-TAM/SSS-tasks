@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-KzMwe8jvp2JuIli/BEPmIUhLpDVrzvw0YlPAtu/SBYg=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-NXZE+oMV5Qh7J7sOQUkM5Pt4uhoaqoT/QvPewY5wULU=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-KzMwe8jvp2JuIli/BEPmIUhLpDVrzvw0YlPAtu/SBYg=' 'sha256-XdVllEJUUlY2mpnvkJOutvZqFFdAOpa9N/wxN6Bu9/U=' 'sha256-/VZgHfjtmVnpYIWHBmtS+dbyZVq3LdeiaQoVTVGvrgg=' https://cdn.jsdelivr.net https://8x8.vc; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; media-src 'self' data: blob: https://epictdzctjgbsctobejh.supabase.co https://*.supabase.co; connect-src 'self' https://epictdzctjgbsctobejh.supabase.co wss://epictdzctjgbsctobejh.supabase.co https://cdn.jsdelivr.net https://api.languagetool.org; frame-src https://8x8.vc https://*.8x8.vc; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<meta name="ovrto-build" content="3f9c8c5c66ec">
+<meta name="ovrto-build" content="b95dbe93b699">
 <title>Ovrto</title>
 <meta name="description" content="Over to you. Every task shows whose turn it is.">
 <meta name="theme-color" content="#0D0D0F">
@@ -2275,7 +2275,7 @@ const BUILTIN = {
   sprint: { name: 'Sprint', icon: 'sprint', special: 'sprint', config: () => ({ filters: [{ f: 'sprint', op: 'any', v: ['current'] }], group: 'status', sort: 'priority', layout: S.prefs?.layout || 'board', columns: DEFAULT_COLS }) },
   clients: { name: 'Clients', icon: 'client', special: 'clients', config: () => ({ filters: [{ f: 'closed', op: 'none', v: ['closed'] }], group: clientField() ? 'f:' + clientField().id : 'project', sort: 'priority', layout: 'list', columns: DEFAULT_COLS }) },
   projects: { name: 'Projects', icon: 'folder', special: 'projects' },
-  vault: { name: 'Access', icon: 'key', special: 'vault' },
+  vault: { name: 'Passwords', icon: 'key', special: 'vault' },
   company: { name: 'Company', icon: 'company', special: 'company' },
   home: { name: 'Home', icon: 'turn', special: 'home' },
   deals: { name: 'Deals', icon: 'deal', special: 'deals' },
@@ -2522,7 +2522,7 @@ function renderSide() {
         ['stock', navItem({ v: 'stock' }, 'Stock', icon('folder'), (S.stock || []).filter(i => i.min_qty > 0 && i.qty <= i.min_qty).length || null)],
         ['devices', navItem({ v: 'devices' }, 'Devices', icon('wifi'), (S.devices || []).filter(d => d.state === 'faulty').length || null)],
         ['projects', navItem({ v: 'projects' }, 'Projects', icon('folder'))],
-        ['vault', navItem({ v: 'vault' }, 'Access', icon('key'))],
+        ['vault', navItem({ v: 'vault' }, 'Passwords', icon('key'))],
         ['leave', h('button', { class: 'navi', 'data-nav': 'leave', onclick: () => openLeave() }, icon('leave'), h('span', { class: 't', text: 'Going on leave' }))],
         ['all', navItem({ v: 'all' }, 'All tasks', icon('all'))],
         ['insights', isAdmin() ? navItem({ v: 'insights' }, 'Insights', icon('chart')) : null],
@@ -3202,7 +3202,7 @@ function openMore() {
         pinned('approvals') ? null : it('check', 'Approvals', () => go({ v: 'approvals' }), approvalsBadge() ? h('span', { class: 'badge', text: String(approvalsBadge()) }) : null),
         inDept(myMember(), 'hr', 'management') || isAdmin() ? it('invite', 'Start onboarding', () => openOnboarding()) : null,
         ...['visits', 'tickets', 'devices', 'tests', 'incidents', 'stock'].filter(v => !pinned(v) && !pageHidden(v)).map(v => it(PAGE_ICON[v], PAGE_LABEL[v], () => go({ v }))),
-        pinned('vault') || pageHidden('vault') ? null : it('key', 'Access', () => go({ v: 'vault' })),
+        pinned('vault') || pageHidden('vault') ? null : it('key', 'Passwords', () => go({ v: 'vault' })),
         it('leave', 'Going on leave', () => openLeave()),
         canInvite() ? it('invite', 'Add members', () => openInviteSheet()) : null,
         isAdmin() && !pinned('insights') && !pageHidden('insights') ? it('chart', 'Insights', () => go({ v: 'insights' })) : null,
@@ -4299,7 +4299,7 @@ const EXPORT_PRESETS = {
 };
 /* What each person may export: admins export the team's tasks; everyone else exports the tasks they work on
    (theirs, given to them, sent to them for review, or that they created). Never exported, for anyone: money,
-   salaries, logins from Access, and (for members) other people's emails. */
+   salaries, logins from Passwords, and (for members) other people's emails. */
 const involvedIn = t => t.assignee_id === uid() || t.turn_owner === uid() || t.created_by === uid() || t.reviewer_id === uid() || waitsOf(t).some(w => w.user === uid() || w.by === uid());
 const exportable = list => isAdmin() ? list : list.filter(involvedIn);
 function openExport() {
@@ -4312,7 +4312,7 @@ function openExport() {
       body.replaceChildren(
         h('div', { class: 'field', 'data-tour': 'export-format' }, 'Format', h('div', { class: 'seg', role: 'group' }, [['xlsx', 'Excel'], ['csv', 'CSV'], ['json', 'JSON'], ['md', 'Client summary']].map(([v, l]) => h('button', { 'aria-pressed': String(st.fmt === v), onclick: () => { st.fmt = v; draw(); } }, l)))),
         h('div', { class: 'field' }, 'Tasks', h('div', { class: 'seg', role: 'group' }, h('button', { 'aria-pressed': String(st.scope === 'view'), onclick: () => { st.scope = 'view'; draw(); } }, isAdmin() ? `This view (${viewN})` : `Mine in this view (${viewN})`), isAdmin() ? h('button', { 'aria-pressed': String(st.scope === 'all'), onclick: () => { st.scope = 'all'; draw(); } }, `Everything (${S.tasks.length})`) : null, h('button', { 'aria-pressed': String(st.scope === 'mine'), onclick: () => { st.scope = 'mine'; draw(); } }, `My work (${mine.length})`))),
-        h('p', { class: 'note', 'data-export-note': '1', text: isAdmin() ? 'Money, salaries and logins from Access are never exported.' : 'You can export the tasks you work on. Money, salaries, logins and other people’s emails are never exported.' }),
+        h('p', { class: 'note', 'data-export-note': '1', text: isAdmin() ? 'Money, salaries and logins from Passwords are never exported.' : 'You can export the tasks you work on. Money, salaries, logins and other people’s emails are never exported.' }),
         st.fmt === 'json' ? h('p', { class: 'note', text: 'JSON includes every field, the checklist and comments, ready to import into other tools.' }) :
           h('div', { class: 'field', 'data-tour': 'export-cols' }, 'Columns',
             h('div', { style: { display: 'flex', gap: '6px', flexWrap: 'wrap' } }, [['basic', 'Basic'], ['all', 'All fields'], ['client', 'Client report']].map(([k, l]) => h('button', { class: 'fchip', onclick: () => { const p = EXPORT_PRESETS[k]; st.cols = typeof p === 'function' ? p() : p.slice(); draw(); } }, l))),
@@ -4504,7 +4504,7 @@ const cmdk = (() => {
         { label: 'New task', sub: 'C', fn: () => openCreate() }, { label: 'Report a bug', fn: () => openCreate({ type: 'bug' }) },
         { label: 'Go to My turn', fn: () => go({ v: 'myturn' }) }, { label: 'Open notifications', fn: () => openNotifs() }, ...(isAdmin() ? [{ label: 'Add members', fn: () => openSettings('workspace', 'invites') }] : []), { label: 'Go to Review', fn: () => go({ v: 'review' }) },
         { label: 'Go to Work', fn: () => go({ v: 'work' }) }, { label: 'Go to Bugs', fn: () => go({ v: 'bugs' }) }, { label: 'Go to Sprint', fn: () => go({ v: 'sprint' }) },
-        { label: 'Go to Clients', fn: () => go({ v: 'clients' }) }, { label: 'Go to All tasks', fn: () => go({ v: 'all' }) }, { label: 'Go to Projects', fn: () => go({ v: 'projects' }) }, { label: 'Go to Access', fn: () => go({ v: 'vault' }) }, ...(canSeeMoney() ? [{ label: 'Go to Company', fn: () => go({ v: 'company' }) }] : []), { label: 'Going on leave', fn: () => openLeave() },
+        { label: 'Go to Clients', fn: () => go({ v: 'clients' }) }, { label: 'Go to All tasks', fn: () => go({ v: 'all' }) }, { label: 'Go to Projects', fn: () => go({ v: 'projects' }) }, { label: 'Go to Passwords', fn: () => go({ v: 'vault' }) }, ...(canSeeMoney() ? [{ label: 'Go to Company', fn: () => go({ v: 'company' }) }] : []), { label: 'Going on leave', fn: () => openLeave() },
         ...S.views.map(v => ({ label: 'View: ' + v.name, fn: () => go({ v: 'view', id: v.id }) })), 
         { label: 'Open chat', fn: () => go({ v: 'chat' }) }, ...(isAdmin() ? [{ label: 'Client pages (status links)', fn: () => openSettings('workspace', 'clientlinks') }, { label: 'Insights', fn: () => go({ v: 'insights' }) }] : []), { label: 'New message to…', fn: () => pickDmPerson() }, { label: 'New channel…', fn: () => newChannel() },
         { label: 'Import tasks from a file…', fn: () => openImport() }, { label: 'Download the import template', fn: () => downloadTemplate() }, { label: 'Export…', fn: () => openExport() }, { label: 'Settings', fn: () => openSettings(isAdmin() ? 'workspace' : 'me') }, { label: 'Help & tours', fn: () => openHelp() },
@@ -4648,7 +4648,7 @@ addEventListener('online', () => { if (S.ws) { flushOutbox(); setupRealtime(); c
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { checkUpdate(); if (S.ws) { flushOutbox(); setupRealtime(); catchUp(); } } });
 
 /* a new version was uploaded: phones (and apps saved to the home screen) pick it up by themselves */
-const BUILD = '3f9c8c5c66ec';
+const BUILD = 'b95dbe93b699';
 let updLast = 0, updShown = false;
 async function checkUpdate(force) {
   if (!force && Date.now() - updLast < 60000) return; updLast = Date.now();
@@ -7894,7 +7894,7 @@ const plainOnly = () => { const ds = myDepts(); return !isAdmin() && !!ds.length
 const deptPeople = () => { const ks = myDepts().map(d => baseKey(d.k)); return new Set(S.members.filter(m => inDept(m, ...ks)).map(m => m.user_id)); };
 const inDept = (m, ...ks) => !!m && (ks.includes(baseKey(m.department)) || extrasOf(m).some(k => ks.includes(baseKey(k))));
 const deptLabel = m => { const d = deptOf(m?.department); const n = extrasOf(m).length; return d ? d.l + (n ? ` +${n}` : '') : null; };
-const PAGE_LABEL = { get home() { return HOME_NAME[homeKind()] || 'Home'; }, work: 'Work', bugs: 'Bugs', review: 'Review', projects: 'Projects', clients: 'Clients', vault: 'Access', insights: 'Insights', company: 'Company', myturn: 'My turn', deals: 'Deals', devices: 'Devices', visits: 'Site visits', tickets: 'Tickets', tests: 'Test library', incidents: 'Incidents', approvals: 'Approvals', stock: 'Stock' };
+const PAGE_LABEL = { get home() { return HOME_NAME[homeKind()] || 'Home'; }, work: 'Work', bugs: 'Bugs', review: 'Review', projects: 'Projects', clients: 'Clients', vault: 'Passwords', insights: 'Insights', company: 'Company', myturn: 'My turn', deals: 'Deals', devices: 'Devices', visits: 'Site visits', tickets: 'Tickets', tests: 'Test library', incidents: 'Incidents', approvals: 'Approvals', stock: 'Stock' };
 const PAGE_ICON = { get home() { return HOME_ICON[homeKind()] || 'turn'; }, work: 'work', bugs: 'bug', review: 'review', projects: 'folder', clients: 'client', vault: 'key', insights: 'chart', company: 'company', myturn: 'turn', deals: 'deal', devices: 'wifi', visits: 'calendar', tickets: 'headset', tests: 'review', incidents: 'bell', approvals: 'check', stock: 'folder' };
 /* pages this person may open: Company needs money access, Insights needs admin */
 const pageAllowed = v => v === 'company' ? canSeeSomeMoney() : v === 'insights' ? isAdmin() : v === 'home' ? !!homeKind() : true;
@@ -8844,7 +8844,7 @@ function showDraft(k, dr, picked, body, foot) {
   foot.replaceChildren(again, h('span', { class: 'sp' }), ...acts);
 }
 
-/* ═════════════ Access: shared logins, locked on each person's device ═════════════
+/* ═════════════ Passwords (the vault): shared logins, locked on each person's device ═════════════
    How it stays safe: each person makes a key pair the first time. The private half is locked with a passphrase only they
    know, in the browser, and the server only stores it locked. Every login gets its own random key; a copy of that key is
    locked for each person who may open it. So the database, Ovrto and anyone reading it see only scrambled text.
@@ -8872,7 +8872,7 @@ async function wrapFor(rawKey, jwk) { const pub = await crypto.subtle.importKey(
 const myKey = () => V.keys[uid()];
 const vaultUnlocked = () => !!V.priv && Date.now() < V.lockAt;
 function vaultTouch() { V.lockAt = Date.now() + VAULT_IDLE; }
-function vaultLock(quiet) { V.priv = null; V.open = {}; V.lockAt = 0; if (!quiet) toast('Access locked'); if (S.route.v === 'vault') render(); }
+function vaultLock(quiet) { V.priv = null; V.open = {}; V.lockAt = 0; if (!quiet) toast('Passwords locked'); if (S.route.v === 'vault') render(); }
 setInterval(() => { if (V.priv && Date.now() >= V.lockAt) vaultLock(true); }, 30000);
 
 async function loadVault() {
@@ -8941,7 +8941,7 @@ async function unshare(item, person) {
   const { error } = await sb.from('vault_grants').delete().eq('item_id', item.id).eq('user_id', person);
   if (error) return toast(errText(error));
   V.grants = V.grants.filter(g => !(g.item_id === item.id && g.user_id === person)); if (person === uid()) V.items = V.items.filter(i => i.id !== item.id);
-  toast('Access removed'); refresh();
+  toast('Login removed'); refresh();
 }
 function genPassword() { const c = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%*-_'; const r = crypto.getRandomValues(new Uint32Array(20)); return [...r].map(x => c[x % c.length]).join(''); }
 const vaultKinds = () => [...new Set([...VAULT_KINDS, ...V.items.map(i => i.kind)])];
@@ -8950,8 +8950,8 @@ const hostOf = u => { try { return new URL(/^\w+:\/\//.test(u) ? u : 'https://' 
 /* ── the page ── */
 let vaultQ = '', vaultKind = null;
 function viewVault() {
-  if (!V.loaded) { loadVault().then(() => render()); return [pageHead('Access'), h('div', { class: 'scroll' }, h('p', { class: 'note', style: { padding: '24px' }, text: 'Loading…' }))]; }
-  if (V.unavailable) return [pageHead('Access'), h('div', { class: 'scroll' }, h('div', { class: 'pjpage' }, h('section', { class: 'vcard' }, icon('key', 28), h('h2', { text: 'Access is almost ready' }), h('p', { text: 'Its database part is waiting to be switched on. Check back soon.' }))))];
+  if (!V.loaded) { loadVault().then(() => render()); return [pageHead('Passwords'), h('div', { class: 'scroll' }, h('p', { class: 'note', style: { padding: '24px' }, text: 'Loading…' }))]; }
+  if (V.unavailable) return [pageHead('Passwords'), h('div', { class: 'scroll' }, h('div', { class: 'pjpage' }, h('section', { class: 'vcard' }, icon('key', 28), h('h2', { text: 'Passwords are almost ready' }), h('p', { text: 'Its database part is waiting to be switched on. Check back soon.' }))))];
   const me_ = myKey(); const unlocked = vaultUnlocked();
   const extra = [unlocked ? { label: 'Lock now', icon: 'lock', fn: () => vaultLock() } : null, isAdmin() ? { label: 'Keepers…', icon: 'gear', fn: () => openKeepers() } : null].filter(Boolean);
   const tools = h('div', { class: 'tools' },
@@ -8959,7 +8959,7 @@ function viewVault() {
       unlocked ? h('button', { class: 'btn icon ghost', title: 'Lock', 'aria-label': 'Lock', onclick: () => vaultLock() }, icon('lock')) : null,
       isAdmin() ? h('button', { class: 'btn icon ghost', title: 'Keepers', 'aria-label': 'Keepers', onclick: () => openKeepers() }, icon('gear')) : null],
     unlocked ? h('button', { class: 'btn pri' + (isPhone() ? ' icon' : ''), 'data-new-login': '1', 'aria-label': 'Add login', title: 'Add login', onclick: () => openLogin() }, icon('plus', 16), isPhone() ? null : 'Add login') : null);
-  const head = pageHead('Access', h('span', { text: 'Logins for servers, stores and dashboards. Locked on your device.' }), tools);
+  const head = pageHead('Passwords', h('span', { text: 'Logins for servers, stores and dashboards. Locked on your device.' }), tools);
   let body;
   if (!me_) body = vaultSetupCard();
   else if (!unlocked) body = vaultUnlockCard();
@@ -8975,9 +8975,9 @@ function vaultSetupCard() {
     if (a.value.length < 8) return toast('Use at least 8 characters');
     if (a.value !== b.value) return toast('The two don’t match');
     go_.disabled = true; go_.textContent = 'Setting up…';
-    try { await vaultSetup(a.value); toast('Your access is ready'); render(); } catch (e) { toast(errText(e)); go_.disabled = false; go_.textContent = 'Set up'; }
+    try { await vaultSetup(a.value); toast('Passwords is set up'); render(); } catch (e) { toast(errText(e)); go_.disabled = false; go_.textContent = 'Set up'; }
   });
-  return h('section', { class: 'vcard' }, icon('key', 28), h('h2', { text: 'Set up your access' }),
+  return h('section', { class: 'vcard' }, icon('key', 28), h('h2', { text: 'Set up Passwords' }),
     h('p', { text: 'Pick a passphrase only you know. It unlocks the logins shared with you on this device. Ovrto never sees it.' }),
     h('p', { class: 'sm mute', text: ks ? `If you forget it, ${ks} can share your logins with you again.` : 'Write it down somewhere safe. If you forget it, someone who has the logins must share them with you again.' }),
     pwEye(a), pwEye(b), go_);
@@ -8987,7 +8987,7 @@ function vaultUnlockCard() {
   const run = async () => { go_.disabled = true; const ok = await vaultUnlock(a.value); go_.disabled = false; if (!ok) { a.value = ''; a.focus(); return toast('Wrong passphrase'); } render(); };
   go_.addEventListener('click', run); a.addEventListener('keydown', e => { if (e.key === 'Enter') run(); });
   setTimeout(() => a.focus(), 60);
-  return h('section', { class: 'vcard' }, icon('lock', 28), h('h2', { text: 'Unlock access' }), h('p', { text: `${plural(V.items.length, 'login')} shared with you. It locks again after 15 minutes.` }),
+  return h('section', { class: 'vcard' }, icon('lock', 28), h('h2', { text: 'Unlock Passwords' }), h('p', { text: `${plural(V.items.length, 'login')} shared with you. It locks again after 15 minutes.` }),
     waitingPeople().length ? h('p', { class: 'sm pjalert', text: `${waitingPeople().map(p => first(prof(p))).join(', ')} made a new passphrase. Unlock to give their logins back.` }) : null,
     coverWaitText() ? h('p', { class: 'sm pjalert', text: coverWaitText() }) : null,
     !coverWaitText() && pendingWaitText() ? h('p', { class: 'sm pjalert', text: pendingWaitText() }) : null, pwEye(a), go_,
@@ -9042,12 +9042,12 @@ function openVaultNewPass() {
         if (lost.length) { const { error } = await sb.from('vault_grants').delete().eq('user_id', uid()).eq('workspace_id', S.ws.id); if (error) throw error; }
         V.grants = V.grants.filter(g => g.user_id !== uid()); V.items = V.items.filter(i => i.created_by === uid() && false);
         await vaultSetup(a.value, lost);
-        closeSheet(true); toast(lost.length ? `New passphrase set. ${plural(lost.length, 'login')} will come back when someone who has them opens Access` : 'New passphrase set'); render();
+        closeSheet(true); toast(lost.length ? `New passphrase set. ${plural(lost.length, 'login')} will come back when someone who has them opens Passwords` : 'New passphrase set'); render();
       } catch (e) { go_.disabled = false; go_.textContent = 'Make a new one'; toast(errText(e)); }
     });
     sh.append(h('div', { class: 'sbody' },
       h('p', { text: 'Ovrto never knew your passphrase, so it can’t send it to you. Make a new one instead.' }),
-      h('p', { class: 'sm mute', text: ks.length ? `Your logins will come back automatically the next time ${ks.join(' or ')} opens Access.` : 'Your logins will come back the next time someone who has them opens Access.' }),
+      h('p', { class: 'sm mute', text: ks.length ? `Your logins will come back automatically the next time ${ks.join(' or ')} opens Passwords.` : 'Your logins will come back the next time someone who has them opens Passwords.' }),
       h('label', { class: 'field' }, 'New passphrase', pwEye(a)), h('label', { class: 'field' }, 'Type it again', pwEye(b))),
       h('div', { class: 'sfoot' }, h('span', { class: 'sp' }), h('button', { class: 'btn ghost', onclick: () => closeSheet() }, 'Cancel'), go_));
     setTimeout(() => a.focus(), 80);
@@ -9067,7 +9067,7 @@ const coverPending = () => (S.leaves || []).filter(l => leaveState(l) !== 'over'
 /* before unlock we can't open items, but we can see the promise in the leave and whether the cover is ready */
 function pendingWaitText() {
   const who = [...new Set(V.items.flatMap(i => Object.keys(i.pending || {}).filter(p => V.keys[p])))];
-  return who.length ? `${who.map(p => first(prof(p))).join(', ')} set up access and ${who.length === 1 ? 'is' : 'are'} waiting for logins. Unlock to send them.` : '';
+  return who.length ? `${who.map(p => first(prof(p))).join(', ')} set up Passwords and ${who.length === 1 ? 'is' : 'are'} waiting for logins. Unlock to send them.` : '';
 }
 function coverWaitText() {
   const ls = (S.leaves || []).filter(l => leaveState(l) !== 'over' && l.cover_id && V.keys[l.cover_id] && (l.user_id === uid() || keepers().includes(uid())) && (l.handover?.items || []).some(id => !V.grants.some(g => g.item_id === id && g.user_id === l.cover_id)));
@@ -9125,13 +9125,13 @@ function openLoginView(item) {
   } });
 }
 function memberOptions(exclude = []) {
-  return S.members.filter(m => !exclude.includes(m.user_id)).map(m => { const p = prof(m.user_id); return { v: m.user_id, label: dname(p) || p?.email || 'Someone', sub: V.keys[m.user_id] ? '' : 'hasn’t set up access yet' }; }).sort((a, b) => a.label.localeCompare(b.label));
+  return S.members.filter(m => !exclude.includes(m.user_id)).map(m => { const p = prof(m.user_id); return { v: m.user_id, label: dname(p) || p?.email || 'Someone', sub: V.keys[m.user_id] ? '' : 'hasn’t set up Passwords yet' }; }).sort((a, b) => a.label.localeCompare(b.label));
 }
 function pickShare(anchor, item) {
   picker(anchor, { options: memberOptions(holders(item).map(g => g.user_id)), multi: true, value: [], placeholder: 'Share with…',
     onPick: async v => { const list = [...(v || [])]; if (!list.length) return; closePop(); const miss = await shareItem(item, list);
       const ok = list.length - miss.length; if (ok) toast(`Shared with ${plural(ok, 'person').replace('persons', 'people')}`);
-      if (miss.length) toast(`${miss.map(p => first(prof(p))).join(', ')} will get it as soon as they set up access`);
+      if (miss.length) toast(`${miss.map(p => first(prof(p))).join(', ')} will get it as soon as they set up Passwords`);
       closeSheet(true); openLoginView(item); refresh(); } });
 }
 function openLogin(item, sec) {
@@ -9163,7 +9163,7 @@ function openLogin(item, sec) {
           V.items.push(row); V.grants.push(mine); V.open[row.id] = secret;
           const miss = await shareItem(row, [...new Set([...keepers(), ...share])].filter(p => p !== uid()));
           const missAsked = miss.filter(p => share.has(p));
-          toast(missAsked.length ? `Saved. ${missAsked.map(p => first(prof(p))).join(', ')} will get it as soon as they set up access` : 'Login saved'); track('vault_add');
+          toast(missAsked.length ? `Saved. ${missAsked.map(p => first(prof(p))).join(', ')} will get it as soon as they set up Passwords` : 'Login saved'); track('vault_add');
         } else {
           const raw = await itemRawKey(item);
           const patch = { project_id: project, kind, name: name.value.trim(), url: url.value.trim(), secret: await aesSeal(raw, secret), updated_by: uid(), updated_at: nowIso() };
@@ -9212,7 +9212,7 @@ function leaveBanners() {
     out.push(h('button', { class: 'leavebar mine', onclick: () => openHandover(l) }, icon('leave', 18), h('span', { class: 'grow' },
       h('b', { text: st === 'over' ? 'Welcome back. Take your work back' : `Your leave · ${fmtDate(l.start_date)} – ${fmtDate(l.end_date)}` }),
       h('span', { class: 'sm', text: st === 'over' ? `${first(prof(l.cover_id))} covered for you` : `${first(prof(l.cover_id)) || 'Nobody'} covers you` }),
-      st !== 'over' && coverWaitText() ? h('span', { class: 'sm pjalert', text: 'Open Access to share your logins with them' }) : null), icon('back', 16)));
+      st !== 'over' && coverWaitText() ? h('span', { class: 'sm pjalert', text: 'Open Passwords to share your logins with them' }) : null), icon('back', 16)));
   }
   return out.length ? h('div', { class: 'leavebars' }, out) : null;
 }
@@ -9232,11 +9232,11 @@ async function openLeave() {
     const itemsPart = h('div', {});
     const drawItems = () => {
       if (!myItems.length) return itemsPart.replaceChildren(h('p', { class: 'note', text: 'No logins shared with you.' }));
-      if (!vaultUnlocked()) { const p = passField('lvPass', 'Your access passphrase', 'current-password'); const b = h('button', { class: 'btn' }, 'Unlock');
+      if (!vaultUnlocked()) { const p = passField('lvPass', 'Your Passwords passphrase', 'current-password'); const b = h('button', { class: 'btn' }, 'Unlock');
         b.addEventListener('click', async () => { if (await vaultUnlock(p.value)) drawItems(); else toast('Wrong passphrase'); });
         return itemsPart.replaceChildren(h('p', { class: 'sm mute', text: `Unlock to share your ${plural(myItems.length, 'login')} until you’re back.` }), h('div', { style: { display: 'flex', gap: '6px' } }, pwEye(p), b), h('button', { class: 'lnk sm', onclick: () => openVaultForgot() }, 'Forgot your passphrase?')); }
       itemsPart.replaceChildren(...[h('div', { class: 'pjlist lvlist' }, myItems.map(i => h('label', { class: 'pjrow' }, box(iSel, i.id), h('span', { class: 'vkind', text: i.kind }), h('span', { class: 'grow' }, h('b', { text: i.name }), h('span', { class: 'sm mute', text: pjOf(i.project_id)?.name || '' }))))),
-        cover && !V.keys[cover] ? h('p', { class: 'sm pjalert', text: `${first(prof(cover))} hasn’t set up access yet. They’ll be asked to, and a keeper can share these with them.` }) : null].filter(Boolean));
+        cover && !V.keys[cover] ? h('p', { class: 'sm pjalert', text: `${first(prof(cover))} hasn’t set up Passwords yet. They’ll be asked to, and a keeper can share these with them.` }) : null].filter(Boolean));
     };
     coverBtn.addEventListener('click', e => picker(e.currentTarget, { options: memberOptions([uid()]).map(o => Object.assign(o, { sub: '' })), value: cover, placeholder: 'Who covers you?', onPick: v => { cover = v; coverBtn.textContent = dname(prof(v)); drawItems(); sync(); } }));
     const note = autoGrow(h('textarea', { id: 'lvNote', rows: '2', placeholder: 'Anything they should know: who to call, what is urgent', style: { width: '100%' } }));
@@ -9252,7 +9252,7 @@ async function openLeave() {
       for (const id of tSel) await patchTask(id, { assignee_id: cover }, { noUndo: true });
       let miss = []; for (const i of items) miss = await shareItem(i, [cover], to.value);
       closeSheet(true); track('leave_new');
-      toast(miss.length ? `Handed over to ${first(prof(cover))}. Logins reach them once they set up access` : `Handed over to ${first(prof(cover))}. Enjoy your leave`); refresh();
+      toast(miss.length ? `Handed over to ${first(prof(cover))}. Logins reach them once they set up Passwords` : `Handed over to ${first(prof(cover))}. Enjoy your leave`); refresh();
     });
     sh.append(h('div', { class: 'sbody' },
       h('div', { class: 'field' }, 'When', h('div', { style: { display: 'flex', gap: '8px', alignItems: 'center' } }, from, h('span', { class: 'mute', text: '→' }), to)),
@@ -9291,9 +9291,9 @@ function openHandover(l) {
       back,
       h('h4', { class: 'vsub', text: `Logins · ${its.length}` }),
       its.length ? h('div', { class: 'pjlist' }, its.map(i => h('div', { class: 'pjrow' }, tick(i.id), i.kind ? h('span', { class: 'vkind', text: i.kind }) : null,
-        h('button', { class: 'grow lvopen', onclick: () => { if (!V.items.includes(i)) return toast(myKey() ? `${giver} will share it automatically the next time they open Access` : 'Set up your access first, then it will be shared with you'); closeSheet(true); go({ v: 'vault' }); setTimeout(() => vaultUnlocked() && openLoginView(i), 300); } }, h('b', { text: i.name }), h('span', { class: 'sm mute', text: V.items.includes(i) ? 'Open in Access' : mineL ? (V.keys[l.cover_id] ? 'Shared when you unlock Access' : `Waiting for ${first(prof(l.cover_id))} to set up access`) : myKey() ? `Arrives when ${giver} opens Access` : 'Set up access to receive it' })))))
+        h('button', { class: 'grow lvopen', onclick: () => { if (!V.items.includes(i)) return toast(myKey() ? `${giver} will share it automatically the next time they open Passwords` : 'Set up Passwords first, then it will be shared with you'); closeSheet(true); go({ v: 'vault' }); setTimeout(() => vaultUnlocked() && openLoginView(i), 300); } }, h('b', { text: i.name }), h('span', { class: 'sm mute', text: V.items.includes(i) ? 'Open in Passwords' : mineL ? (V.keys[l.cover_id] ? 'Shared when you unlock Passwords' : `Waiting for ${first(prof(l.cover_id))} to set up Passwords`) : myKey() ? `Arrives when ${giver} opens Passwords` : 'Set up Passwords to receive it' })))))
         : h('p', { class: 'note', text: 'No logins handed over.' }),
-      !mineL && !myKey() ? h('button', { class: 'btn', onclick: () => { closeSheet(true); go({ v: 'vault' }); } }, icon('key', 16), 'Set up access to receive logins') : null,
+      !mineL && !myKey() ? h('button', { class: 'btn', onclick: () => { closeSheet(true); go({ v: 'vault' }); } }, icon('key', 16), 'Set up Passwords to receive logins') : null,
       h('h4', { class: 'vsub', text: `Tasks · ${ts.length}` }),
       ts.length ? h('div', { class: 'pjlist' }, ts.map(t => h('div', { class: 'pjrow' }, tick(t.id), h('button', { class: 'grow lvopen', onclick: () => openTask(t.id) }, h('b', { text: t.title }),
         h('span', { class: 'sm mute', text: `${taskKey(t)} · ${stOf(t.status_id)?.name || ''} · with ${first(prof(t.assignee_id)) || 'nobody'}` }), t.stopped?.text ? h('span', { class: 'sm stopline', text: '↳ ' + t.stopped.text }) : null))))
@@ -10396,6 +10396,12 @@ AR.patterns.unshift(["^Got it: (.+)\\. We picked the answers below for you\\.$",
 Object.assign(AR.exact, {"Your words": "كلماتكم", "The people you serve": "اللي بتخدموهم", "One piece of work": "الشغلانة الواحدة", "A bigger piece of work": "الشغل الأكبر", "Leave a box empty to keep Ovrto’s word. Arabic is optional.": "سيب الخانة فاضية عشان تفضل كلمة Ovrto. العربي اختياري.", "Save words": "احفظ الكلمات", "Saved. Ovrto is switching to your words…": "اتحفظت. Ovrto بيغيّر لكلماتكم…", "Use the words your company uses. A clinic can say Patient instead of Client, a workshop Job instead of Task. Everyone in the team sees them.": "استخدم الكلمات اللي شركتك بتقولها. العيادة تقول مريض بدل عميل، والورشة تقول شغلانة بدل مهمة. الفريق كله هيشوفها.", "Ovrto will say: ": "Ovrto هيقول: ", "Change words": "غيّر الكلمات"});
 Object.assign(AR.exact, {"Manufacturing": "التصنيع"});
 Object.assign(AR.exact, {"Reading what you wrote…": "بنقرا اللي كتبته…"});
+Object.assign(AR.exact, {"Passwords": "الباسوردات", "Passwords locked": "الباسوردات اتقفلت", "Login removed": "الحساب اتشال", "Open in Passwords": "افتحه في الباسوردات", "Money, salaries and logins from Passwords are never exported.": "الفلوس والمرتبات والحسابات اللي في الباسوردات مش بتتصدّر أبدًا.", "Passwords are almost ready": "الباسوردات قربت تجهز", "Go to Passwords": "روح للباسوردات", "Shared when you unlock Passwords": "هتتشارك لما تفتح الباسوردات", "Open Passwords to share your logins with them": "افتح الباسوردات عشان تشاركهم حساباتك", "Set up Passwords to receive it": "جهّز الباسوردات عشان توصلك", "Set up Passwords first, then it will come to you": "جهّز الباسوردات الأول، وبعدين هتوصلك"});
+AR.patterns.unshift(["^(.+) will share it automatically the next time they open Passwords$", "$1 هيشاركه تلقائيًا أول ما يفتح الباسوردات"], ["^Arrives when (.+) opens Passwords$", "هيوصل لما $1 يفتح الباسوردات"], ["^Your logins will come back automatically the next time (.+) opens Passwords\\.$", "حساباتك هترجع تلقائيًا أول ما $1 يفتح الباسوردات."], ["^New passphrase set\\. (.+) will come back when someone who has them opens Passwords$", "اتعملت عبارة سر جديدة. $1 هترجع لما حد عنده يفتح الباسوردات"]);
+Object.assign(AR.exact, {"Set up Passwords first, then it will be shared with you": "جهّز الباسوردات الأول، وبعدين هتتشارك معاك"});
+AR.patterns.unshift(["^Waiting for (.+) to set up Passwords$", "مستني $1 يجهّز الباسوردات"]);
+Object.assign(AR.exact, {"Set up Passwords": "جهّز الباسوردات", "Passwords is set up": "الباسوردات جاهزة", "Unlock Passwords": "افتح الباسوردات", "Your Passwords passphrase": "عبارة السر بتاعة الباسوردات", "Set up Passwords to receive logins": "جهّز الباسوردات عشان تستلم الحسابات"});
+AR.patterns.unshift(["^(.+) hasn’t set up Passwords yet\\. (.+)$", "$1 لسه ما جهّزش الباسوردات. $2"], ["^Handed over to (.+)\\. Logins reach them once they set up Passwords$", "اتسلّم لـ $1. الحسابات هتوصله أول ما يجهّز الباسوردات"], ["^(.+) will get it as soon as they set up Passwords$", "$1 هيوصله أول ما يجهّز الباسوردات"], ["^Saved\\. (.+) will get it as soon as they set up Passwords$", "اتحفظ. $1 هيوصله أول ما يجهّز الباسوردات"]);
 var LANG = (() => { try { return JSON.parse(localStorage.getItem('baton.lang') || '"en"') === 'ar' ? 'ar' : 'en'; } catch { return 'en'; } })();
 const isAr = () => LANG === 'ar';
 var I18N_SKIP = '.row .t,.tc:not(.waitrow) .tt>b,.card>.t,.inrow .t,.stuck-row .t,.rv-item .t,.md,.mdbox,.mbody,.ev .txt,.ttl,textarea,input,select,[contenteditable],code,pre,kbd,.notr,.wordmark,.wm-anim,.mark-anim,.plate,.cp-t b,.cp-in>h1,.mhead b,.cv-name b,.chip-task,.mention,.toast .notr,.cl-row .nm>div:first-child,.prow .nm>div:first-child';

@@ -6,7 +6,7 @@ const EXPORT_PRESETS = {
 };
 /* What each person may export: admins export the team's tasks; everyone else exports the tasks they work on
    (theirs, given to them, sent to them for review, or that they created). Never exported, for anyone: money,
-   salaries, logins from Access, and (for members) other people's emails. */
+   salaries, logins from Passwords, and (for members) other people's emails. */
 const involvedIn = t => t.assignee_id === uid() || t.turn_owner === uid() || t.created_by === uid() || t.reviewer_id === uid() || waitsOf(t).some(w => w.user === uid() || w.by === uid());
 const exportable = list => isAdmin() ? list : list.filter(involvedIn);
 function openExport() {
@@ -19,7 +19,7 @@ function openExport() {
       body.replaceChildren(
         h('div', { class: 'field', 'data-tour': 'export-format' }, 'Format', h('div', { class: 'seg', role: 'group' }, [['xlsx', 'Excel'], ['csv', 'CSV'], ['json', 'JSON'], ['md', 'Client summary']].map(([v, l]) => h('button', { 'aria-pressed': String(st.fmt === v), onclick: () => { st.fmt = v; draw(); } }, l)))),
         h('div', { class: 'field' }, 'Tasks', h('div', { class: 'seg', role: 'group' }, h('button', { 'aria-pressed': String(st.scope === 'view'), onclick: () => { st.scope = 'view'; draw(); } }, isAdmin() ? `This view (${viewN})` : `Mine in this view (${viewN})`), isAdmin() ? h('button', { 'aria-pressed': String(st.scope === 'all'), onclick: () => { st.scope = 'all'; draw(); } }, `Everything (${S.tasks.length})`) : null, h('button', { 'aria-pressed': String(st.scope === 'mine'), onclick: () => { st.scope = 'mine'; draw(); } }, `My work (${mine.length})`))),
-        h('p', { class: 'note', 'data-export-note': '1', text: isAdmin() ? 'Money, salaries and logins from Access are never exported.' : 'You can export the tasks you work on. Money, salaries, logins and other people’s emails are never exported.' }),
+        h('p', { class: 'note', 'data-export-note': '1', text: isAdmin() ? 'Money, salaries and logins from Passwords are never exported.' : 'You can export the tasks you work on. Money, salaries, logins and other people’s emails are never exported.' }),
         st.fmt === 'json' ? h('p', { class: 'note', text: 'JSON includes every field, the checklist and comments, ready to import into other tools.' }) :
           h('div', { class: 'field', 'data-tour': 'export-cols' }, 'Columns',
             h('div', { style: { display: 'flex', gap: '6px', flexWrap: 'wrap' } }, [['basic', 'Basic'], ['all', 'All fields'], ['client', 'Client report']].map(([k, l]) => h('button', { class: 'fchip', onclick: () => { const p = EXPORT_PRESETS[k]; st.cols = typeof p === 'function' ? p() : p.slice(); draw(); } }, l))),
