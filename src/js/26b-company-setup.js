@@ -33,7 +33,7 @@ const TEAMS = [
   { k: 'qa', l: 'Testing', base: 'qa' }, { k: 'design', l: 'Design', base: 'design' }, { k: 'devops', l: 'IT', base: 'devops' },
   { k: 'field', l: 'Field team', base: 'field' }, { k: 'support', l: 'Technical support', base: 'support' },
   { k: 'warehouse', l: 'Warehouse', base: 'operations', custom: true }, { k: 'purchasing', l: 'Purchasing', base: 'operations', custom: true },
-  { k: 'production', l: 'Production', base: 'operations', custom: true }, { k: 'legal', l: 'Legal', base: 'management', custom: true },
+  { k: 'production', l: 'Manufacturing', base: 'operations', custom: true }, { k: 'legal', l: 'Legal', base: 'management', custom: true },
 ];
 const WEEKLY = [
   { g: 'With clients', items: [['sell', 'Find and sell to clients', 'sales'], ['requests', 'Answer client requests', 'success'], ['sites', 'Visit client sites', 'field']] },
@@ -84,7 +84,7 @@ function matchTeam(text, teams = deptsOn()) {
 
 /* ── the admin sets up a new company: name, then four questions ── */
 function companySetupForm(onDone, err) {
-  const st = { biz: new Set(), other: '', work: new Set(), teams: new Set(['management']), size: '', otherTeam: '' };
+  const st = { biz: new Set(), other: '', work: new Set(), teams: new Set(['management']), size: '', otherTeam: '', words: null };
   const name = h('input', { type: 'text', id: 'teamName', maxlength: '60', placeholder: 'e.g. Bright Studio', autocomplete: 'organization' });
   const box = h('div', { class: 'csq' });
   const chip = (on, label, attrs, fn) => h('button', Object.assign({ type: 'button', class: 'chipbtn', 'aria-pressed': String(on), onclick: fn }, attrs), on ? h('span', { 'aria-hidden': 'true', text: '✓ ' }) : null, h('span', { text: label }));
@@ -112,7 +112,17 @@ function companySetupForm(onDone, err) {
           const known = TEAMS.find(t => t.l.toLowerCase() === v.toLowerCase()); st.teams.add(known ? known.k : 'own:' + v); teamOtherI.value = ''; draw();
         } }, icon('plus', 14), 'Add'))),
       h('div', { class: 'csq-q', 'data-q': 'size' }, h('b', { text: 'How many people work at the company?' }),
-        h('div', { class: 'chips' }, ...SIZES.map(s => chip(st.size === s, s, { 'data-size': s }, () => { st.size = s; draw(); })))));
+        h('div', { class: 'chips' }, ...SIZES.map(s => chip(st.size === s, s, { 'data-size': s }, () => { st.size = s; draw(); })))),
+      wordsLine());
+  };
+  let wordsOpen = false, wordsEd = null, wordsTouched = false;
+  const wordsLine = () => {
+    const sug = wordsTouched ? st.words : suggestWords(st.biz, st.other); if (!wordsTouched) st.words = sug;
+    const said = WORD_KINDS.map(([k], i) => wordOf(st.words, k, 0)).join(', ');
+    if (wordsOpen) { wordsEd = wordsEditor(st.words); wordsEd.el.addEventListener('input', () => { wordsTouched = true; st.words = wordsEd.value(); }); }
+    return h('div', { class: 'csq-q', 'data-q': 'words' }, h('b', { text: 'Your words' }),
+      h('div', { class: 'note' }, h('span', { text: 'Ovrto will say: ' }), h('b', { class: 'notr', text: said })),
+      wordsOpen ? wordsEd.el : h('div', {}, h('button', { type: 'button', class: 'btn sm', 'data-words-change': '1', onclick: () => { wordsOpen = true; draw(); } }, 'Change words')));
   };
   draw();
   const cfg = () => {
@@ -123,7 +133,7 @@ function companySetupForm(onDone, err) {
       if (t.custom) custom.push({ k: 'c_' + t.k, l: t.l, base: t.base });
       else { on.push(t.base); if (t.l !== deptOfBase(t.base)?.l) names[t.base] = t.l; }
     }
-    return { small: ['1', '2–10'].includes(st.size), on, names, custom, biz: [...st.biz], biz_other: st.other.trim() || undefined, size: st.size || undefined, work: [...st.work] };
+    return { small: ['1', '2–10'].includes(st.size), on, names, custom, biz: [...st.biz], biz_other: st.other.trim() || undefined, size: st.size || undefined, work: [...st.work], words: st.words || undefined };
   };
   const preset = () => { const b = [...st.biz].map(k => BIZ.find(x => x.k === k)); return b.find(x => x?.preset === 'blank') ? 'blank' : b.find(x => x?.preset === 'agency') ? 'agency' : 'general'; };
   return { name, box, cfg, preset, valid: () => { if (!name.value.trim()) return 'Give your company a name.'; if (!st.size) return 'Pick how many people work at the company.'; return ''; } };
@@ -133,26 +143,75 @@ function companySetupForm(onDone, err) {
 function otherTeamBox(onPick) {
   const inp = h('input', { type: 'text', id: 'deptOther', maxlength: '60', placeholder: 'Your job in a few words, e.g. I post on our Instagram' });
   const out = h('div', { class: 'ai-note', 'aria-live': 'polite', hidden: true });
-  const check = () => {
+  let seq = 0;
+  const check = async () => {
     const v = inp.value.trim(); out.hidden = !v; if (!v) return out.replaceChildren();
-    const d = matchTeam(v);
+    const my = ++seq; let d = matchTeam(v), ai = null;
+    if (!d && navigator.onLine && await aiReady().catch(() => false)) { // the company's AI reads it when the word list can't
+      if (my !== seq) return;
+      out.replaceChildren(h('span', { class: 'note', text: 'Reading what you wrote…' }));
+      try { const r = await sb.functions.invoke('team-match', { body: { ws: S.ws.id, text: v, teams: deptsOn().map(x => ({ k: x.k, l: x.l })) } }); ai = r.data && !r.data.error && !r.data.off ? r.data : null; } catch {}
+      if (my !== seq) return;
+      if (ai?.team) d = deptsOn().find(x => x.k === ai.team) || null;
+    }
     if (d) return out.replaceChildren(h('span', {}, h('span', { text: 'Sounds like ' }), h('b', { text: d.l }), h('span', { text: '.' })), h('button', { type: 'button', class: 'btn sm pri', 'data-other-use': d.k, onclick: () => onPick(d.k) }, `Use ${d.l}`));
     const can = isAdmin() || wsDeptCfg()?.members_add !== false;
-    const nm = v.length <= 30 ? v.replace(/^i (also )?(do|work in|work on|handle|post on|post|make|run|am in)\s+/i, '').replace(/^\w/, c => c.toUpperCase()) : '';
+    const nm = ai?.new_name || (v.length <= 30 ? v.replace(/^i (also )?(do|work in|work on|handle|post on|post|make|run|am in)\s+/i, '').replace(/^\w/, c => c.toUpperCase()) : '');
+    const like = ai?.works_like && !['management', 'finance', 'hwlead'].includes(ai.works_like) ? ai.works_like : guessBase(v);
     if (!can) return out.replaceChildren(h('span', { text: 'There’s no team like this yet. Ask your admin to add it.' }));
     const nameI = h('input', { type: 'text', id: 'newTeamName', maxlength: '40', value: nm, placeholder: 'Name the team, e.g. Media', 'aria-label': 'Team name' });
     out.replaceChildren(h('span', { text: 'There’s no team like this yet. Add it? Others who do the same job can join it.' }), nameI,
       h('button', { type: 'button', class: 'btn sm pri', 'data-other-add': '1', onclick: async e => {
         const l = nameI.value.trim(); if (l.length < 2) return nameI.focus();
-        const done = busy(e.currentTarget, 'Adding…'); const r = await sb.rpc('add_my_team', { ws: S.ws.id, team: l, works_like: guessBase(v + ' ' + l) }); done();
+        const done = busy(e.currentTarget, 'Adding…'); const r = await sb.rpc('add_my_team', { ws: S.ws.id, team: l, works_like: like }); done();
         if (r.error) return toast(errText(r.error));
         const c = Object.assign({}, wsDeptCfg() || {}); const k = r.data;
-        if (!(c.custom || []).some(x => x.k === k)) c.custom = [...(c.custom || []), { k, l, base: guessBase(v + ' ' + l), by: uid() }];
+        if (!(c.custom || []).some(x => x.k === k)) c.custom = [...(c.custom || []), { k, l, base: like, by: uid() }];
         S.ws.departments = c; const w = S.wsList.find(x => x.id === S.ws.id); if (w) w.departments = c;
         toast(`${l} team added`); onPick(k);
       } }, icon('plus', 14), 'Add team'));
   };
-  inp.addEventListener('input', () => { clearTimeout(inp._t); inp._t = setTimeout(check, 350); });
+  inp.addEventListener('input', () => { clearTimeout(inp._t); inp._t = setTimeout(check, 500); });
   inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(inp._t); check(); } });
   return h('div', { class: 'otherteam' }, inp, out);
+}
+
+/* ── the company's own words (Client → Patient, Task → Job, Project → Event) ── */
+const WORD_KINDS = [['client', 'The people you serve', 'Client', 'Clients'], ['task', 'One piece of work', 'Task', 'Tasks'], ['project', 'A bigger piece of work', 'Project', 'Projects']];
+const WORD_IDEAS = {
+  clinic: { client: { one: 'Patient', many: 'Patients', ar1: 'مريض', arm: 'مرضى' } },
+  school: { client: { one: 'Student', many: 'Students', ar1: 'طالب', arm: 'طلاب' }, project: { one: 'Course', many: 'Courses', ar1: 'كورس', arm: 'كورسات' } },
+  shops: { client: { one: 'Customer', many: 'Customers', ar1: 'زبون', arm: 'زباين' }, project: { one: 'Branch', many: 'Branches', ar1: 'فرع', arm: 'فروع' } },
+  online: { client: { one: 'Customer', many: 'Customers', ar1: 'زبون', arm: 'زباين' } },
+  field: { client: { one: 'Customer', many: 'Customers', ar1: 'زبون', arm: 'زباين' }, task: { one: 'Job', many: 'Jobs', ar1: 'شغلانة', arm: 'شغلانات' } },
+  build: { project: { one: 'Site', many: 'Sites', ar1: 'موقع', arm: 'مواقع' } },
+  events: { project: { one: 'Event', many: 'Events', ar1: 'مناسبة', arm: 'مناسبات' } },
+};
+function suggestWords(biz, otherText) {
+  const out = {}; const keys = [...biz]; if (/event|wedding|party|conference|ايفنت|أفراح|افراح|مناسبات|حفلات/i.test(otherText || '')) keys.push('events');
+  for (const k of keys) Object.assign(out, WORD_IDEAS[k] || {});
+  return Object.keys(out).length ? out : null;
+}
+const wordOf = (w, k, i) => (w && w[k] && (i ? w[k].many || w[k].one : w[k].one)) || WORD_KINDS.find(x => x[0] === k)[i ? 3 : 2];
+/* rows of inputs to edit the words; returns { el, value() } */
+function wordsEditor(start) {
+  const rows = WORD_KINDS.map(([k, label, one, many]) => {
+    const v = (start && start[k]) || {};
+    const mk = (key, ph, lang) => h('input', { type: 'text', maxlength: '24', 'data-word': `${k}.${key}`, placeholder: ph, value: v[key] || '', lang, dir: lang === 'ar' ? 'rtl' : 'ltr', 'aria-label': `${label}: ${ph}` });
+    const i = { one: mk('one', one, 'en'), many: mk('many', many, 'en'), ar1: mk('ar1', 'بالعربي', 'ar'), arm: mk('arm', 'الجمع', 'ar') };
+    return { k, i, el: h('div', { class: 'wrow' }, h('b', { text: label }), h('div', { class: 'wgrid' }, i.one, i.many, i.ar1, i.arm)) };
+  });
+  return { el: h('div', { class: 'words' }, h('p', { class: 'note', text: 'Leave a box empty to keep Ovrto’s word. Arabic is optional.' }), ...rows.map(r => r.el)),
+    value() { const o = {}; for (const r of rows) { const x = {}; for (const [kk, inp] of Object.entries(r.i)) { const t = inp.value.trim(); if (t) x[kk] = t; } if (x.one || x.ar1) o[r.k] = x; } return Object.keys(o).length ? o : null; } };
+}
+function wordsPanel() {
+  const w = wsDeptCfg()?.words || null; const ed = wordsEditor(w);
+  const save = h('button', { class: 'btn pri', 'data-words-save': '1', onclick: async e => {
+    const words = ed.value(); const cfg = Object.assign({}, wsDeptCfg() || {}, { words });
+    const done = busy(e.currentTarget, 'Saving…'); const r = await sb.from('workspaces').update({ departments: cfg }).eq('id', S.ws.id).select(); done();
+    if (r.error) return toast(errText(r.error));
+    S.ws.departments = cfg; const x = S.wsList.find(y => y.id === S.ws.id); if (x) x.departments = cfg;
+    toast('Saved. Ovrto is switching to your words…'); WORDS.sync(S.ws);
+  } }, 'Save words');
+  return h('div', { class: 'pbody' }, h('p', { class: 'note', text: 'Use the words your company uses. A clinic can say Patient instead of Client, a workshop Job instead of Task. Everyone in the team sees them.' }), ed.el, h('div', {}, save));
 }

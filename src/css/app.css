@@ -1391,3 +1391,9 @@ input[type=date]::-webkit-date-and-time-value{text-align:start}
 .otherteam>input{width:100%;box-sizing:border-box}
 .deptother{margin-top:12px}
 .deptother .note{margin:0 0 6px}
+.words{display:flex;flex-direction:column;gap:12px}
+.words .wrow{display:flex;flex-direction:column;gap:6px}
+.words .wrow>b{font-size:14px}
+.words .wgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+@media (max-width:560px){.words .wgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.words input{min-width:0;width:100%;box-sizing:border-box}

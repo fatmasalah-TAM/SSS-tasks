@@ -6,7 +6,8 @@ async function switchWs(id) {
   for (const k of ['members', 'statuses', 'types', 'fields', 'rules', 'views', 'projects', 'tasks', 'invites', 'notifs', 'channels', 'messages', 'reactions', 'huddles']) S[k] = [];
   S.reads = {}; huddleCfg = null;
   await restoreSnapshot(id); render();
-  savePrefs({ last_workspace: id }); store.set('appName', w.app_name);
+  await savePrefs({ last_workspace: id }); store.set('appName', w.app_name);
+  if (WORDS.sync(w)) return;
   await loadAll(); S.route = { v: startView() }; render(); setupRealtime(); checkDept();
 }
 /* join the company: from a team invite link, or by the company email (only after the email is confirmed) */
@@ -38,6 +39,7 @@ async function boot() {
     if (!S.wsList.length) { await setupTeamScreen(); return; }
     const want = S.prefs.last_workspace && S.wsList.find(w => w.id === S.prefs.last_workspace);
     S.ws = want || S.wsList[0]; store.set('appName', S.ws.app_name);
+    if (WORDS.sync(S.ws)) return; // this company uses its own words: redraw with them
     if (await restoreSnapshot(S.ws.id)) render();
     loadWaitingFiles();
     await loadAll();

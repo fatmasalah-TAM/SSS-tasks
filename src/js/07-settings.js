@@ -66,6 +66,7 @@ function setWorkspace(body) {
 
   body.append(panel('Promises to clients (SLA)', 'sla', slaPanel()));
   body.append(panel('Onboarding checklist', 'onboarding', onboardingPanel()));
+  body.append(panel('Your words', 'words', wordsPanel()));
   body.append(panel('Departments', 'depts', h('div', { class: 'pbody' }, h('div', { style: { display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' } },
     h('div', { style: { flex: '1', minWidth: '200px' } }, h('b', { 'data-dept-summary': '1', text: deptSummary() }), h('div', { class: 'note', text: 'Which departments your company has, their names, and whether everyone sees every page.' })),
     h('button', { class: 'btn', 'data-dept-setup': '1', onclick: () => openDeptSetup() }, 'Set up departments')))));
